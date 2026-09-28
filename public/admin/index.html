@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Owner area · IrishBredEventers</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+
+<div class="masthead-band">
+  <div class="wrap">
+    <div class="masthead-top">
+      <div>
+        <a href="/" class="site-name-link"><h1 class="site-name">IrishBredEventers</h1></a>
+        <p class="site-tagline">Owner area</p>
+      </div>
+      <div class="masthead-meta" id="who"></div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <h2 class="view-title">Owner area</h2>
+  <p class="view-subtitle">Every weekly job is three steps: add it, check it, publish it.</p>
+
+  <div class="reg-sorts adm-tabs" id="adm-tabs">
+    <button class="active" data-a="results">Results</button>
+    <button data-a="unverified">Unverified <span class="count" id="n-unverified" hidden></span></button>
+    <button data-a="news">News</button>
+    <button data-a="ads">Ads</button>
+    <button data-a="comments">Comments <span class="count" id="n-comments" hidden></span></button>
+    <button data-a="corrections">Corrections <span class="count" id="n-corrections" hidden></span></button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="adm-pane active" id="adm-results">
+    <h3 class="extra-title">Weekly results</h3>
+    <p class="extra-copy">1. Choose your Word file, or paste the text. 2. Check what the site read. 3. Publish. Anything the site cannot read cleanly is marked unverified and goes to the end of the results.</p>
+    <form class="site-form" id="parse-form" style="max-width:none;">
+      <label>Word file (.docx) or text file<input type="file" name="file" id="adm-file" accept=".docx,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"></label>
+      <div class="adm-row-edit" style="margin:0;">
+        <label>Country when the file does not say<select name="country" id="adm-country"></select></label>
+        <label>Year when the file does not say<input type="number" name="year" id="adm-year" min="2000" max="2100"></label>
+      </div>
+      <label>Or paste the results here<textarea name="text" id="adm-text" style="min-height:150px;"></textarea></label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="site-btn" type="submit">Read results</button>
+        <button class="site-btn alt" type="button" id="adm-clear">Clear</button>
+      </div>
+      <div class="form-done" id="adm-msg" role="status"></div>
+    </form>
+    <div id="adm-preview"></div>
+    <h3 class="extra-title" style="margin-top:34px;">Published uploads</h3>
+    <div id="adm-batches"></div>
+  </div>
+
+  <!-- UNVERIFIED -->
+  <div class="adm-pane" id="adm-unverified">
+    <h3 class="extra-title">Unverified results</h3>
+    <p class="extra-copy">These sit at the end of the public results. Fix anything that is wrong, then "Mark as verified" moves the horse up into its class.</p>
+    <div id="unv-list"></div>
+  </div>
+
+  <!-- NEWS -->
+  <div class="adm-pane" id="adm-news">
+    <h3 class="extra-title">Post news</h3>
+    <p class="extra-copy">The newest post becomes the home page headline.</p>
+    <form class="site-form" id="news-form">
+      <label>Headline<input type="text" name="title" maxlength="160" required></label>
+      <label>Write-up<textarea name="body" style="min-height:180px;" required></textarea></label>
+      <label>Photo (optional)<input type="file" name="image" accept="image/*"></label>
+      <button class="site-btn" type="submit">Publish news</button>
+      <div class="form-done" role="status"></div>
+    </form>
+    <h3 class="extra-title" style="margin-top:34px;">Posted</h3>
+    <div id="news-list"></div>
+  </div>
+
+  <!-- ADS -->
+  <div class="adm-pane" id="adm-ads">
+    <h3 class="extra-title">Ads</h3>
+    <p class="extra-copy">Large business ads take the top banner (use a wide image, about 970 × 120). Small breeder and business ads rotate through the side and end-of-results slots. Ads stop showing after their end date.</p>
+    <form class="site-form" id="ad-form">
+      <label>Tier<select name="tier"><option value="large">Large business (top banner)</option><option value="small" selected>Small breeder or business (side and end slots)</option></select></label>
+      <label>Advertiser name<input type="text" name="name" maxlength="80" required></label>
+      <label>Link (optional)<input type="text" name="link" placeholder="https://" inputmode="url"></label>
+      <label>Runs until (optional)<input type="date" name="ends_on"></label>
+      <label>Advert image<input type="file" name="image" accept="image/*"></label>
+      <button class="site-btn" type="submit">Add advert</button>
+      <div class="form-done" role="status"></div>
+    </form>
+    <h3 class="extra-title" style="margin-top:34px;">Current ads</h3>
+    <div id="ad-list"></div>
+  </div>
+
+  <!-- COMMENTS -->
+  <div class="adm-pane" id="adm-comments">
+    <h3 class="extra-title">Comments</h3>
+    <p class="extra-copy">Nothing appears on the site until you approve it.</p>
+    <div id="cm-list"></div>
+  </div>
+
+  <!-- CORRECTIONS -->
+  <div class="adm-pane" id="adm-corrections">
+    <h3 class="extra-title">Corrections and additions</h3>
+    <p class="extra-copy">Sent in from the results page. Mark each one done once it's sorted.</p>
+    <div id="corr-list"></div>
+  </div>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap foot-in">
+    <div><b class="serif" style="font-size:20px;">IrishBredEventers</b><div>Owner area</div></div>
+    <div><a href="/">Back to the site</a><br><a href="/cdn-cgi/access/logout">Log out</a></div>
+  </div>
+</footer>
+
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

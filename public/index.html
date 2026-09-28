@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IrishBredEventers</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Every Irish-bred eventing result, worldwide. Searchable by horse, sire, dam, dam sire and breeder, and free for breeders.">
+<link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+
+<div class="masthead-band">
+  <div class="wrap">
+    <div class="masthead-top">
+      <div>
+        <a href="/" class="site-name-link" data-link><h1 class="site-name">IrishBredEventers</h1></a>
+        <p class="site-tagline">Every Irish-bred result, worldwide — searchable, and free for breeders.</p>
+      </div>
+      <div class="masthead-meta">Results updated weekly</div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <a href="/" data-tab="home" data-link class="active">Home</a>
+      <a href="/results" data-tab="results" data-link>Results</a>
+      <a href="/news" data-tab="news" data-link>News</a>
+      <a href="/about" data-tab="about" data-link>About</a>
+    </nav>
+  </div>
+</div>
+
+<div class="wrap banner-wrap">
+  <div class="banner-ad" id="banner-ad" role="complementary" aria-label="Headline sponsor advert">
+    <span class="rail-eyebrow">Advertisement</span>
+    <div class="banner-title">Large business banner</div>
+    <div class="banner-sub">Top tier · full width on every page</div>
+  </div>
+</div>
+
+<div class="search-band" id="search-band">
+  <div class="wrap">
+    <form class="search-box" id="search-form" role="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="global-search" type="search" autocomplete="off" aria-label="Search" placeholder="Search a horse, sire, dam, dam sire or breeder — try “Womanizer” or “Cooley”">
+    </form>
+    <div class="search-hint">Searches horse names (and former names), sires, dams, dam sires and breeders across every result.</div>
+  </div>
+</div>
+
+<div id="notice" class="wrap notice" role="status" hidden></div>
+
+<div class="page-layout">
+<aside class="results-rail" aria-label="Adverts"><div><div class="rail-slot" id="rail-1"></div><div class="rail-slot" id="rail-2"></div><div class="rail-slot" id="rail-3"></div><div class="rail-slot" id="rail-4"></div></div></aside>
+<main class="wrap">
+
+  <!-- HOME -->
+  <section class="view active" id="view-home">
+    <p class="section-label">This week's headline</p>
+    <h2 class="hero-headline" id="hero-headline">Irish-bred eventing results, every week</h2>
+    <p class="hero-copy" id="hero-copy">Every Irish-bred horse placed in eventing worldwide, with its breeding and breeder.</p>
+    <a class="read-more-link" id="hero-link" href="/news" data-link>Read the full commentary</a>
+
+    <hr class="rule">
+
+    <p class="section-label">1st place horses</p>
+    <div id="home-preview"><div class="empty-state">Loading…</div></div>
+    <a class="read-more-link" id="home-all-link" href="/results" data-link>See all results</a>
+
+    <hr class="rule">
+
+    <div class="ad-grid" id="home-ads-1"></div>
+
+    <div class="signup-slot"></div>
+
+    <div class="ad-grid" id="home-ads-2" style="margin-top:22px;"></div>
+
+    <div class="free-band">
+      <div class="free-text">
+        <div class="free-title">Results are free for breeders</div>
+        <div class="free-copy">This service has always been free to read and always will be. Advertising and sponsorship cover the hosting, the domain and the hours behind every Monday's write-up.</div>
+      </div>
+    </div>
+
+    <div class="ad-grid" id="home-ads-3" style="margin-top:22px;"></div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="view" id="view-results">
+    <h2 class="view-title" id="results-title">Results</h2>
+    <div class="reg-head" style="margin-bottom:14px;">
+      <div style="flex:1 1 200px;font-size:13px;color:var(--ink-faint);">Browse by season</div>
+      <div class="reg-sorts" id="season-toggle"></div>
+    </div>
+    <div class="legend-bar">
+      <span class="legend-line">Grouped by country → event → class.</span>
+      <button class="info-icon" id="legend-toggle" aria-expanded="false" aria-controls="legend-drop" aria-label="How to read the results">i</button>
+    </div>
+    <div class="legend-drop" id="legend-drop">
+      <div class="legend-title">How to read the results</div>
+      <div class="legend-grid">
+        <div><b>1. Country</b><p>Results are split by the country the event was held in.</p></div>
+        <div><b>2. Event &amp; date</b><p>Each event under that country, with the dates it ran.</p></div>
+        <div><b>3. Class</b><p>Each event broken into its classes — CCI 4* Short, Novice and so on.</p></div>
+        <div><b>4. The horse</b><p>Irish-bred horses that placed, in finishing order, with breeding and breeder underneath. Former names are shown and are searchable.</p></div>
+        <div><b>5. Score</b><p><b>38.7, 4, 8.8 = 51.5</b> — dressage penalties, show jumping penalties, cross country penalties, then the final score. Lowest wins; a clear round shows as 0.</p></div>
+        <div><b>6. Unverified</b><p>Results still being checked sit at the very end of the list, and move up once confirmed.</p></div>
+      </div>
+      <p class="legend-foot">Placings are the horse's position in the class overall, not just among Irish-breds — which is why numbers sometimes skip. Click any horse for its full record.</p>
+    </div>
+    <div id="results-list"><div class="empty-state">Loading…</div></div>
+    <div class="ad-grid ad-grid-end" id="results-ads" style="margin-top:36px;"></div>
+    <div id="results-comments"></div>
+    <div class="extra-block" id="corrections">
+      <h3 class="extra-title">Corrections and additions</h3>
+      <p class="extra-copy">Spotted a mistake or a missing horse? Tell us and it will be checked before the results are changed.</p>
+      <form class="site-form" id="correction-form">
+        <label>Event and class<input type="text" name="event" required maxlength="200" placeholder="e.g. Thoresby, CCI 4* Short Sec G"></label>
+        <label>What needs correcting or adding<textarea name="message" required maxlength="3000"></textarea></label>
+        <label>Your email (optional)<input type="email" name="email" maxlength="200"></label>
+        <div class="ts-slot"></div>
+        <button class="site-btn" type="submit">Send</button>
+        <div class="form-done" role="status"></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- SEARCH -->
+  <section class="view" id="view-search">
+    <h2 class="view-title">Search</h2>
+    <p class="view-subtitle">Matches current names, former names, sires, dams, dam sires and breeders. Narrow it to one field below.</p>
+    <div class="reg-head" style="margin-bottom:12px;">
+      <div style="flex:1 1 160px;font-size:13px;color:var(--ink-faint);">Search in</div>
+      <div class="reg-sorts" id="search-fields">
+        <button class="active" data-field="all">Everything</button>
+        <button data-field="name">Horse name</button>
+        <button data-field="sire">Sire</button>
+        <button data-field="dam">Dam / dam sire</button>
+        <button data-field="breeder">Breeder</button>
+      </div>
+    </div>
+    <div id="search-count"></div>
+    <div id="search-results"></div>
+  </section>
+
+  <!-- NEWS -->
+  <section class="view" id="view-news">
+    <h2 class="view-title">News &amp; Commentary</h2>
+    <div id="news-list"><div class="empty-state">Loading…</div></div>
+    <div id="news-comments"></div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="view" id="view-about">
+    <h2 class="view-title">About</h2>
+    <div class="about-copy">
+      <p>IrishBredEventers has tracked the performance of Irish-bred horses across the world's eventing circuits for close to twenty years — first as a set of spreadsheets, then a weekly Facebook round-up read by thousands of breeders, owners and riders every Monday morning.</p>
+      <p>This site is that same weekly results service, given a permanent, searchable home. It stays independent, stays free for breeders and owners to use, and stays in the same voice it's always had — because that's what made it worth reading in the first place.</p>
+      <p>Every result here traces back to the horse's breeding, so a mare sold as a foal in 2009 is just as easy to find as this week's winner.</p>
+    </div>
+    <div class="contact-block" id="advertise">
+      <h3>Advertise</h3>
+      <div class="contact-row"><span>Large business</span><span>Headline banner across every page, for feed, tack and other national brands.</span></div>
+      <div class="contact-row"><span>Small breeder or business</span><span>Side and end-of-results slots, with their own lower pricing. Get in touch for current rates.</span></div>
+    </div>
+
+    <div class="contact-block">
+      <h3>Contact</h3>
+      <div class="contact-row"><span>Email</span><span><a href="mailto:results@irishbredeventing.ie">results@irishbredeventing.ie</a></span></div>
+      <div class="contact-row"><span>Phone</span><span>+353 (0)xx xxx xxxx</span></div>
+      <div class="contact-row"><span>Facebook</span><span>Irish Bred Eventing Results</span></div>
+      <div class="contact-row"><span>Advertising</span><span>Ads and sponsorship — get in touch for current rates.</span></div>
+    </div>
+
+    <div class="signup-slot"></div>
+
+    <div class="contact-block" id="privacy">
+      <h3>Privacy</h3>
+      <p class="privacy-copy">If you sign up for results emails we keep only your email address, use it only to send a link when new results are published, and never share or sell it. Every email has an unsubscribe link, and unsubscribing deletes your address. Comments show the name you give and your comment once approved. Corrections forms keep your email only if you add it, so we can reply. To have anything removed, email us.</p>
+    </div>
+  </section>
+
+</main>
+<aside class="results-rail" aria-label="Adverts"><div><div class="rail-slot" id="rail-5"></div><div class="rail-slot" id="rail-6"></div><div class="rail-slot" id="rail-7"></div><div class="rail-slot" id="rail-8"></div></div></aside>
+</div>
+
+<footer class="site-foot">
+  <div class="wrap foot-in">
+    <div><b class="serif" style="font-size:20px;">IrishBredEventers</b><div>Every Irish-bred result, free for breeders.</div></div>
+    <div>
+      <a href="mailto:results@irishbredeventing.ie">results@irishbredeventing.ie</a><br>
+      Advertising and sponsorship: get in touch for current rates.<br>
+      <span class="foot-privacy">We keep only what you send us: an email address for results emails, and approved comments. <a href="/about#privacy" data-link>Privacy</a></span><br>
+      <a class="foot-btn" href="/admin/">Owner area</a>
+    </div>
+  </div>
+</footer>
+
+<template id="signup-template">
+  <form class="signup">
+    <h3>Get each week's results by email</h3>
+    <p>A short notification with a link to the new results, sent the moment they are published. Free, and you can unsubscribe any time.</p>
+    <div class="signup-row">
+      <input type="email" name="email" required placeholder="your@email.com" aria-label="Your email">
+      <button type="submit">Sign me up</button>
+    </div>
+    <div class="ts-slot"></div>
+    <div class="signup-note">We'll only ever use it to send the weekly results. No sharing, no selling.</div>
+    <div class="signup-done" role="status"></div>
+  </form>
+</template>
+
+<!-- Article overlay -->
+<div class="overlay" id="article-overlay">
+  <div class="article-modal-card" id="article-modal-card" role="dialog" aria-modal="true"></div>
+</div>
+
+<!-- Horse profile overlay -->
+<div class="overlay" id="overlay">
+  <div class="profile-card" id="profile-card" role="dialog" aria-modal="true"></div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
