@@ -2,7 +2,7 @@
 
 A permanent, searchable home for Charlie Ripman's weekly Irish Bred Eventing Results.
 
-- **Hosting:** Cloudflare Pages (static pages) + Pages Functions (server code)
+- **Hosting:** Cloudflare Workers with static assets (pages in `public/`, server code routed by `src/worker.js`)
 - **Database:** Cloudflare D1 (SQLite, with FTS5 full-text search)
 - **Images:** Cloudflare R2 (news photos, ad images)
 - **Owner login:** Cloudflare Access with an emailed one-time code
@@ -22,7 +22,8 @@ public/               The website (served as static files)
   css/site.css        Styles from the approved mockup
   js/app.js           Public site behaviour
   js/admin.js         Owner area behaviour
-functions/            Server code (Pages Functions). Each file is a URL.
+src/worker.js         Worker entry: sends /api/* and /media/* to the handlers in functions/
+functions/            Server code, one file per URL
   api/…               Public API: results, search, news, ads, comments, corrections, sign-up
   api/admin/…         Owner API: upload, publish, verify, news, ads, comments, corrections
   media/[[path]].js   Serves R2 images at /media/…
@@ -51,7 +52,7 @@ npm install
 cp .dev.vars.example .dev.vars        # local settings: skips login and spam check on localhost
 npm run db:migrate:local              # create the tables
 npm run db:seed:local                 # load the sample week
-npm run dev                           # http://localhost:8788  (owner area: /admin/)
+npm run dev                           # http://localhost:8787  (owner area: /admin/)
 npm test                              # parser, Word reader, search and login tests
 ```
 
@@ -61,54 +62,52 @@ npm test                              # parser, Word reader, search and login te
 
 Do these once, in order. Everything is on the free plans to start.
 
-### 1. Database and image storage
-- [ ] `npx wrangler login`
-- [ ] `npx wrangler d1 create irishbredeventers` → copy the `database_id` into `wrangler.toml`
-- [ ] `npx wrangler r2 bucket create irishbredeventers-media`
-- [ ] `npm run db:migrate:remote` (creates the tables)
-- [ ] Optional, for the test launch: `npm run db:seed:remote` (loads the sample week; remove it later from the owner area with "Remove this upload", and delete the sample news posts)
-- [ ] Commit and push the `wrangler.toml` change
+### 1. Worker (already connected to GitHub)
+- [ ] Cloudflare dashboard → **Workers & Pages** → the `irishbredeventers` Worker → **Settings → Build**
+- [ ] Build command: *(leave empty)*. Deploy command: `npx wrangler deploy`. Branch: `main`
+- [ ] The Worker name in the dashboard must match `"name"` in `wrangler.jsonc` (`irishbredeventers`)
+- [ ] Push to `main` → it deploys. The first deploy also creates the D1 database and the R2 bucket
 
-### 2. Pages project
-- [ ] Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git** → pick this repo
-- [ ] Production branch: `main`. Framework preset: **None**. Build command: *(leave empty)*. Build output directory: `public`
-- [ ] Deploy. Bindings (D1 `DB`, R2 `MEDIA`) and variables come from `wrangler.toml`
-- [ ] Open `https://irishbredeventers.pages.dev` and check the home page loads
+### 2. Create the tables (once, after the first deploy)
+- [ ] On your computer: `npx wrangler login`, then `npm run db:migrate:remote`
+- [ ] Optional, for the test launch: `npm run db:seed:remote` (loads the sample week; remove it later from the owner area with "Remove this upload", and delete the sample news posts)
+- [ ] Open `https://irishbredeventers.<your-subdomain>.workers.dev` and check results show
+
+Until the tables exist, the pages load but results and news show an error.
 
 ### 3. Owner login (Cloudflare Access)
 - [ ] Dashboard → **Zero Trust** → pick a team name (this gives you `yourteam.cloudflareaccess.com`)
 - [ ] **Settings → Authentication** → add **One-time PIN** (the emailed login code)
 - [ ] **Access → Applications → Add → Self-hosted**. Add these destinations to the **one** application:
-  - `irishbredeventers.pages.dev/admin`
-  - `irishbredeventers.pages.dev/api/admin`
-  - `*.irishbredeventers.pages.dev/admin` and `*.irishbredeventers.pages.dev/api/admin` (preview builds)
+  - `irishbredeventers.<your-subdomain>.workers.dev/admin`
+  - `irishbredeventers.<your-subdomain>.workers.dev/api/admin`
   - later, the same two paths on the .ie domain
 - [ ] Policy: **Allow**, include **Emails**: Charlie's and Emer's addresses
 - [ ] Copy the application's **Audience (AUD) tag**
-- [ ] In `wrangler.toml` set `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, and `ADMIN_EMAILS` (Charlie's and Emer's, comma separated). Push.
+- [ ] In `wrangler.jsonc` set `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, and `ADMIN_EMAILS` (Charlie's and Emer's, comma separated). Push.
 - [ ] Test: open `/admin/` in a private window → you should get the email-code login
 
 The owner API checks the Access login itself too, so it stays closed even if the Access rule is ever wrong.
 
 ### 4. Spam protection (Turnstile)
-- [ ] Dashboard → **Turnstile** → **Add widget** → add the pages.dev hostname (and the .ie later) → mode **Managed**
-- [ ] Put the **site key** in `wrangler.toml` as `TURNSTILE_SITE_KEY` and push
-- [ ] Add the **secret key**: Pages project → **Settings → Variables and Secrets** → add secret `TURNSTILE_SECRET`
+- [ ] Dashboard → **Turnstile** → **Add widget** → add the workers.dev hostname (and the .ie later) → mode **Managed**
+- [ ] Put the **site key** in `wrangler.jsonc` as `TURNSTILE_SITE_KEY` and push
+- [ ] Add the **secret key**: Worker → **Settings → Variables and Secrets** → add secret `TURNSTILE_SECRET`
 - [ ] Without the secret, the public forms refuse posts (they fail closed)
 
 ### 5. Email (results notifications)
 - [ ] Choose Resend or Brevo (check current pricing; both have free tiers)
 - [ ] Verify the sending domain with them (they give you DNS records to add in Cloudflare)
-- [ ] Set `MAIL_PROVIDER` and `MAIL_FROM` in `wrangler.toml`, push
-- [ ] Add secret `MAIL_API_KEY` in the Pages project settings
+- [ ] Set `MAIL_PROVIDER` and `MAIL_FROM` in `wrangler.jsonc`, push
+- [ ] Add secret `MAIL_API_KEY` in the Worker settings
 - [ ] Test: sign up on the site → confirm email arrives → publish a small upload with "Email subscribers" ticked
 
 Until `MAIL_API_KEY` is set, sign-ups are stored but no email is sent (the owner area says "email not set up yet").
 
 ### 6. Domain
 - [ ] Buy the .ie through Smarthost, then point its nameservers at Cloudflare (add the site in Cloudflare first to get them)
-- [ ] Pages project → **Custom domains** → add the .ie
-- [ ] Update `SITE_URL` in `wrangler.toml`, add the .ie paths to the Access application and the Turnstile widget
+- [ ] Worker → **Settings → Domains & Routes** → add the .ie as a custom domain
+- [ ] Update `SITE_URL` in `wrangler.jsonc`, add the .ie paths to the Access application and the Turnstile widget
 - [ ] Business mailbox for the contact address: Cloudflare **Email Routing** can forward results@… to an existing inbox for free, or use a paid mailbox
 - [ ] Update the contact email and phone in `public/index.html` (About page and footer)
 

@@ -1,0 +1,45 @@
+// IrishBredEventers on Cloudflare Workers.
+// Static pages come from /public. Only /api/* and /media/* run the Worker code (src/worker.js).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "irishbredeventers",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/media/*"]
+  },
+  // D1 database. With no database_id, the first deploy creates it and later deploys reuse it.
+  // Create the tables once after that: npm run db:migrate:remote
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "irishbredeventers",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // R2 bucket for news photos and ad images (created on first deploy if missing).
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "irishbredeventers-media"
+    }
+  ],
+  "vars": {
+    // Public web address, used in email links. Change once the .ie domain is live.
+    "SITE_URL": "https://irishbredeventers.workers.dev",
+    // Cloudflare Access (Zero Trust) team domain and the Application Audience (AUD) tag for /admin.
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": "",
+    // Only these emails may use the owner area (comma separated).
+    "ADMIN_EMAILS": "",
+    // Turnstile site key (public). The secret is added as a secret: TURNSTILE_SECRET.
+    "TURNSTILE_SITE_KEY": "",
+    // Mailing service: "resend" or "brevo". The API key is added as a secret: MAIL_API_KEY.
+    "MAIL_PROVIDER": "resend",
+    "MAIL_FROM": "IrishBredEventers <results@irishbredeventing.ie>"
+  },
+  "observability": { "enabled": true }
+}
