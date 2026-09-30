@@ -30,8 +30,12 @@
   let summary = null;
   const refreshSummary = () => loadSummary().then(s => { summary = s; }).catch(showLoginError);
 
+  // The owner API answers "Not found" once the login has run out (it never says why to strangers).
   function showLoginError(e) {
-    document.querySelector('main').insertAdjacentHTML('afterbegin', `<div class="notice">${esc(e.message)}</div>`);
+    const msg = e.message === 'Not found'
+      ? 'Your login has run out. <a href="/signin">Log in again</a>, then reload this page.'
+      : esc(e.message);
+    document.querySelector('main').insertAdjacentHTML('afterbegin', `<div class="notice">${msg}</div>`);
   }
 
   const btnMsg = (el, t) => { el.textContent = t; };

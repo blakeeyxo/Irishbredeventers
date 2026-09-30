@@ -1,5 +1,6 @@
 // IrishBredEventers on Cloudflare Workers.
-// Static pages come from /public. Only /api/* and /media/* run the Worker code (src/worker.js).
+// Static pages come from /public. /api/*, /media/*, the owner area (/admin) and the sign-in path
+// run the Worker code first (src/worker.js), which returns 404 for /admin to anyone not logged in.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "irishbredeventers",
@@ -9,7 +10,7 @@
     "directory": "./public",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/media/*"]
+    "run_worker_first": ["/api/*", "/media/*", "/admin", "/admin/*", "/signin", "/signin/*"]
   },
   // D1 database. With no database_id, the first deploy creates it and later deploys reuse it.
   // Create the tables once after that: npm run db:migrate:remote
@@ -30,7 +31,8 @@
   "vars": {
     // Public web address, used in email links. Change once the .ie domain is live.
     "SITE_URL": "https://irishbredeventers.workers.dev",
-    // Cloudflare Access (Zero Trust) team domain and the Application Audience (AUD) tag for /admin.
+    // Cloudflare Access (Zero Trust) team domain and the Application Audience (AUD) tag of the
+    // Access application that guards /signin (not /admin: /admin must stay a plain 404 to the public).
     "ACCESS_TEAM_DOMAIN": "",
     "ACCESS_AUD": "",
     // Only these emails may use the owner area (comma separated).

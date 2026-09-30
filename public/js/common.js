@@ -1,4 +1,4 @@
-/* Shared helpers for the public site and the owner area. */
+/* Shared helpers used by every page. */
 (function () {
   const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 

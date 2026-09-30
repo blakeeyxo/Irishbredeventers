@@ -1,8 +1,14 @@
 /*
  * Worker entry point.
  * Static pages in /public are served by Workers static assets (see wrangler.jsonc).
- * Only /api/* and /media/* reach this code; it hands each request to the matching
- * handler in /functions, which use the Pages Functions calling style.
+ * Only /api/*, /media/*, the owner area (/admin) and the sign-in path reach this code;
+ * it hands each API request to the matching handler in /functions, which use the
+ * Pages Functions calling style.
+ *
+ * The owner area is invisible to the public: /admin and /api/admin answer a plain 404
+ * to anyone without a valid Cloudflare Access login, exactly like a page that doesn't exist.
+ * Cloudflare Access guards /signin only; after the emailed-code login it sends the
+ * owner on to /admin/.
  */
 import * as config from '../functions/api/config.js';
 import * as home from '../functions/api/home.js';
@@ -19,7 +25,7 @@ import * as subscribe from '../functions/api/subscribe.js';
 import * as subscribeConfirm from '../functions/api/subscribe/confirm.js';
 import * as unsubscribe from '../functions/api/unsubscribe.js';
 import * as media from '../functions/media/[[path]].js';
-import * as adminMiddleware from '../functions/api/admin/_middleware.js';
+import { verifyAccess } from '../lib/access.js';
 import * as adminParse from '../functions/api/admin/parse.js';
 import * as adminImport from '../functions/api/admin/import.js';
 import * as adminImportCheck from '../functions/api/admin/import/check.js';
@@ -72,27 +78,58 @@ function match(pathname) {
   return null;
 }
 
+// Keep in step with "run_worker_first" in wrangler.jsonc and the Access application.
+const SIGN_IN = /^\/signin(\/|$)/;
+const OWNER_PAGES = /^\/admin(\/|$)/;
+const OWNER_API = /^\/api\/admin(\/|$)/;
+
+const PRIVATE = { 'cache-control': 'no-store', 'x-robots-tag': 'noindex, nofollow' };
 const jsonError = (message, status) => new Response(JSON.stringify({ error: message }), {
-  status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }
+  status, headers: { 'content-type': 'application/json; charset=utf-8', ...PRIVATE }
 });
+const notFoundPage = () => new Response('Not found', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8', ...PRIVATE } });
+
+async function ownerLogin(request, env) {
+  try { return await verifyAccess(request, env); } catch (e) { console.error(e); return null; }
+}
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const found = match(url.pathname);
+    const path = url.pathname;
+
+    // Owner area: decided before anything else, so a stranger learns nothing (no 401, 405 or 503).
+    const ownerPage = OWNER_PAGES.test(path), ownerApi = OWNER_API.test(path), signIn = SIGN_IN.test(path);
+    let user = null;
+    if (ownerPage || ownerApi || signIn) {
+      user = await ownerLogin(request, env);
+      if (!user) return ownerApi ? jsonError('Not found', 404) : notFoundPage();
+      if (signIn) return new Response(null, { status: 302, headers: { location: '/admin/', ...PRIVATE } });
+      if (ownerPage) {
+        const res = await env.ASSETS.fetch(request);
+        const out = new Response(res.body, res);
+        for (const [k, v] of Object.entries(PRIVATE)) out.headers.set(k, v);
+        return out;
+      }
+    }
+
+    const found = match(path);
     if (!found) return jsonError('Not found', 404);
     const handler = found.mod[METHOD_EXPORT[request.method]] || found.mod.onRequest;
     if (!handler) return jsonError('Method not allowed', 405);
     if (!env.DB) return jsonError('The database is not connected yet.', 503);
 
     const context = {
-      request, env, params: found.params, data: {},
+      request, env, params: found.params, data: { user },
       waitUntil: p => ctx.waitUntil(p),
       next: () => handler(context)
     };
     try {
-      if (url.pathname.startsWith('/api/admin/')) return await adminMiddleware.onRequest(context);
-      return await handler(context);
+      const res = await handler(context);
+      if (!ownerApi) return res;
+      const out = new Response(res.body, res);
+      for (const [k, v] of Object.entries(PRIVATE)) out.headers.set(k, v);
+      return out;
     } catch (e) {
       console.error(e);
       return jsonError('Something went wrong on the server.', 500);
