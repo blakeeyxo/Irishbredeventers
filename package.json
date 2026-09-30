@@ -9,7 +9,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply irishbredeventers --remote",
     "parse": "node scripts/parse-file.mjs",
     "test": "node --test tests/*.test.js",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler d1 migrations apply irishbredeventers --remote && wrangler deploy",
     "db:reset:local": "rm -rf .wrangler/state/v3/d1 && wrangler d1 migrations apply irishbredeventers --local",
     "import:local": "node scripts/import-file.mjs",
     "ads:local": "node scripts/load-example-ads.mjs",
