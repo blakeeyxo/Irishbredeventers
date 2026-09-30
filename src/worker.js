@@ -20,7 +20,8 @@ import * as unsubscribe from '../functions/api/unsubscribe.js';
 import * as media from '../functions/media/[[path]].js';
 import * as adminMiddleware from '../functions/api/admin/_middleware.js';
 import * as adminParse from '../functions/api/admin/parse.js';
-import * as adminPublish from '../functions/api/admin/publish.js';
+import * as adminImport from '../functions/api/admin/import.js';
+import * as adminImportCheck from '../functions/api/admin/import/check.js';
 import * as adminBatches from '../functions/api/admin/batches.js';
 import * as adminUnverified from '../functions/api/admin/unverified.js';
 import * as adminNews from '../functions/api/admin/news.js';
@@ -44,7 +45,8 @@ const ROUTES = {
   '/api/subscribe/confirm': subscribeConfirm,
   '/api/unsubscribe': unsubscribe,
   '/api/admin/parse': adminParse,
-  '/api/admin/publish': adminPublish,
+  '/api/admin/import': adminImport,
+  '/api/admin/import/check': adminImportCheck,
   '/api/admin/batches': adminBatches,
   '/api/admin/unverified': adminUnverified,
   '/api/admin/news': adminNews,

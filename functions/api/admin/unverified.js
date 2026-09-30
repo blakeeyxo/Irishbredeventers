@@ -14,12 +14,16 @@ export async function onRequestPost({ env, request }) {
   const b = await readJson(request);
   const id = Number(b && b.id);
   if (!Number.isInteger(id)) return bad('Bad id');
-  const row = await env.DB.prepare('SELECT batch_id FROM placings WHERE id = ?').bind(id).first();
+  const row = await env.DB.prepare('SELECT batch_id, result_id FROM placings WHERE id = ?').bind(id).first();
   if (!row) return bad('Not found', 404);
 
   if (b.remove) {
-    await env.DB.prepare('DELETE FROM placings WHERE id = ?').bind(id).run();
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM placings WHERE id = ?').bind(id),
+      env.DB.prepare('DELETE FROM results WHERE id = ?').bind(row.result_id)
+    ]);
   } else {
+    if (b.verify && row.result_id) await env.DB.prepare('UPDATE results SET verified = 1 WHERE id = ?').bind(row.result_id).run();
     const f = b.fields || {};
     const sets = [], vals = [];
     for (const k of EDITABLE) if (k in f) { sets.push(`${k} = ?`); vals.push(str(f[k], 240)); }

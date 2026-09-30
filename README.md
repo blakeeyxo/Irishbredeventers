@@ -25,19 +25,25 @@ public/               The website (served as static files)
 src/worker.js         Worker entry: sends /api/* and /media/* to the handlers in functions/
 functions/            Server code, one file per URL
   api/…               Public API: results, search, news, ads, comments, corrections, sign-up
-  api/admin/…         Owner API: upload, publish, verify, news, ads, comments, corrections
+  api/admin/…         Owner API: read, check and import results, verify, news, ads, comments, corrections, enquiries
   media/[[path]].js   Serves R2 images at /media/…
 lib/
-  parser.js           Reads Charlie's results text into placings (never keeps the rider)
+  parser.js           Reads Charlie's results text (2026 style, 2010 archive style) into rows
+  names.js            Name matching: normalising, near-matches, (ISH)/[TIH]/[was …] tags, counties
+  import-plan.js      Works out what an import will add and which names need a same/different answer
+  import.js           Saves an import into the breeding tables and the results pages (safe to repeat)
   docx.js             Gets the text out of a Word .docx (no packages needed)
-  results.js          Saves an upload as a batch, removes a batch
+  results.js          Queries for the public results pages; removes a whole upload
   access.js           Checks the Cloudflare Access login on owner API calls
   mail.js             Sends email through Resend or Brevo
 migrations/           D1 database tables
-seed/sample.sql       Sample week from the mockup (127 horses, 6 news posts)
+seed/
+  sample-results-2-weeks.txt   Two fictional weeks in Charlie's format, covering every variation
+  example-ads/                 Example ad images (invented businesses, marked "Example ad")
 scripts/
   parse-file.mjs      Test the parser on one of Charlie's files: npm run parse -- file.docx
-  build-seed.mjs      Rebuilds seed/sample.sql from the mockup
+  import-file.mjs     Import a file into the LOCAL site: npm run import:local -- file.txt
+  load-example-ads.mjs  Load the example ads into the LOCAL site: npm run ads:local
 tests/                npm test
 ```
 
@@ -50,11 +56,16 @@ Needs Node.js 20 or newer.
 ```bash
 npm install
 cp .dev.vars.example .dev.vars        # local settings: skips login and spam check on localhost
-npm run db:migrate:local              # create the tables
-npm run db:seed:local                 # load the sample week
+npm run db:migrate:local              # create the tables (LOCAL database only)
 npm run dev                           # http://localhost:8787  (owner area: /admin/)
-npm test                              # parser, Word reader, search and login tests
+# in a second terminal, while dev is running:
+npm run import:local -- seed/sample-results-2-weeks.txt   # two fictional weeks (asks about near-matches;
+                                                          #   add --same sire,dam to answer "same" for those)
+npm run ads:local                     # example ads
+npm test                              # parser, matching, Word reader, search and login tests
 ```
+
+`npm run db:reset:local` wipes the local database and applies every migration again.
 
 ---
 
@@ -70,7 +81,6 @@ Do these once, in order. Everything is on the free plans to start.
 
 ### 2. Create the tables (once, after the first deploy)
 - [ ] On your computer: `npx wrangler login`, then `npm run db:migrate:remote`
-- [ ] Optional, for the test launch: `npm run db:seed:remote` (loads the sample week; remove it later from the owner area with "Remove this upload", and delete the sample news posts)
 - [ ] Open `https://irishbredeventers.<your-subdomain>.workers.dev` and check results show
 
 Until the tables exist, the pages load but results and news show an error.
@@ -116,32 +126,20 @@ Until `MAIL_API_KEY` is set, sign-ups are stored but no email is sent (the owner
 ## Charlie's weekly job
 
 1. Go to `/admin/` and log in with the emailed code.
-2. **Results** tab → choose the Word file (or paste the text) → it reads straight away.
-3. Check the table. Pink rows could not be read cleanly and are ticked **Unverified**. Tick or untick any row.
-4. Leave "Email subscribers" ticked and press **Publish**.
+2. **Results** tab → paste the week's results exactly as written, or choose the Word file. Press **Read results**.
+3. Check the table. Pink rows could not be read cleanly and are ticked **Unverified**; gold rows have a note (no dam sire, no scores, scores that don't add up). Press **Fix** on any row to correct a field.
+4. If a name looks like one already on file ("Sligo Candyboy" vs "Sligo Candy Boy", "Guidam" vs "Luidam"), choose **Same** or **Different**. Confirm stays locked until every one is answered. "Same" answers are remembered, so next week isn't asked again.
+5. Press **Confirm and save**. The summary shows how many results, horses, sires, dams and breeders were added. Pasting the same week twice adds nothing.
 
-Fix unverified rows later in the **Unverified** tab: correct the details and press **Save and mark as verified**. The horse moves up into its class. A wrong upload can be removed whole under **Published uploads**.
+Fix unverified rows later in the **Unverified** tab. A wrong upload can be removed whole under **Published uploads**.
 
-### How the file should look
+### Breeding data
 
-```
-England
-Thoresby International and One Day Event, 3rd – 5th April 2026
-CCI 4* Short Sec G
-4th Master Smart (was Ballinaclough Satisfied) ISH 2013 gelding by Satisfation 1 (HANN) out of Kilpatrick Pip (ISH)[TIH] by Master Imp (TB). Breeder: Edmond Crotty. Tara Dixon (IRL) 38.7, 4, 8.8 = 51.5
-```
+Every saved result also builds the breeding records: `horses` (with former names in `horse_aliases`), `sires`, `dams` (each linked to her own sire, the dam sire), `breeders` and `results`. Names are matched in a normalised form (lowercase, no punctuation, single spaces), so "Flex A Bill" and "Flex-a-Bill" are one sire. A horse is one record per name + year of birth + sire + dam.
 
-- A country on its own line, then the event with its dates, then the class, then one sentence per placing starting with the position.
-- The rider is read past and never stored.
-- Put a full stop after the breeder's name, otherwise the site can't tell where the breeder ends and the rider starts. That row gets flagged, never guessed.
-- A line saying just `Unverified` marks every placing after it as unverified.
-- Long paragraphs (commentary) are skipped and listed under "lines not used", so nothing disappears silently.
+## Testing the parser on Charlie's files
 
----
-
-## First job once it's running: test with Charlie's real files
-
-The parser reads the mockup's 127 sample horses with 124 clean and 3 correctly flagged. It still needs Charlie's own files:
+Tested on Charlie's real files: the 6 April 2026 file reads 124 of 127 placings cleanly and the 2 August 2010 archive reads 74 of 80. Every flagged row has something genuinely missing (no breeding given, "out of" twice, breeding not found). To check a new file without touching any database:
 
 ```bash
 npm run parse -- "path/to/6 April 2026.docx"
@@ -158,7 +156,7 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
 ## Decisions (from the brief, not to reopen)
 
 - Menu: Home, Results, News, About. Search box on every page.
-- Riders are not shown, not searchable and not stored.
+- Riders are not shown on the public site and not searchable. Since the breeding-data build they are stored in `results` (rider name and country), as requested.
 - No stallion page (stallion ads are just ads). No donation button. No scheduled newsletter.
 - Unverified results always sit at the very end under their own heading.
 - Comments only appear after approval.

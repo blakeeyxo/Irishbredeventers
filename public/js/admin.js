@@ -2,7 +2,6 @@
 (function () {
   const { esc, api, ordinal, niceDate, scoreText } = window.IBE;
   const $ = id => document.getElementById(id);
-  let checkRows = [];
 
   /* ---------- Tabs ---------- */
   const loaders = { results: loadBatches, unverified: loadUnverified, news: loadNews, ads: loadAds, comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
@@ -37,11 +36,14 @@
 
   const btnMsg = (el, t) => { el.textContent = t; };
 
-  /* ---------- Results upload ---------- */
+  /* ---------- Weekly results: paste or upload → preview → confirm ---------- */
+  // State for the current paste. Nothing is saved until CONFIRM.
+  let imp = null; // { rows, weekLabel, notes, events, classes, questions, decisions, onlyProblems, editing }
+
   $('adm-year').value = new Date().getFullYear();
   $('adm-clear').addEventListener('click', () => {
     $('parse-form').reset(); $('adm-year').value = new Date().getFullYear();
-    checkRows = []; renderPreview(); btnMsg($('adm-msg'), '');
+    imp = null; renderImport(); btnMsg($('adm-msg'), '');
   });
   $('adm-file').addEventListener('change', () => { if ($('adm-file').files[0]) $('parse-form').requestSubmit(); });
 
@@ -54,60 +56,188 @@
       const d = await api('/api/admin/parse', { method: 'POST', form });
       $('adm-text').value = d.text;
       $('adm-file').value = '';
-      checkRows = d.rows;
-      renderPreview(d);
-      btnMsg($('adm-msg'), d.rows.length ? '' : 'No placings found. Each placing needs to start with its position, for example "1st Horse Name ISH 2015 gelding by Sire out of Dam by Dam Sire. Breeder: Name."');
+      imp = { rows: d.rows.map(r => ({ ...r, skip: false })), weekLabel: d.weekLabel || '', notes: d.notes, events: d.events, classes: d.classes,
+        questions: [], decisions: {}, onlyProblems: false, editing: null, summary: null };
+      btnMsg($('adm-msg'), d.rows.length ? '' : 'No placings found. Each placing starts with its position, e.g. "1st Westwick Rebel [ISH] - 2014 gelding by …".');
+      await runCheck();
       if (d.rows.length) $('adm-preview').scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
       btnMsg($('adm-msg'), err.message);
     }
   });
 
-  function renderPreview(d) {
-    const box = $('adm-preview');
-    if (!checkRows.length) { box.innerHTML = ''; return; }
-    const bad = checkRows.filter(r => r.issues.length).length;
-    const subs = summary ? summary.subscribers : 0;
-    box.innerHTML = `<div style="margin-top:30px;">
-      <h3>Check before publishing</h3>
-      <p class="intro"><b>${checkRows.length}</b> placings found in <b>${d.events}</b> event${d.events === 1 ? '' : 's'} and <b>${d.classes}</b> class${d.classes === 1 ? '' : 'es'}. <b>${bad}</b> need checking and are ticked "Unverified". Tick or untick any row. Unverified rows go to the end of the results.</p>
-      <table class="adm-table stack"><tr><th>Pos</th><th>Horse</th><th>Sire · dam (dam sire)</th><th>Breeder</th><th>Score</th><th>Event · class</th><th>Unverified</th></tr>
-      ${checkRows.map((r, i) => `<tr class="${r.issues.length ? 'bad' : ''}">
-        <td data-label="Pos">${esc(ordinal(r.position))}</td>
-        <td data-label="Horse"><b>${esc(r.horse_name || '?')}</b>${r.former_name ? `<br><small>was ${esc(r.former_name)}</small>` : ''}<br><small>${esc([r.breed, r.foaled, r.sex].filter(Boolean).join(' '))}</small></td>
-        <td data-label="Breeding">${esc(r.sire || '?')} · ${esc(r.dam || '?')} (${esc(r.dam_sire || '–')})</td>
-        <td data-label="Breeder">${esc(r.breeder || '?')}</td>
-        <td data-label="Score">${esc(scoreText(r) || '?')}</td>
-        <td data-label="Event">${esc(r.country || '?')} · ${esc(r.event_name || '?')}<br><small>${esc(r.class_name || '?')}</small>
-          ${r.issues.length ? `<br><small class="iss">${esc(r.issues.join('; '))}</small>` : ''}
-          ${r.warnings.length ? `<br><small class="adm-warn">${esc(r.warnings.join('; '))}</small>` : ''}</td>
-        <td data-label="Unverified"><input type="checkbox" data-i="${i}" ${r.verified ? '' : 'checked'} aria-label="Unverified"></td></tr>`).join('')}
-      </table>
-      ${d.notes.length ? `<details class="adm-notes"><summary>${d.notes.length} line${d.notes.length === 1 ? '' : 's'} not used (commentary or unrecognised)</summary>${d.notes.map(n => `<p>${esc(n)}</p>`).join('')}</details>` : ''}
-      <div class="form" style="margin-top:16px;">
-        <label>Label for this upload<input type="text" id="adm-label" maxlength="120" value="Results ${esc(new Date().toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' }))}"></label>
-        <label style="display:flex;gap:8px;align-items:center;font-weight:600;"><input type="checkbox" id="adm-email" ${subs ? 'checked' : ''} style="width:auto;"> Email subscribers a link to the new results (${subs} subscriber${subs === 1 ? '' : 's'}${summary && !summary.mailReady ? ', email not set up yet' : ''})</label>
-        <button class="btn" type="button" id="adm-publish">Publish ${checkRows.length} results</button>
-        <div class="form-done" id="pub-msg" role="status"></div>
-      </div></div>`;
-    box.querySelectorAll('input[data-i]').forEach(cb => cb.addEventListener('change', () => { checkRows[cb.dataset.i].verified = !cb.checked; }));
-    $('adm-publish').addEventListener('click', publish);
+  // Ask the server which names already exist and which look like an existing record.
+  let checkSeq = 0;
+  async function runCheck() {
+    if (!imp || !imp.rows.length) { renderImport(); return; }
+    const seq = ++checkSeq;
+    try {
+      const d = await api('/api/admin/import/check', { method: 'POST', body: { rows: imp.rows, decisions: imp.decisions } });
+      if (seq !== checkSeq || !imp) return;
+      imp.questions = d.questions;
+      imp.newCounts = d.newCounts;
+    } catch (err) {
+      btnMsg($('adm-msg'), err.message);
+    }
+    renderImport();
+  }
+  let recheckTimer;
+  const recheckSoon = () => { clearTimeout(recheckTimer); recheckTimer = setTimeout(runCheck, 500); };
+
+  const tagged = (n, b, t) => n ? `${esc(n)}${b ? ` <small>(${esc(b)})</small>` : ''}${t ? ' <small class="tih">TIH</small>' : ''}` : '<span class="iss">?</span>';
+  const EDIT_FIELDS = [
+    ['position', 'Place'], ['horse_name', 'Horse'], ['former_name', 'Former name(s)'], ['breed', 'Breed code'], ['tih_flag', 'Horse TIH', 'check'],
+    ['foaled', 'Year'], ['sex', 'Sex'], ['sire', 'Sire'], ['sire_breed', 'Sire code'], ['sire_tih', 'Sire TIH', 'check'],
+    ['dam', 'Dam'], ['dam_breed', 'Dam code'], ['dam_tih', 'Dam TIH', 'check'], ['dam_sire', 'Dam sire'], ['dam_sire_breed', 'Dam sire code'],
+    ['dam_sire_tih', 'Dam sire TIH', 'check'], ['breeder', 'Breeder'], ['breeder_county', 'County'], ['rider_name', 'Rider'], ['rider_country', 'Rider country'],
+    ['dressage', 'Dressage'], ['show_jumping', 'Show jumping'], ['cross_country', 'Cross country'], ['score', 'Total'],
+    ['class_name', 'Class'], ['event_name', 'Event'], ['country', 'Country'], ['start_date', 'Event start (YYYY-MM-DD)']
+  ];
+
+  function rowHTML(r, i) {
+    const status = r.skip ? 'skip' : r.issues.length ? 'bad' : r.warnings.length ? 'warn' : '';
+    const edit = imp.editing === i ? `<tr class="edit-row"><td colspan="8"><div class="adm-row-edit">${EDIT_FIELDS.map(([k, l, t]) => t === 'check'
+      ? `<label class="chk"><input type="checkbox" data-f="${k}" data-i="${i}" ${r[k] ? 'checked' : ''}> ${l}</label>`
+      : `<label>${l}<input data-f="${k}" data-i="${i}" value="${esc(r[k] ?? '')}"></label>`).join('')}</div>
+      <div class="adm-actions"><button class="btn sm" type="button" data-done="${i}">Done</button></div></td></tr>` : '';
+    return `<tr class="${status}">
+      <td data-label="Place">${esc(ordinal(r.position))}</td>
+      <td data-label="Horse"><b>${esc(r.horse_name || '?')}</b>${r.breed ? ` <small>(${esc(r.breed)})</small>` : ''}${r.tih_flag ? ' <small class="tih">TIH</small>' : ''}
+        ${r.former_name ? `<br><small>was ${esc(r.former_name)}</small>` : ''}<br><small>${esc([r.foaled, r.sex].filter(Boolean).join(' ') || 'year and sex?')}</small></td>
+      <td data-label="Sire × Dam">${tagged(r.sire, r.sire_breed, r.sire_tih)} × ${tagged(r.dam, r.dam_breed, r.dam_tih)}<br><small>dam by ${r.dam_sire ? tagged(r.dam_sire, r.dam_sire_breed, r.dam_sire_tih) : '–'}</small></td>
+      <td data-label="Breeder">${r.breeder ? esc(r.breeder) : '–'}${r.breeder_county ? `<br><small>${esc(r.breeder_county)}</small>` : ''}</td>
+      <td data-label="Rider">${esc(r.rider_name || '–')}${r.rider_country ? ` <small>${esc(r.rider_country)}</small>` : ''}</td>
+      <td data-label="Score">${esc(scoreText(r) || '–')}</td>
+      <td data-label="Event">${esc(r.event_name || '?')}<br><small>${esc(r.class_name || '?')} · ${esc(r.country || '?')}</small>
+        ${r.issues.length ? `<div class="iss">⚠ ${esc(r.issues.join('; '))}</div>` : ''}
+        ${r.warnings.length ? `<div class="adm-warn">${esc(r.warnings.join('; '))}</div>` : ''}</td>
+      <td data-label="Options" class="opts">
+        <label class="chk"><input type="checkbox" data-unv="${i}" ${r.verified ? '' : 'checked'}> Unverified</label>
+        <label class="chk"><input type="checkbox" data-skip="${i}" ${r.skip ? 'checked' : ''}> Leave out</label>
+        <button class="btn sm alt" type="button" data-edit="${i}">${imp.editing === i ? 'Close' : 'Fix'}</button></td></tr>${edit}`;
   }
 
-  async function publish() {
-    const btn = $('adm-publish');
+  function questionsHTML() {
+    if (!imp.questions.length) return '';
+    const kinds = { sire: 'Sire', dam: 'Dam', breeder: 'Breeder', horse: 'Horse' };
+    const open = imp.questions.filter(q => !imp.decisions[q.key]).length;
+    return `<div class="match-box">
+      <h4>Names that look like ones already on file <span class="${open ? 'iss' : 'ok'}">${open ? `${open} to answer` : 'all answered'}</span></h4>
+      <p class="intro">Choose "Same" if it is the same horse or person spelled differently, or "Different" to keep it as a new record.</p>
+      ${imp.questions.map(q => `<div class="match">
+        <div><b>${esc(kinds[q.kind])}: ${esc(q.name)}</b> <small>${esc(q.context)}</small></div>
+        <div class="match-opts">
+          ${q.candidates.map(c => `<label class="chk"><input type="radio" name="${esc(q.key)}" value="${esc(c.id)}" ${String(imp.decisions[q.key]) === String(c.id) ? 'checked' : ''}>
+            Same as <b>${esc(c.label)}</b> <small>${esc(c.detail || '')}</small></label>`).join('')}
+          <label class="chk"><input type="radio" name="${esc(q.key)}" value="new" ${imp.decisions[q.key] === 'new' ? 'checked' : ''}> Different (new record)</label>
+        </div></div>`).join('')}
+    </div>`;
+  }
+
+  function renderImport() {
+    const box = $('adm-preview');
+    if (!imp) { box.innerHTML = ''; return; }
+    if (imp.summary) {
+      const s = imp.summary;
+      box.innerHTML = `<div class="summary-box">
+        <h4>Saved ${esc(imp.weekLabel || 'this week')}</h4>
+        <div class="summary-grid">
+          <div><b>${s.results}</b><span>results</span></div><div><b>${s.horses}</b><span>new horses</span></div>
+          <div><b>${s.sires}</b><span>new sires</span></div><div><b>${s.dams}</b><span>new dams</span></div><div><b>${s.breeders}</b><span>new breeders</span></div>
+        </div>
+        <p class="intro">${s.alreadySaved ? `${s.alreadySaved} of these results were already saved, so they were left as they were. ` : ''}${s.emailed ? `Emailing ${s.emailed} subscribers now.` : ''}</p>
+        <button class="btn alt" type="button" id="imp-new">Paste another week</button></div>`;
+      $('imp-new').addEventListener('click', () => { imp = null; $('parse-form').reset(); $('adm-year').value = new Date().getFullYear(); renderImport(); window.scrollTo({ top: 0 }); });
+      return;
+    }
+    if (!imp.rows.length) { box.innerHTML = ''; return; }
+    const incl = imp.rows.filter(r => !r.skip);
+    const bad = incl.filter(r => r.issues.length).length, warn = incl.filter(r => !r.issues.length && r.warnings.length).length;
+    const open = imp.questions.filter(q => !imp.decisions[q.key]).length;
+    const subs = summary ? summary.subscribers : 0;
+    const shown = imp.rows.map((r, i) => [r, i]).filter(([r]) => !imp.onlyProblems || r.issues.length || r.warnings.length);
+    const nc = imp.newCounts || {};
+    box.innerHTML = `<div style="margin-top:30px;">
+      <h3>Check before saving</h3>
+      <p class="intro"><b>${incl.length}</b> placings in <b>${imp.events}</b> event${imp.events === 1 ? '' : 's'} and <b>${imp.classes}</b> class${imp.classes === 1 ? '' : 'es'}.
+        <span class="iss">${bad} could not be read cleanly</span> and are ticked Unverified. ${warn} ${warn === 1 ? 'has' : 'have'} notes. Click <b>Fix</b> on any row to correct it.</p>
+      ${questionsHTML()}
+      <div class="adm-bar"><label class="chk"><input type="checkbox" id="imp-only" ${imp.onlyProblems ? 'checked' : ''}> Show only rows with warnings</label>
+        <span>New on file if saved: ${nc.horses ?? '…'} horses, ${nc.sires ?? '…'} sires, ${nc.dams ?? '…'} dams, ${nc.breeders ?? '…'} breeders</span></div>
+      <div class="table-scroll"><table class="adm-table stack imp-table"><tr><th>Place</th><th>Horse</th><th>Sire × Dam</th><th>Breeder</th><th>Rider</th><th>Score</th><th>Event · class</th><th></th></tr>
+      ${shown.map(([r, i]) => rowHTML(r, i)).join('')}</table></div>
+      ${imp.notes.length ? `<details class="adm-notes"><summary>${imp.notes.length} line${imp.notes.length === 1 ? '' : 's'} not used (commentary or notes)</summary>${imp.notes.map(n => `<p>${esc(n)}</p>`).join('')}</details>` : ''}
+      <div class="form confirm-box">
+        <label>Week<input type="text" id="imp-week" maxlength="120" value="${esc(imp.weekLabel)}" placeholder="e.g. Week of 6 April 2026"></label>
+        <label class="chk"><input type="checkbox" id="imp-email" ${subs ? 'checked' : ''}> Email subscribers a link to the new results (${subs} subscriber${subs === 1 ? '' : 's'}${summary && !summary.mailReady ? ', email not set up yet' : ''})</label>
+        <button class="btn gold" type="button" id="imp-confirm" ${open ? 'disabled' : ''}>Confirm and save ${incl.length} results</button>
+        <div class="form-note">${open ? `Answer the ${open} name question${open === 1 ? '' : 's'} above first.` : 'Saving twice is safe: results already on file are not added again.'}</div>
+        <div class="form-done" id="imp-msg" role="status"></div>
+      </div></div>`;
+  }
+
+  // One set of listeners on the preview box handles every control inside it.
+  const box = $('adm-preview');
+  box.addEventListener('change', e => {
+    const t = e.target;
+    if (!imp) return;
+    if (t.id === 'imp-only') { imp.onlyProblems = t.checked; renderImport(); return; }
+    if (t.id === 'imp-week') { imp.weekLabel = t.value; return; }
+    if (t.dataset.unv !== undefined) { imp.rows[t.dataset.unv].verified = !t.checked; return; }
+    if (t.dataset.skip !== undefined) { imp.rows[t.dataset.skip].skip = t.checked; renderImport(); recheckSoon(); return; }
+    if (t.type === 'radio') { imp.decisions[t.name] = t.value === 'new' ? 'new' : t.value; renderImport(); return; }
+    if (t.dataset.f) {
+      const r = imp.rows[t.dataset.i];
+      r[t.dataset.f] = t.type === 'checkbox' ? t.checked : t.value;
+      r.edited = true;
+      recheckSoon();
+    }
+  });
+  box.addEventListener('input', e => { if (e.target.id === 'imp-week' && imp) imp.weekLabel = e.target.value; });
+  box.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || !imp) return;
+    if (b.dataset.edit !== undefined) { const i = Number(b.dataset.edit); imp.editing = imp.editing === i ? null : i; renderImport(); }
+    if (b.dataset.done !== undefined) {
+      const r = imp.rows[b.dataset.done];
+      if (r.edited) {
+        revalidate(r);
+        if (!r.warnings.includes('Edited by hand')) r.warnings = r.warnings.concat('Edited by hand');
+      }
+      imp.editing = null; renderImport();
+    }
+    if (b.id === 'imp-confirm') confirmImport();
+  });
+
+  // After a fix, drop the problems that are now solved. Charlie still decides the Unverified tick.
+  function revalidate(r) {
+    const solved = {
+      'Horse name not found': !!r.horse_name, 'Year or sex not found': !!(r.foaled && r.sex), 'Sex not found': !!r.sex,
+      'Sire not found': !!r.sire, 'Dam not found': !!r.dam, 'Breeding not found': !!(r.sire || r.dam),
+      '"out of" appears twice': !/\bout of\b/i.test(r.dam || ''), 'No event heading above it': !!r.event_name,
+      'No class heading above it': !!r.class_name, 'No country for the event': !!r.country
+    };
+    r.issues = r.issues.filter(x => (x.startsWith('Could not tell') ? !r.breeder : !solved[x]));
+    const warnSolved = { 'No breeder given': !!r.breeder, 'No dam sire given': !!r.dam_sire, 'No scores given': r.score !== null && r.score !== '', 'Sire unknown': !!r.sire };
+    r.warnings = r.warnings.filter(x => !warnSolved[x]);
+  }
+
+  async function confirmImport() {
+    const btn = $('imp-confirm');
     btn.disabled = true;
-    btnMsg($('pub-msg'), 'Publishing…');
+    btnMsg($('imp-msg'), 'Saving…');
     try {
-      const d = await api('/api/admin/publish', { method: 'POST', body: { rows: checkRows, label: $('adm-label').value, notify: $('adm-email').checked } });
-      checkRows = [];
-      $('parse-form').reset(); $('adm-year').value = new Date().getFullYear();
-      renderPreview();
-      btnMsg($('adm-msg'), `Published ${d.rowCount} results (${d.unverifiedCount} unverified).${d.emailed ? ` Emailing ${d.emailed} subscribers now.` : ''}`);
+      const res = await fetch('/api/admin/import', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ rows: imp.rows, decisions: imp.decisions, weekLabel: $('imp-week').value, notify: $('imp-email').checked }) });
+      const d = await res.json().catch(() => ({}));
+      if (res.status === 409) { imp.questions = d.needsDecision; renderImport(); btnMsg($('imp-msg'), 'Some names changed. Answer the questions above, then confirm again.'); return; }
+      if (!res.ok) throw new Error(d.error || `Could not save (${res.status})`);
+      imp.summary = d;
+      renderImport();
       loadBatches(); refreshSummary();
-    } catch (e) {
+    } catch (err) {
       btn.disabled = false;
-      btnMsg($('pub-msg'), e.message);
+      btnMsg($('imp-msg'), err.message);
     }
   }
 

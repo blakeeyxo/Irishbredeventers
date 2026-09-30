@@ -371,7 +371,8 @@
   }
 
   /* ---------- News ---------- */
-  const imgUrl = key => `/media/${key}`;
+  // The design preview supplies its own image lookup; the live site serves images from R2 at /media/.
+  const imgUrl = key => (window.IBE_MEDIA_URL ? window.IBE_MEDIA_URL(key) : `/media/${key}`);
   const paragraphs = t => String(t).split(/\n\s*\n/).map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
 
   async function renderNews() {

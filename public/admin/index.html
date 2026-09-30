@@ -41,14 +41,14 @@
   <!-- RESULTS -->
   <div class="adm-pane active" id="adm-results">
     <h3>Weekly results</h3>
-    <p class="intro">1. Choose your Word file, or paste the text. 2. Check what the site read. 3. Publish. Anything the site cannot read cleanly is marked unverified and goes to the end of the results.</p>
+    <p class="intro">Paste the week's results exactly as you write them, or choose your Word file. The site shows everything it understood, flags anything it's unsure about, and asks when a name looks like one already on file. Nothing is saved until you press Confirm.</p>
     <form class="form" id="parse-form" style="max-width:none;">
       <label>Word file (.docx) or text file<input type="file" name="file" id="adm-file" accept=".docx,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"></label>
       <div class="form-row">
         <label>Country when the file does not say<select name="country" id="adm-country"></select></label>
         <label>Year when the file does not say<input type="number" name="year" id="adm-year" min="2000" max="2100"></label>
       </div>
-      <label>Or paste the results here<textarea name="text" id="adm-text" style="min-height:150px;"></textarea></label>
+      <label>Or paste the results here<textarea name="text" id="adm-text" style="min-height:180px;" placeholder="Rocking Horse December Horse Trials (USA) 6th - 7th December 2025&#10;Open Intermediate&#10;1st Westwick Rebel [ISH] - 2014 gelding by Flex A Bill (ISH)[TIH] out of Rebels Dream [ISH] by Rich Rebel (TB). Breeder: John Brady (Wicklow). Rider: Madeline Hartsock (USA) 39.8, 0, 4.0 = 43.8."></textarea></label>
       <div class="adm-actions">
         <button class="btn" type="submit">Read results</button>
         <button class="btn alt" type="button" id="adm-clear">Clear</button>
