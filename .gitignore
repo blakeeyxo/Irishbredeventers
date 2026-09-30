@@ -3,3 +3,6 @@ node_modules/
 .dev.vars
 .DS_Store
 *.log
+# Charlie's source Word files stay out of the repo
+*.docx
+*.doc

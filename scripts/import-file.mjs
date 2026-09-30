@@ -1,5 +1,5 @@
 // Import a results file into the LOCAL site, the same way the owner area does (read → check → confirm).
-//   npm run import:local -- seed/sample-results-2-weeks.txt [--near new|same] [--same sire,dam] [--year 2010] [--country England]
+//   npm run import:local -- seed/sample-results-2-weeks.txt [--near new|same] [--same sire,dam] [--year 2010] [--country England] [--label "Week of 17 February 2025"]
 // --near answers every near-match question the same way; --same answers "same" only for those kinds (the rest "different");
 // --different lists questions to answer "different" regardless, e.g. --different "sire:guidam".
 // Needs `npm run dev` running. Refuses anything but localhost, so it can never touch the live database.
@@ -8,7 +8,7 @@ import { basename } from 'node:path';
 
 const args = process.argv.slice(2);
 const opt = name => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
-const valueArgs = new Set(['--year', '--country', '--near', '--url', '--same', '--different'].map(opt).filter(Boolean));
+const valueArgs = new Set(['--year', '--country', '--near', '--url', '--same', '--different', '--label'].map(opt).filter(Boolean));
 const differentKeys = (opt('--different') || '').split(',').map(s => s.trim()).filter(Boolean);
 const sameKinds = (opt('--same') || '').split(',').filter(Boolean);
 const answering = opt('--near') || sameKinds.length;
@@ -46,6 +46,6 @@ for (const week of weeks) {
   }
   if (check.questions.length && !answering) { console.log('\nAnswer these in the owner area, or rerun with --near new|same.'); process.exit(1); }
   const out = await call('/api/admin/import', { method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ rows, decisions, weekLabel: parsed.weekLabel, notify: false }) });
+    body: JSON.stringify({ rows, decisions, weekLabel: opt('--label') || parsed.weekLabel, notify: false }) });
   console.log(`${parsed.weekLabel || basename(file)}: ${out.results} new results (${out.alreadySaved} already saved), ${out.horses} new horses, ${out.sires} new sires, ${out.dams} new dams, ${out.breeders} new breeders. ${parsed.rows.filter(r => r.issues.length).length} unverified.`);
 }
