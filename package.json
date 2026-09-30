@@ -13,7 +13,8 @@
     "db:reset:local": "rm -rf .wrangler/state/v3/d1 && wrangler d1 migrations apply irishbredeventers --local",
     "import:local": "node scripts/import-file.mjs",
     "ads:local": "node scripts/load-example-ads.mjs",
-    "content:local": "node scripts/load-starter-content.mjs"
+    "content:local": "node scripts/build-content-sql.mjs && wrangler d1 execute irishbredeventers --local --file seed/starter-content.sql",
+    "content:remote": "node scripts/build-content-sql.mjs && wrangler d1 execute irishbredeventers --remote --file seed/starter-content.sql"
   },
   "devDependencies": {
     "wrangler": "^4.40.0"

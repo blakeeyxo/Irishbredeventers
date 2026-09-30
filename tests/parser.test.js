@@ -177,3 +177,19 @@ test('mockup sample week (older style) still reads, rider kept only in its own f
     }
   });
 });
+
+test('February 2025 variants: "32." score, OIO, dash before [was], [ISH} typo, comma-separated former names', () => {
+  const typo = entry('1st Luska Candy Clover [ISH][was HSH Luska Legend] – 2013 gelding by Sligo Candy Boy [ISH] out of Miss Demeanor [ISH] by White Clover (ISH)[TIH]. Breeder: Amie Sterling (Tipperary). Rider: Jack Curtis (USA) 32., 0, 15.6 = 47.7');
+  assert.deepEqual([typo.dressage, typo.score], ['32', 47.7]);
+  assert.ok(typo.warnings.some(w => w.startsWith('Scores add up to 47.6')));
+  const oio = entry('3rd SSH Playboy (unk) – 2012 gelding OIO by Cit Cat (HOLST) out of Stomeyford Black Pearl (unk). Breeder: Ennisnag Stud. Rider: Julie Wolfert (USA) 35.5, 0, 11.2 = 46.7');
+  assert.deepEqual([oio.sire, oio.dam, oio.dam_breed], ['Cit Cat', 'Stomeyford Black Pearl', 'unk']);
+  assert.ok(oio.warnings.includes('Marked OIO'));
+  assert.equal(oio.verified, true);
+  const dash = entry('6th Dondante (ISH) – [was Cooley All Air] – 2010 gelding by Pacino (BWP) out of Muckno Clover [ISH] by Euro Clover [ISH]. Breeder: Francis Brennan (Monaghan). Rider: Meg Pellegrini (USA) 34.1, 0.4, 16.0 = 50.5');
+  assert.deepEqual([dash.horse_name, dash.breed, dash.former_name], ['Dondante', 'ISH', 'Cooley All Air']);
+  const brace = entry('10th Crugraff (ISH) – 2010 gelding by Kroongraaf (KWPN) out of Tullibards Pretty Young Thing [ISH} by Cruising (ISH)[TIH]. Breeder: John Higgins (Derry). Rider: Barbie Violi (USA) 34.1, 0, 22.8 = 56.9.');
+  assert.deepEqual([brace.dam, brace.dam_breed, brace.dam_sire], ['Tullibards Pretty Young Thing', 'ISH', 'Cruising']);
+  const two = entry('3rd MHE Briarhill Excel Star Cassondra (ISH)[was Briarhill Chacoa K, Briarhill Star Cass] – 2019 mare by Kings Cornet (ISH) out of Briarhill Temple (ISH) by Chacoa (HOLST). Breeder: Anne Coyne. Rider: Morgan Houberg (USA) 34.6, 12, 0.0 = 46.6.');
+  assert.equal(two.former_name, 'Briarhill Chacoa K, Briarhill Star Cass');
+});

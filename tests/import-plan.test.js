@@ -71,3 +71,20 @@ Novice Sec A
   const kept = planImport(other, existing, { [q.key]: 'new' });
   assert.equal(kept.newCounts.horses, 1);
 });
+
+test('a mare is found under her sire\'s confirmed spelling', () => {
+  const rows = parseResults(`Rocking Horse Winter Horse trials (USA) 14th – 16th February 2025
+Open Modified A
+4th Rock Island (ISH)[TIH] – 2017 gelding by Island Commander (TB) out of Coolcorren Gypsey (ISH)[TIH] by Coolcorran Cool Diamond (ISH). Breeder: Michael Byrne. Rider: Robin Walker (USA) 27.6, 0, 2.0 = 29.6`).rows;
+  const existing = {
+    sires: [{ id: 1, name: 'Coolcorron Cool Diamond', name_normalised: 'coolcorron cool diamond' }, { id: 2, name: 'Island Commander', name_normalised: 'island commander' }],
+    dams: [{ id: 5, name: 'Coolcorren Gypsey', name_normalised: 'coolcorren gypsey', sire_name: 'Coolcorron Cool Diamond', sire_normalised: 'coolcorron cool diamond' }],
+    breeders: [{ id: 7, name: 'Michael Byrne', name_normalised: 'michael byrne', county: '' }],
+    horses: [{ id: 9, name: 'Rock Island', name_normalised: 'rock island', birth_year: 2017, sire_normalised: 'island commander', dam_normalised: 'coolcorren gypsey', damsire_normalised: 'coolcorron cool diamond' }],
+    matches: [{ kind: 'sire', match_key: 'coolcorran cool diamond', target_id: 1 }]
+  };
+  const plan = planImport(rows, existing);
+  assert.equal(plan.pending.length, 0);
+  assert.equal(plan.dams.get('coolcorren gypsey|coolcorran cool diamond').id, 5);
+  assert.equal([...plan.horses.values()][0].id, 9);
+});

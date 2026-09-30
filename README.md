@@ -45,7 +45,7 @@ scripts/
   parse-file.mjs      Test the parser on one of Charlie's files: npm run parse -- file.docx
   import-file.mjs     Import a file into the LOCAL site: npm run import:local -- file.txt
   load-example-ads.mjs  Load the example ads into the LOCAL site: npm run ads:local
-  load-starter-content.mjs  Load starter link cards and articles into the LOCAL site: npm run content:local
+  build-content-sql.mjs  Builds seed/starter-content.sql for npm run content:local / content:remote
 tests/                npm test
 ```
 
@@ -64,7 +64,7 @@ npm run dev                           # http://localhost:8787  (owner area: /adm
 npm run import:local -- seed/sample-results-2-weeks.txt   # two fictional weeks (asks about near-matches;
                                                           #   add --same sire,dam to answer "same" for those)
 npm run ads:local                     # example ads: 2 banners + side boxes booked into slots 2, 5 and 8 (--all for all 8)
-npm run content:local                 # link cards from seed/starter-content.json
+npm run content:local                 # articles and link cards from seed/starter-content.json (content:remote loads them on the live site)
 npm test                              # parser, matching, Word reader, search and login tests
 ```
 
