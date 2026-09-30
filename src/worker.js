@@ -13,6 +13,7 @@ import * as news from '../functions/api/news.js';
 import * as ads from '../functions/api/ads.js';
 import * as comments from '../functions/api/comments.js';
 import * as corrections from '../functions/api/corrections.js';
+import * as enquiries from '../functions/api/enquiries.js';
 import * as subscribe from '../functions/api/subscribe.js';
 import * as subscribeConfirm from '../functions/api/subscribe/confirm.js';
 import * as unsubscribe from '../functions/api/unsubscribe.js';
@@ -26,6 +27,7 @@ import * as adminNews from '../functions/api/admin/news.js';
 import * as adminAds from '../functions/api/admin/ads.js';
 import * as adminComments from '../functions/api/admin/comments.js';
 import * as adminCorrections from '../functions/api/admin/corrections.js';
+import * as adminEnquiries from '../functions/api/admin/enquiries.js';
 import * as adminSummary from '../functions/api/admin/summary.js';
 
 const ROUTES = {
@@ -37,6 +39,7 @@ const ROUTES = {
   '/api/ads': ads,
   '/api/comments': comments,
   '/api/corrections': corrections,
+  '/api/enquiries': enquiries,
   '/api/subscribe': subscribe,
   '/api/subscribe/confirm': subscribeConfirm,
   '/api/unsubscribe': unsubscribe,
@@ -48,6 +51,7 @@ const ROUTES = {
   '/api/admin/ads': adminAds,
   '/api/admin/comments': adminComments,
   '/api/admin/corrections': adminCorrections,
+  '/api/admin/enquiries': adminEnquiries,
   '/api/admin/summary': adminSummary
 };
 

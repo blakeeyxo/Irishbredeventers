@@ -39,7 +39,9 @@
     "TURNSTILE_SITE_KEY": "",
     // Mailing service: "resend" or "brevo". The API key is added as a secret: MAIL_API_KEY.
     "MAIL_PROVIDER": "resend",
-    "MAIL_FROM": "IrishBredEventers <results@irishbredeventing.ie>"
+    "MAIL_FROM": "IrishBredEventers <results@irishbredeventing.ie>",
+    // Where advertising enquiries are emailed (optional; they are always in the owner area).
+    "ENQUIRY_EMAIL": ""
   },
   "observability": { "enabled": true }
 }

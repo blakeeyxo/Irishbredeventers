@@ -5,7 +5,7 @@
   let checkRows = [];
 
   /* ---------- Tabs ---------- */
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: loadNews, ads: loadAds, comments: loadComments, corrections: loadCorrections };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: loadNews, ads: loadAds, comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -17,7 +17,7 @@
   async function loadSummary() {
     const s = await api('/api/admin/summary');
     $('who').textContent = `Logged in as ${s.user}`;
-    for (const k of ['unverified', 'comments', 'corrections']) {
+    for (const k of ['unverified', 'comments', 'corrections', 'enquiries']) {
       const el = $('n-' + k);
       el.textContent = s[k];
       el.hidden = !s[k];
@@ -68,9 +68,9 @@
     if (!checkRows.length) { box.innerHTML = ''; return; }
     const bad = checkRows.filter(r => r.issues.length).length;
     const subs = summary ? summary.subscribers : 0;
-    box.innerHTML = `<div class="extra-block" style="margin-top:26px;">
-      <h3 class="extra-title">Check before publishing</h3>
-      <p class="extra-copy"><b>${checkRows.length}</b> placings found in <b>${d.events}</b> event${d.events === 1 ? '' : 's'} and <b>${d.classes}</b> class${d.classes === 1 ? '' : 'es'}. <b>${bad}</b> need checking and are ticked "Unverified". Tick or untick any row. Unverified rows go to the end of the results.</p>
+    box.innerHTML = `<div style="margin-top:30px;">
+      <h3>Check before publishing</h3>
+      <p class="intro"><b>${checkRows.length}</b> placings found in <b>${d.events}</b> event${d.events === 1 ? '' : 's'} and <b>${d.classes}</b> class${d.classes === 1 ? '' : 'es'}. <b>${bad}</b> need checking and are ticked "Unverified". Tick or untick any row. Unverified rows go to the end of the results.</p>
       <table class="adm-table stack"><tr><th>Pos</th><th>Horse</th><th>Sire · dam (dam sire)</th><th>Breeder</th><th>Score</th><th>Event · class</th><th>Unverified</th></tr>
       ${checkRows.map((r, i) => `<tr class="${r.issues.length ? 'bad' : ''}">
         <td data-label="Pos">${esc(ordinal(r.position))}</td>
@@ -84,10 +84,10 @@
         <td data-label="Unverified"><input type="checkbox" data-i="${i}" ${r.verified ? '' : 'checked'} aria-label="Unverified"></td></tr>`).join('')}
       </table>
       ${d.notes.length ? `<details class="adm-notes"><summary>${d.notes.length} line${d.notes.length === 1 ? '' : 's'} not used (commentary or unrecognised)</summary>${d.notes.map(n => `<p>${esc(n)}</p>`).join('')}</details>` : ''}
-      <div class="site-form" style="margin-top:16px;">
+      <div class="form" style="margin-top:16px;">
         <label>Label for this upload<input type="text" id="adm-label" maxlength="120" value="Results ${esc(new Date().toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' }))}"></label>
         <label style="display:flex;gap:8px;align-items:center;font-weight:600;"><input type="checkbox" id="adm-email" ${subs ? 'checked' : ''} style="width:auto;"> Email subscribers a link to the new results (${subs} subscriber${subs === 1 ? '' : 's'}${summary && !summary.mailReady ? ', email not set up yet' : ''})</label>
-        <button class="site-btn" type="button" id="adm-publish">Publish ${checkRows.length} results</button>
+        <button class="btn" type="button" id="adm-publish">Publish ${checkRows.length} results</button>
         <div class="form-done" id="pub-msg" role="status"></div>
       </div></div>`;
     box.querySelectorAll('input[data-i]').forEach(cb => cb.addEventListener('change', () => { checkRows[cb.dataset.i].verified = !cb.checked; }));
@@ -115,7 +115,7 @@
     const d = await api('/api/admin/batches');
     $('adm-batches').innerHTML = d.batches.length ? d.batches.map(b => `<div class="adm-card"><b>${esc(b.label || 'Upload')}</b>
       <div class="meta">${esc(niceDate(b.created_at))} · ${b.row_count} results · ${b.unverified_count} unverified</div>
-      <div class="adm-actions"><button class="site-btn sm alt" data-del-batch="${b.id}" data-name="${esc(b.label)}">Remove this upload</button></div></div>`).join('')
+      <div class="adm-actions"><button class="btn sm alt" data-del-batch="${b.id}" data-name="${esc(b.label)}">Remove this upload</button></div></div>`).join('')
       : '<div class="empty-state">Nothing uploaded yet.</div>';
   }
   $('adm-batches').addEventListener('click', async e => {
@@ -135,9 +135,9 @@
       <b>${esc(r.horse_name || '?')}</b> <span class="meta">${esc(r.country)} · ${esc(r.event_name)} · ${esc(r.class_name)}</span>
       <div class="adm-row-edit">${FIELDS.map(([k, l]) => `<label>${l}<input name="${k}" value="${esc(r[k] ?? '')}"></label>`).join('')}</div>
       <div class="adm-actions">
-        <button class="site-btn sm" data-act="verify">Save and mark as verified</button>
-        <button class="site-btn sm alt" data-act="save">Save, keep unverified</button>
-        <button class="site-btn sm alt" data-act="remove">Delete</button>
+        <button class="btn sm" data-act="verify">Save and mark as verified</button>
+        <button class="btn sm alt" data-act="save">Save, keep unverified</button>
+        <button class="btn sm alt" data-act="remove">Delete</button>
       </div></form>`).join('') : '<div class="empty-state">No unverified results.</div>';
   }
   $('unv-list').addEventListener('click', async e => {
@@ -192,7 +192,7 @@
     $('news-list').innerHTML = d.news.length ? d.news.map(n => `<div class="adm-card">
       ${n.image_key ? `<img class="adm-thumb" src="/media/${esc(n.image_key)}" alt="">` : ''}<b>${esc(n.title)}</b>
       <div class="meta">${esc(niceDate(n.published_at))}</div>
-      <div class="adm-actions"><button class="site-btn sm alt" data-del-news="${n.id}">Delete</button></div></div>`).join('') : '<div class="empty-state">No news yet.</div>';
+      <div class="adm-actions"><button class="btn sm alt" data-del-news="${n.id}">Delete</button></div></div>`).join('') : '<div class="empty-state">No news yet.</div>';
   }
   $('news-list').addEventListener('click', async e => {
     const b = e.target.closest('[data-del-news]');
@@ -208,8 +208,8 @@
     const today = new Date().toISOString().slice(0, 10);
     $('ad-list').innerHTML = d.ads.length ? d.ads.map(a => `<div class="adm-card">
       ${a.image_key ? `<img class="adm-thumb" src="/media/${esc(a.image_key)}" alt="">` : ''}<b>${esc(a.name)}</b>
-      <div class="meta">${a.tier === 'large' ? 'Large business (top banner)' : 'Small breeder or business'}${a.ends_on ? ` · until ${esc(niceDate(a.ends_on))}` : ''}${a.ends_on && a.ends_on < today ? ' · <b class="iss">ended, no longer showing</b>' : ''}${a.link ? ` · ${esc(a.link)}` : ''}</div>
-      <div class="adm-actions"><button class="site-btn sm alt" data-del-ad="${a.id}">Remove</button></div></div>`).join('')
+      <div class="meta">${a.tier === 'large' ? 'Banner (top and bottom)' : 'Side box'}${a.ends_on ? ` · until ${esc(niceDate(a.ends_on))}` : ''}${a.ends_on && a.ends_on < today ? ' · <b class="iss">ended, no longer showing</b>' : ''}${a.link ? ` · ${esc(a.link)}` : ''}</div>
+      <div class="adm-actions"><button class="btn sm alt" data-del-ad="${a.id}">Remove</button></div></div>`).join('')
       : '<div class="empty-state">No ads yet. Placeholders show until one is added.</div>';
   }
   $('ad-list').addEventListener('click', async e => {
@@ -225,8 +225,8 @@
     const pending = d.comments.filter(c => c.status === 'pending'), approved = d.comments.filter(c => c.status === 'approved');
     const item = c => `<div class="adm-card"><b>${esc(c.name)}</b> <span class="meta">${esc(niceDate(c.created_at))} · on ${c.scope === 'news' ? 'News' : 'Results'}</span>
       <p style="margin:6px 0;">${esc(c.body)}</p><div class="adm-actions">
-      ${c.status === 'pending' ? `<button class="site-btn sm" data-cm="approve" data-id="${c.id}">Approve</button>` : ''}
-      <button class="site-btn sm alt" data-cm="delete" data-id="${c.id}">Delete</button></div></div>`;
+      ${c.status === 'pending' ? `<button class="btn sm" data-cm="approve" data-id="${c.id}">Approve</button>` : ''}
+      <button class="btn sm alt" data-cm="delete" data-id="${c.id}">Delete</button></div></div>`;
     $('cm-list').innerHTML = `<div class="cm-queue"><b>Waiting for approval (${pending.length})</b>${pending.map(item).join('') || '<p>No comments waiting.</p>'}</div>
       ${approved.length ? `<details class="adm-notes"><summary>Approved comments (${approved.length})</summary>${approved.map(item).join('')}</details>` : ''}`;
   }
@@ -245,8 +245,8 @@
       <b>${esc(c.event_text)}</b> <span class="meta">${esc(niceDate(c.created_at))}${c.status === 'done' ? ' · done' : ''}</span>
       <p style="margin:6px 0;white-space:pre-wrap;">${esc(c.message)}</p>
       ${c.email ? `<div class="meta">Reply to: <a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>` : ''}
-      <div class="adm-actions">${c.status === 'open' ? `<button class="site-btn sm" data-corr="done" data-id="${c.id}">Done</button>` : ''}
-      <button class="site-btn sm alt" data-corr="delete" data-id="${c.id}">Delete</button></div></div>`).join('')
+      <div class="adm-actions">${c.status === 'open' ? `<button class="btn sm" data-corr="done" data-id="${c.id}">Done</button>` : ''}
+      <button class="btn sm alt" data-corr="delete" data-id="${c.id}">Delete</button></div></div>`).join('')
       : '<div class="empty-state">No corrections sent in.</div>';
   }
   $('corr-list').addEventListener('click', async e => {
@@ -255,6 +255,26 @@
     if (b.dataset.corr === 'delete' && !confirm('Delete this correction?')) return;
     await api('/api/admin/corrections', { method: 'POST', body: { id: Number(b.dataset.id), action: b.dataset.corr } });
     loadCorrections(); refreshSummary();
+  });
+
+  /* ---------- Advertising enquiries ---------- */
+  const INTEREST = { banner: 'Banner', box: 'Side box', unsure: 'Not sure yet' };
+  async function loadEnquiries() {
+    const d = await api('/api/admin/enquiries');
+    $('enq-list').innerHTML = d.enquiries.length ? d.enquiries.map(q => `<div class="adm-card">
+      <b>${esc(q.business || q.name)}</b> <span class="meta">${esc(niceDate(q.created_at))} · ${esc(INTEREST[q.interest] || q.interest)}${q.status === 'done' ? ' · done' : ''}</span>
+      <div class="meta">${esc(q.name)} · <a href="mailto:${esc(q.email)}">${esc(q.email)}</a>${q.phone ? ` · <a href="tel:${esc(q.phone)}">${esc(q.phone)}</a>` : ''}</div>
+      ${q.message ? `<p style="margin:6px 0;white-space:pre-wrap;">${esc(q.message)}</p>` : ''}
+      <div class="adm-actions">${q.status === 'open' ? `<button class="btn sm" data-enq="done" data-id="${q.id}">Done</button>` : ''}
+      <button class="btn sm alt" data-enq="delete" data-id="${q.id}">Delete</button></div></div>`).join('')
+      : '<div class="empty-state">No advertising enquiries yet.</div>';
+  }
+  $('enq-list').addEventListener('click', async e => {
+    const b = e.target.closest('[data-enq]');
+    if (!b) return;
+    if (b.dataset.enq === 'delete' && !confirm('Delete this enquiry?')) return;
+    await api('/api/admin/enquiries', { method: 'POST', body: { id: Number(b.dataset.id), action: b.dataset.enq } });
+    loadEnquiries(); refreshSummary();
   });
 
   refreshSummary().then(loadBatches);
