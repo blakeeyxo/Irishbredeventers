@@ -162,8 +162,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .card { background: var(--paper); border: 1px solid var(--rule); padding: 26px 28px; }
 .card h3 { font-size: 23px; line-height: 1.25; color: var(--navy); margin: 0 0 10px; }
 .card p { color: var(--ink-soft); margin: 0 0 14px; font-size: 15px; }
-.free-note { margin-top: 28px; padding: 18px 22px; border-left: 2px solid var(--gold-bright); background: var(--paper); font-size: 14.5px; color: var(--ink-soft); }
-.free-note b { font-family: var(--serif); color: var(--navy); font-size: 16px; font-weight: 600; }
 
 /* ---------- Filters ---------- */
 .seasons { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
