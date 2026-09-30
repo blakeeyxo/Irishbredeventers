@@ -12,7 +12,8 @@
     "deploy": "wrangler deploy",
     "db:reset:local": "rm -rf .wrangler/state/v3/d1 && wrangler d1 migrations apply irishbredeventers --local",
     "import:local": "node scripts/import-file.mjs",
-    "ads:local": "node scripts/load-example-ads.mjs"
+    "ads:local": "node scripts/load-example-ads.mjs",
+    "content:local": "node scripts/load-starter-content.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.40.0"

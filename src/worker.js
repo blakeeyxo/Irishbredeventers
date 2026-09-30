@@ -10,6 +10,7 @@ import * as results from '../functions/api/results.js';
 import * as search from '../functions/api/search.js';
 import * as horse from '../functions/api/horse/[id].js';
 import * as news from '../functions/api/news.js';
+import * as links from '../functions/api/links.js';
 import * as ads from '../functions/api/ads.js';
 import * as comments from '../functions/api/comments.js';
 import * as corrections from '../functions/api/corrections.js';
@@ -25,6 +26,7 @@ import * as adminImportCheck from '../functions/api/admin/import/check.js';
 import * as adminBatches from '../functions/api/admin/batches.js';
 import * as adminUnverified from '../functions/api/admin/unverified.js';
 import * as adminNews from '../functions/api/admin/news.js';
+import * as adminLinks from '../functions/api/admin/links.js';
 import * as adminAds from '../functions/api/admin/ads.js';
 import * as adminComments from '../functions/api/admin/comments.js';
 import * as adminCorrections from '../functions/api/admin/corrections.js';
@@ -37,6 +39,7 @@ const ROUTES = {
   '/api/results': results,
   '/api/search': search,
   '/api/news': news,
+  '/api/links': links,
   '/api/ads': ads,
   '/api/comments': comments,
   '/api/corrections': corrections,
@@ -50,6 +53,7 @@ const ROUTES = {
   '/api/admin/batches': adminBatches,
   '/api/admin/unverified': adminUnverified,
   '/api/admin/news': adminNews,
+  '/api/admin/links': adminLinks,
   '/api/admin/ads': adminAds,
   '/api/admin/comments': adminComments,
   '/api/admin/corrections': adminCorrections,

@@ -32,6 +32,7 @@
     <button class="chip active" data-a="results">Results</button>
     <button class="chip" data-a="unverified">Unverified <span class="count" id="n-unverified" hidden></span></button>
     <button class="chip" data-a="news">News</button>
+    <button class="chip" data-a="links">Link cards</button>
     <button class="chip" data-a="ads">Ads</button>
     <button class="chip" data-a="comments">Comments <span class="count" id="n-comments" hidden></span></button>
     <button class="chip" data-a="corrections">Corrections <span class="count" id="n-corrections" hidden></span></button>
@@ -69,27 +70,68 @@
 
   <!-- NEWS -->
   <div class="adm-pane" id="adm-news">
-    <h3>Post news</h3>
-    <p class="intro">The newest post becomes the commentary on the home page.</p>
+    <h3 id="news-form-title">Add a news article</h3>
+    <p class="intro">Articles appear on the News page and as cards in the right-hand column. The top article is the commentary on the home page. Use the arrows to change the order.</p>
     <form class="form" id="news-form">
-      <label>Headline<input type="text" name="title" maxlength="160" required></label>
-      <label>Write-up<textarea name="body" style="min-height:180px;" required></textarea></label>
-      <label>Photo (optional)<input type="file" name="image" accept="image/*"></label>
-      <button class="btn" type="submit">Publish news</button>
+      <input type="hidden" name="id">
+      <label>Headline<input type="text" name="title" maxlength="200" required></label>
+      <label>Article text<textarea name="body" style="min-height:220px;" required></textarea></label>
+      <div class="form-row">
+        <label>Date<input type="date" name="date"></label>
+        <label>Photo<input type="file" name="image" accept="image/*"></label>
+      </div>
+      <div class="form-row">
+        <label>Original web address (optional)<input type="text" name="source_url" placeholder="https://" inputmode="url"></label>
+        <label>First published by (optional)<input type="text" name="source_name" maxlength="120" placeholder="e.g. Horse Sport Ireland"></label>
+      </div>
+      <label class="chk edit-only" hidden><input type="checkbox" name="remove_image" value="1"> Remove the current photo</label>
+      <div class="adm-actions">
+        <button class="btn" type="submit">Publish article</button>
+        <button class="btn alt edit-only" type="button" data-cancel hidden>Cancel editing</button>
+      </div>
       <div class="form-done" role="status"></div>
     </form>
-    <h3 style="margin-top:40px;">Posted</h3>
+    <h3 style="margin-top:40px;">Articles, in order</h3>
     <div id="news-list"></div>
+  </div>
+
+  <!-- LINK CARDS -->
+  <div class="adm-pane" id="adm-links">
+    <h3 id="links-form-title">Add a link card</h3>
+    <p class="intro">Link cards point to articles on other websites and open in a new tab. They fill the right-hand column after news articles, in the order below.</p>
+    <form class="form" id="links-form">
+      <input type="hidden" name="id">
+      <label>Headline<input type="text" name="title" maxlength="200" required></label>
+      <label>Web address<input type="text" name="url" placeholder="https://" inputmode="url" required></label>
+      <label>Short teaser (optional)<textarea name="teaser" maxlength="400" style="min-height:70px;"></textarea></label>
+      <div class="form-row">
+        <label>Website name (optional)<input type="text" name="source_name" maxlength="120" placeholder="e.g. The Irish Field"></label>
+        <label>Date (optional)<input type="date" name="date"></label>
+      </div>
+      <label>Image<input type="file" name="image" accept="image/*"></label>
+      <label class="chk edit-only" hidden><input type="checkbox" name="remove_image" value="1"> Remove the current image</label>
+      <div class="adm-actions">
+        <button class="btn" type="submit">Save link card</button>
+        <button class="btn alt edit-only" type="button" data-cancel hidden>Cancel editing</button>
+      </div>
+      <div class="form-done" role="status"></div>
+    </form>
+    <h3 style="margin-top:40px;">Link cards, in order</h3>
+    <div id="links-list"></div>
   </div>
 
   <!-- ADS -->
   <div class="adm-pane" id="adm-ads">
     <h3>Ads</h3>
-    <p class="intro">Banner ads run full width at the top and bottom of every page (use a wide image, about 1300 × 110). Side-box ads fill the eight boxes down the right. Ads stop showing after their end date. Empty slots show "Advertise here".</p>
+    <p class="intro">Banner ads run full width at the top and bottom of every page (use a wide image, about 1300 × 110). Side-box ads are square (about 480 × 480) and are booked into a slot in the right-hand column: slot 1 is the top. A booked ad replaces the news or link card in its slot automatically. Ads show from their start date to their end date.</p>
     <form class="form" id="ad-form">
       <label>Type<select name="tier"><option value="large">Banner (top and bottom)</option><option value="small" selected>Side box (right-hand column)</option></select></label>
       <label>Advertiser name<input type="text" name="name" maxlength="80" required></label>
       <label>Link (optional)<input type="text" name="link" placeholder="https://" inputmode="url"></label>
+      <div class="form-row">
+        <label>Slot (side boxes; 1 = top, blank = first free)<input type="number" name="slot" min="1" max="40"></label>
+        <label>Starts on (optional)<input type="date" name="starts_on"></label>
+      </div>
       <label>Runs until (optional)<input type="date" name="ends_on"></label>
       <label>Advert image<input type="file" name="image" accept="image/*"></label>
       <button class="btn" type="submit">Add advert</button>

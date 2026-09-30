@@ -40,10 +40,12 @@ migrations/           D1 database tables
 seed/
   sample-results-2-weeks.txt   Two fictional weeks in Charlie's format, covering every variation
   example-ads/                 Example ad images (invented businesses, marked "Example ad")
+  starter-content.json         Link cards (and articles, once supplied) for the local site
 scripts/
   parse-file.mjs      Test the parser on one of Charlie's files: npm run parse -- file.docx
   import-file.mjs     Import a file into the LOCAL site: npm run import:local -- file.txt
   load-example-ads.mjs  Load the example ads into the LOCAL site: npm run ads:local
+  load-starter-content.mjs  Load starter link cards and articles into the LOCAL site: npm run content:local
 tests/                npm test
 ```
 
@@ -61,7 +63,8 @@ npm run dev                           # http://localhost:8787  (owner area: /adm
 # in a second terminal, while dev is running:
 npm run import:local -- seed/sample-results-2-weeks.txt   # two fictional weeks (asks about near-matches;
                                                           #   add --same sire,dam to answer "same" for those)
-npm run ads:local                     # example ads
+npm run ads:local                     # example ads: 2 banners + side boxes booked into slots 2, 5 and 8 (--all for all 8)
+npm run content:local                 # link cards from seed/starter-content.json
 npm test                              # parser, matching, Word reader, search and login tests
 ```
 
@@ -132,6 +135,10 @@ Until `MAIL_API_KEY` is set, sign-ups are stored but no email is sent (the owner
 5. Press **Confirm and save**. The summary shows how many results, horses, sires, dams and breeders were added. Pasting the same week twice adds nothing.
 
 Fix unverified rows later in the **Unverified** tab. A wrong upload can be removed whole under **Published uploads**.
+
+### The right-hand column
+
+The column runs the full height of every page. Each slot shows, in this order: the side-box ad booked for that slot (Ads tab: "Slot", 1 = top, with optional start and end dates), otherwise a news article card, otherwise an external link card (Link cards tab). It never shows an empty box. Articles and link cards can be added, edited, deleted and moved up or down in the owner area. Banners only show when a banner ad is booked. "Advertise here" appears only in the Advertise section of the About page.
 
 ### Breeding data
 

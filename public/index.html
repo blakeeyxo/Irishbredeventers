@@ -40,7 +40,7 @@
   </div>
 </header>
 
-<div class="container banner-row"><div id="banner-top"></div></div>
+<div class="container banner-row" hidden><div id="banner-top"></div></div>
 <div class="container"><div id="notice" class="notice" role="status" hidden></div></div>
 
 <div class="container page">
@@ -129,11 +129,6 @@
     <div id="search-results"></div>
   </section>
 
-  <!-- HORSE -->
-  <section class="view" id="view-horse">
-    <div id="horse-page"><div class="empty-state">Loading…</div></div>
-  </section>
-
   <!-- NEWS -->
   <section class="view" id="view-news">
     <p class="eyebrow">News</p>
@@ -156,7 +151,7 @@
 
     <div class="panel" id="advertise">
       <p class="eyebrow">Advertise</p>
-      <h2>Advertise with IBER</h2>
+      <h2>Advertise here</h2>
       <p>Reach breeders, owners and riders who follow Irish-bred eventing every week.</p>
       <div class="tiers">
         <div class="tier"><b>Banner</b><span>Full-width banner at the top and bottom of every page. Suited to feed, tack and national brands.</span></div>
@@ -199,10 +194,10 @@
   </section>
 
 </main>
-<aside class="rail" id="rail" aria-label="Advertisements"></aside>
+<aside class="rail" id="rail" aria-label="Advertisements and news"></aside>
 </div>
 
-<div class="container banner-row bottom"><div id="banner-bottom"></div></div>
+<div class="container banner-row bottom" hidden><div id="banner-bottom"></div></div>
 
 <footer class="site-foot">
   <div class="container foot-inner">
@@ -246,6 +241,10 @@
 
 <div class="overlay" id="article-overlay">
   <div class="modal" id="article-modal" role="dialog" aria-modal="true"></div>
+</div>
+
+<div class="overlay" id="horse-overlay">
+  <div class="modal horse-modal" id="horse-modal" role="dialog" aria-modal="true" aria-label="Horse record"></div>
 </div>
 
 <script src="/js/common.js"></script>

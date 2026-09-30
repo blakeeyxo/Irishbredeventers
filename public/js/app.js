@@ -8,6 +8,7 @@
   const state = {
     config: { currentYear: new Date().getFullYear(), turnstileSiteKey: '' },
     ads: { large: [], small: [] },
+    links: [],
     adOffset: Math.floor(Math.random() * 1000),
     season: null,
     seasonRows: [],
@@ -62,7 +63,7 @@
       document.querySelectorAll('#search-fields .chip').forEach(b => b.classList.toggle('active', b.dataset.field === state.searchField));
       renderSearch(q);
     }
-    if (r.view === 'horse') renderHorse(Number(r.id));
+    if (r.view === 'horse') { showView('results'); renderResults(new URLSearchParams()); openHorse(Number(r.id)); }
     if (r.view === 'news') renderNews().then(() => { if (r.id) openArticle(Number(r.id)); });
     if (r.view === 'about') checkRateCard();
     if (r.hash) setTimeout(() => { const el = document.querySelector(r.hash); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 60);
@@ -72,6 +73,9 @@
     const a = e.target.closest('a[data-link]');
     if (!a || e.metaKey || e.ctrlKey || e.shiftKey || a.target) return;
     e.preventDefault();
+    // Horse names open the horse's record in a pop-up over the current page.
+    const horse = a.getAttribute('href').match(/^\/horse\/(\d+)$/);
+    if (horse) { openHorse(Number(horse[1])); return; }
     navigate(a.getAttribute('href'));
   });
   if (!MEMORY) window.addEventListener('popstate', render);
@@ -317,23 +321,23 @@
     ? `<div class="ped ${cls}"><span>${role}</span><b>${esc(name)}</b></div>`
     : `<div class="ped ${cls} missing"><span>${role}</span><b>Not in the results</b></div>`;
 
-  async function renderHorse(id) {
-    const el = $('horse-page');
-    el.innerHTML = '<div class="empty-state">Loading…</div>';
+  const CLOSE = '<button class="modal-close" aria-label="Close">&times;</button>';
+  async function openHorse(id) {
+    const el = $('horse-modal');
+    el.innerHTML = `${CLOSE}<div class="empty-state">Loading…</div>`;
+    openOverlay('horse-overlay');
     let d;
-    try { d = await api(`/api/horse/${id}`); } catch (e) { el.innerHTML = `<div class="empty-state">${esc(e.message)}</div>`; return; }
+    try { d = await api(`/api/horse/${id}`); } catch (e) { el.innerHTML = `${CLOSE}<div class="empty-state">${esc(e.message)}</div>`; return; }
     const h = d.horse, runs = d.runs;
-    document.title = `${h.horse_name} · ${SITE}`;
     const formers = [...new Set(runs.map(r => r.former_name).filter(Boolean))];
     const positions = runs.map(r => r.position).filter(n => n);
     const dressage = runs.map(r => parseFloat(r.dressage)).filter(n => !isNaN(n));
     const xcKnown = runs.filter(r => r.cross_country !== '' && r.cross_country !== null);
     const xcClear = xcKnown.filter(r => parseFloat(r.cross_country) === 0).length;
     const fact = (label, v) => `<div><span>${label}</span><b>${esc(v || '–')}</b></div>`;
-    el.innerHTML = `
-      <a class="back-link" href="/results" data-link>← Back to results</a>
+    el.innerHTML = `${CLOSE}
       <p class="eyebrow">Horse</p>
-      <h2 class="page-title">${esc(h.horse_name)}</h2>
+      <h2 class="page-title horse-title">${esc(h.horse_name)}</h2>
       ${formers.length ? `<p class="horse-former">Formerly competed as ${esc(formers.join(', '))}</p>` : ''}
       <div class="facts">${fact('Breed', h.breed)}${fact('Foaled', h.foaled)}${fact('Sex', h.sex)}${fact('Breeder', h.breeder)}</div>
       <div class="horse-grid">
@@ -375,20 +379,23 @@
   const imgUrl = key => (window.IBE_MEDIA_URL ? window.IBE_MEDIA_URL(key) : `/media/${key}`);
   const paragraphs = t => String(t).split(/\n\s*\n/).map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
 
+  let newsPromise = null;
+  const loadNews = () => (newsPromise = newsPromise || api('/api/news').then(d => { state.news = d.news; return d.news; })
+    .catch(e => { newsPromise = null; throw e; }));
+
   async function renderNews() {
     if (!state.loaded.newsComments) { state.loaded.newsComments = true; renderComments($('news-comments')); }
-    if (state.news) return;
-    try {
-      state.news = (await api('/api/news')).news;
-    } catch (e) {
+    try { await loadNews(); } catch (e) {
       $('news-list').innerHTML = `<div class="empty-state">${esc(e.message)}</div>`;
       return;
     }
+    if ($('news-list').dataset.done) return;
+    $('news-list').dataset.done = '1';
     $('news-list').innerHTML = state.news.length ? state.news.map(a => `
       <a class="article" href="/news/${a.id}" data-link>
         ${a.image_key ? `<div class="article-thumb"><img src="${imgUrl(a.image_key)}" alt="" loading="lazy"></div>` : ''}
         <div>
-          <div class="article-date">${esc(niceDate(a.published_at))}</div>
+          <div class="article-date">${esc(niceDate(a.published_at))}${a.source_name ? ` · ${esc(a.source_name)}` : ''}</div>
           <div class="article-title">${esc(a.title)}</div>
           <div class="article-snippet">${esc(a.snippet)}</div>
         </div>
@@ -396,29 +403,41 @@
   }
 
   let lastFocus = null;
+  function openOverlay(id) {
+    if (!document.querySelector('.overlay.active')) lastFocus = document.activeElement;
+    document.querySelectorAll('.overlay.active').forEach(o => { if (o.id !== id) o.classList.remove('active'); });
+    $(id).classList.add('active');
+    $(id).scrollTop = 0;
+    document.body.classList.add('no-scroll');
+    setTimeout(() => { const b = $(id).querySelector('.modal-close'); if (b) b.focus(); }, 0);
+  }
+  function closeOverlays() {
+    const open = document.querySelector('.overlay.active');
+    if (!open) return;
+    open.classList.remove('active');
+    document.body.classList.remove('no-scroll');
+    const r = routeFromUrl();
+    if (open.id === 'article-overlay' && r.view === 'news' && r.id) setUrl('/news', true);
+    if (r.view === 'horse') setUrl('/results', true);
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => {
+    if (e.target === o || e.target.closest('.modal-close')) closeOverlays();
+  }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOverlays(); });
+
   function openArticle(id) {
     const a = (state.news || []).find(x => x.id === id);
     if (!a) return;
-    lastFocus = document.activeElement;
     $('article-modal').innerHTML = `
       <button class="modal-close" aria-label="Close">&times;</button>
       ${a.image_key ? `<div class="modal-photo"><img src="${imgUrl(a.image_key)}" alt=""></div>` : ''}
       <div class="article-date">${esc(niceDate(a.published_at))}</div>
       <div class="modal-title">${esc(a.title)}</div>
-      <div class="modal-body">${paragraphs(a.body)}</div>`;
-    $('article-overlay').classList.add('active');
-    document.body.classList.add('no-scroll');
-    setTimeout(() => $('article-modal').querySelector('.modal-close').focus(), 0);
+      <div class="modal-body">${paragraphs(a.body)}</div>
+      ${a.source_url ? `<p class="modal-source">${a.source_name ? `First published by ${esc(a.source_name)}. ` : ''}<a href="${esc(a.source_url)}" target="_blank" rel="noopener">Read the original ↗</a></p>` : ''}`;
+    openOverlay('article-overlay');
   }
-  function closeArticle() {
-    if (!$('article-overlay').classList.contains('active')) return;
-    $('article-overlay').classList.remove('active');
-    document.body.classList.remove('no-scroll');
-    if (routeFromUrl().id) setUrl('/news', true);
-    if (lastFocus && lastFocus.focus) lastFocus.focus();
-  }
-  $('article-overlay').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.closest('.modal-close')) closeArticle(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeArticle(); });
 
   /* ---------- Comments (News page, held for approval) ---------- */
   async function renderComments(el) {
@@ -492,34 +511,76 @@
       .catch(() => { $('pdf-line').textContent = 'The rate card is on its way. Send an enquiry below and we will reply with current rates.'; });
   }
 
-  /* ---------- Ads: banner top and bottom, 8 boxes on the right ---------- */
-  const ADV = '/about#advertise';
+  /* ---------- Banners and the right-hand column ----------
+     Banners show only when an ad is booked. The right-hand column runs the full height of the
+     page. Each slot shows, in order of priority: the ad booked for that slot, otherwise a news
+     card, otherwise an external link card. It never shows an empty box. */
   function bannerHTML(ad) {
-    if (!ad) return `<a class="banner" href="${ADV}" data-link><span class="ad-eyebrow">Advertisement</span>
-      <span class="adv-here"><b>Advertise here</b><small>Full-width banner on every page · Enquire →</small></span></a>`;
     const inner = ad.image_key ? `<img src="${imgUrl(ad.image_key)}" alt="${esc(ad.name)}">`
-      : `<span class="ad-eyebrow">Advertisement</span><span class="adv-here"><b>${esc(ad.name)}</b></span>`;
+      : `<span class="ad-eyebrow">Advertisement</span><span class="banner-name">${esc(ad.name)}</span>`;
     return ad.link ? `<a class="banner" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${inner}</a>` : `<div class="banner">${inner}</div>`;
   }
-  // Each live ad shows once, starting at a random one so all get time near the top.
-  // Slots with no ad show a neutral "Advertise here" box.
-  function boxHTML(k) {
-    const list = state.ads.small;
-    if (k >= list.length) {
-      return `<a class="ad-box" href="${ADV}" data-link><span class="ad-eyebrow">Advertisement</span>
-        <span class="ad-body"><span class="adv-here"><b>Advertise here</b><small>Enquire →</small></span></span></a>`;
-    }
-    const ad = list[(k + state.adOffset) % list.length];
+  function renderBanners() {
+    const large = state.ads.large;
+    $('banner-top').innerHTML = large[0] ? bannerHTML(large[0]) : '';
+    $('banner-bottom').innerHTML = large[0] ? bannerHTML(large[1] || large[0]) : '';
+    $('banner-top').parentElement.hidden = !large[0];
+    $('banner-bottom').parentElement.hidden = !large[0];
+  }
+
+  const cardImage = key => key ? `<img src="${imgUrl(key)}" alt="" loading="lazy">` : '<span class="card-fallback" aria-hidden="true">IBER</span>';
+  const hostOf = url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
+
+  function adSlotHTML(ad) {
     const inner = ad.image_key ? `<img src="${imgUrl(ad.image_key)}" alt="${esc(ad.name)}" loading="lazy">` : `<span class="ad-name">${esc(ad.name)}</span>`;
     const body = `<span class="ad-eyebrow">Advertisement</span><span class="ad-body">${inner}</span>`;
-    return ad.link ? `<a class="ad-box live" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${body}</a>` : `<div class="ad-box live">${body}</div>`;
+    return ad.link ? `<a class="slot ad-box" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${body}</a>` : `<div class="slot ad-box">${body}</div>`;
   }
-  function renderAds() {
-    const large = state.ads.large;
-    $('banner-top').innerHTML = bannerHTML(large[0]);
-    $('banner-bottom').innerHTML = bannerHTML(large[1] || large[0]);
-    $('rail').innerHTML = Array.from({ length: 8 }, (_, k) => boxHTML(k)).join('');
+  function newsCardHTML(n) {
+    return `<a class="slot rcard" href="/news/${n.id}" data-link>
+      <span class="card-img">${cardImage(n.image_key)}</span>
+      <span class="card-body"><span class="card-kicker">News</span><b>${esc(n.title)}</b><span class="card-teaser">${esc(n.snippet)}</span></span></a>`;
   }
+  function linkCardHTML(l) {
+    const source = l.source_name || hostOf(l.url);
+    return `<a class="slot rcard" href="${esc(l.url)}" target="_blank" rel="noopener">
+      <span class="card-img">${cardImage(l.image_key)}</span>
+      <span class="card-body"><span class="card-kicker">${esc(source)} ↗</span><b>${esc(l.title)}</b>${l.teaser ? `<span class="card-teaser">${esc(l.teaser)}</span>` : ''}</span></a>`;
+  }
+
+  const GAP = 14;
+  const stackedRail = () => matchMedia('(max-width: 980px)').matches; // tablet and phone: the column sits under the page
+  // How many roughly square slots fit beside the page content.
+  function slotCount() {
+    if (stackedRail()) return 8;
+    const width = $('rail').clientWidth || 232;
+    return Math.max(1, Math.round(($('main').offsetHeight + GAP) / (width + GAP)));
+  }
+
+  let lastRail = '';
+  function buildRail() {
+    const n = slotCount();
+    const slots = new Array(n).fill(null);
+    // a) Booked ads in their slot; ads without a slot fill the first free slots from the top.
+    const small = state.ads.small || [];
+    for (const ad of small.filter(a => a.slot)) if (ad.slot <= n && !slots[ad.slot - 1]) slots[ad.slot - 1] = adSlotHTML(ad);
+    for (const ad of small.filter(a => !a.slot)) { const i = slots.indexOf(null); if (i >= 0) slots[i] = adSlotHTML(ad); }
+    // b) News cards, then c) external link cards. If slots remain, the cards repeat so there is never a gap.
+    const pool = (state.news || []).map(newsCardHTML).concat((state.links || []).map(linkCardHTML));
+    let k = 0;
+    for (let i = 0; i < n; i++) if (!slots[i] && pool.length) slots[i] = pool[k++ % pool.length];
+    const html = slots.filter(Boolean).join('');
+    if (html !== lastRail) { $('rail').innerHTML = html; lastRail = html; }
+    $('rail').hidden = !html;
+    // Beside the page, stretch the slots evenly so the column ends exactly where the page ends.
+    const fit = !stackedRail() && !!html;
+    $('rail').classList.toggle('fit', fit);
+    $('rail').style.height = fit ? `${$('main').offsetHeight}px` : '';
+  }
+  let railTimer;
+  const queueRail = () => { clearTimeout(railTimer); railTimer = setTimeout(buildRail, 80); };
+  if (window.ResizeObserver) new ResizeObserver(queueRail).observe($('main'));
+  window.addEventListener('resize', queueRail);
 
   /* ---------- Notices (email confirm / unsubscribe) ---------- */
   function showNotice() {
@@ -539,12 +600,15 @@
   async function start() {
     $('year').textContent = new Date().getFullYear();
     showNotice();
-    renderAds();
     try { state.config = await api('/api/config'); } catch { /* keep defaults */ }
     turnstileReady(state.config.turnstileSiteKey);
     document.querySelectorAll('form .ts-slot').forEach(s => mountTurnstile(s.closest('form')));
     render();
-    try { state.ads = await api('/api/ads'); renderAds(); } catch { /* placeholders stay */ }
+    const [ads, , links] = await Promise.allSettled([api('/api/ads'), loadNews(), api('/api/links')]);
+    if (ads.status === 'fulfilled') state.ads = ads.value;
+    if (links.status === 'fulfilled') state.links = links.value.links;
+    renderBanners();
+    buildRail();
   }
   start();
 })();

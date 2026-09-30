@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
 
   /* ---------- Tabs ---------- */
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: loadNews, ads: loadAds, comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), links: () => loadLinks(), ads: loadAds, comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -309,26 +309,74 @@
     form.delete('image');
     if (img) form.append('image', img);
     btn.disabled = true; done.textContent = 'Saving…';
-    try { await api(url, { method: 'POST', form }); formEl.reset(); done.textContent = after; }
-    catch (err) { done.textContent = err.message; }
+    try { await api(url, { method: 'POST', form }); formEl.reset(); done.textContent = after; return true; }
+    catch (err) { done.textContent = err.message; return false; }
     finally { btn.disabled = false; }
   }
 
-  /* ---------- News ---------- */
-  $('news-form').addEventListener('submit', e => submitWithImage(e, '/api/admin/news', 1400,
-    'Published. It is now the home page headline and the top of the News page.').then(loadNews));
-  async function loadNews() {
-    const d = await api('/api/admin/news');
-    $('news-list').innerHTML = d.news.length ? d.news.map(n => `<div class="adm-card">
-      ${n.image_key ? `<img class="adm-thumb" src="/media/${esc(n.image_key)}" alt="">` : ''}<b>${esc(n.title)}</b>
-      <div class="meta">${esc(niceDate(n.published_at))}</div>
-      <div class="adm-actions"><button class="btn sm alt" data-del-news="${n.id}">Delete</button></div></div>`).join('') : '<div class="empty-state">No news yet.</div>';
+  /* ---------- News articles and link cards: add, edit, delete, re-order ---------- */
+  function contentEditor({ key, url, listKey, form, list, titleEl, noun, addTitle, maxW, describe }) {
+    let items = [];
+    const f = $(form);
+    const setEditing = item => {
+      f.reset();
+      f.elements.id.value = item ? item.id : '';
+      f.querySelectorAll('.edit-only').forEach(el => { el.hidden = !item; });
+      $(titleEl).textContent = item ? `Edit ${noun}: ${item.title}` : addTitle;
+      f.querySelector('button[type=submit]').textContent = item ? 'Save changes' : (key === 'news' ? 'Publish article' : 'Save link card');
+      if (!item) return;
+      for (const el of f.elements) {
+        if (!el.name || el.type === 'file' || el.type === 'checkbox' || el.name === 'id') continue;
+        const v = el.name === 'date' ? String(item.published_at || item.card_date || '').slice(0, 10) : item[el.name];
+        if (v !== undefined && v !== null) el.value = v;
+      }
+      f.scrollIntoView({ behavior: 'smooth' });
+    };
+    async function load() {
+      items = (await api(url))[listKey];
+      $(list).innerHTML = items.length ? items.map((it, i) => `<div class="adm-card order-card">
+        <div class="order-btns"><button class="btn sm alt" data-move="-1" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
+          <button class="btn sm alt" data-move="1" data-i="${i}" ${i === items.length - 1 ? 'disabled' : ''} aria-label="Move down">↓</button></div>
+        <div>${it.image_key ? `<img class="adm-thumb" src="/media/${esc(it.image_key)}" alt="">` : ''}<b>${esc(it.title)}</b>
+          <div class="meta">${describe(it)}</div>
+          <div class="adm-actions"><button class="btn sm" data-edit="${i}">Edit</button><button class="btn sm alt" data-del="${i}">Delete</button></div></div></div>`).join('')
+        : `<div class="empty-state">No ${noun}s yet.</div>`;
+    }
+    f.addEventListener('submit', async e => {
+      const editing = !!f.elements.id.value;
+      if (!(await submitWithImage(e, url, maxW, editing ? 'Saved.' : 'Added. It is on the site now.'))) return;
+      setEditing(null);
+      load();
+    });
+    f.querySelector('[data-cancel]').addEventListener('click', () => setEditing(null));
+    $(list).addEventListener('click', async e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      const i = Number(b.dataset.i ?? b.dataset.edit ?? b.dataset.del);
+      if (b.dataset.edit !== undefined) setEditing(items[i]);
+      if (b.dataset.del !== undefined) {
+        if (!confirm(`Delete "${items[i].title}"?`)) return;
+        await api(`${url}?id=${items[i].id}`, { method: 'DELETE' });
+        load();
+      }
+      if (b.dataset.move !== undefined) {
+        const j = i + Number(b.dataset.move);
+        [items[i], items[j]] = [items[j], items[i]];
+        await api(url, { method: 'POST', body: { order: items.map(x => x.id) } });
+        load();
+      }
+    });
+    return load;
   }
-  $('news-list').addEventListener('click', async e => {
-    const b = e.target.closest('[data-del-news]');
-    if (!b || !confirm('Delete this news post?')) return;
-    await api(`/api/admin/news?id=${b.dataset.delNews}`, { method: 'DELETE' });
-    loadNews();
+  const loadNews = contentEditor({
+    key: 'news', url: '/api/admin/news', listKey: 'news', form: 'news-form', list: 'news-list', titleEl: 'news-form-title',
+    noun: 'article', addTitle: 'Add a news article', maxW: 1600,
+    describe: n => `${esc(niceDate(n.published_at))}${n.source_name ? ` · ${esc(n.source_name)}` : ''}${n.source_url ? ` · <a href="${esc(n.source_url)}" target="_blank" rel="noopener">original ↗</a>` : ''}`
+  });
+  const loadLinks = contentEditor({
+    key: 'links', url: '/api/admin/links', listKey: 'links', form: 'links-form', list: 'links-list', titleEl: 'links-form-title',
+    noun: 'link card', addTitle: 'Add a link card', maxW: 1200,
+    describe: l => `${l.card_date ? esc(niceDate(l.card_date)) + ' · ' : ''}${esc(l.source_name || '')} <a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.url)}</a>`
   });
 
   /* ---------- Ads ---------- */
@@ -338,9 +386,9 @@
     const today = new Date().toISOString().slice(0, 10);
     $('ad-list').innerHTML = d.ads.length ? d.ads.map(a => `<div class="adm-card">
       ${a.image_key ? `<img class="adm-thumb" src="/media/${esc(a.image_key)}" alt="">` : ''}<b>${esc(a.name)}</b>
-      <div class="meta">${a.tier === 'large' ? 'Banner (top and bottom)' : 'Side box'}${a.ends_on ? ` · until ${esc(niceDate(a.ends_on))}` : ''}${a.ends_on && a.ends_on < today ? ' · <b class="iss">ended, no longer showing</b>' : ''}${a.link ? ` · ${esc(a.link)}` : ''}</div>
+      <div class="meta">${a.tier === 'large' ? 'Banner (top and bottom)' : `Side box · ${a.slot ? `slot ${a.slot}` : 'first free slot'}`}${a.starts_on ? ` · from ${esc(niceDate(a.starts_on))}` : ''}${a.ends_on ? ` · until ${esc(niceDate(a.ends_on))}` : ''}${a.ends_on && a.ends_on < today ? ' · <b class="iss">ended, no longer showing</b>' : ''}${a.link ? ` · ${esc(a.link)}` : ''}</div>
       <div class="adm-actions"><button class="btn sm alt" data-del-ad="${a.id}">Remove</button></div></div>`).join('')
-      : '<div class="empty-state">No ads yet. Placeholders show until one is added.</div>';
+      : '<div class="empty-state">No ads yet. The right-hand column shows news and link cards until one is booked.</div>';
   }
   $('ad-list').addEventListener('click', async e => {
     const b = e.target.closest('[data-del-ad]');
