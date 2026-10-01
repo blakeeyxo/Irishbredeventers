@@ -18,7 +18,7 @@
   };
 
   /* ---------- Routing ---------- */
-  const VIEWS = ['home', 'results', 'search', 'horse', 'news', 'about'];
+  const VIEWS = ['home', 'results', 'calendar', 'search', 'horse', 'news', 'about'];
   // The design preview (a single static page) keeps the route in memory; the live site uses real paths.
   const MEMORY = window.IBE_MEMORY_ROUTES === true;
   let memoryUrl = '/';
@@ -42,7 +42,7 @@
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
     const tab = view === 'horse' || view === 'search' ? null : view;
     document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
-    const names = { home: SITE + ' (IBER)', results: 'Results', search: 'Search', news: 'News', about: 'About' };
+    const names = { home: SITE + ' (IBER)', results: 'Results', calendar: 'Calendar', search: 'Search', news: 'News', about: 'About' };
     if (view !== 'horse') document.title = view === 'home' ? names.home : `${names[view]} · ${SITE}`;
   }
 
@@ -55,6 +55,7 @@
     lastPath = path;
     if (r.view === 'home') renderHome();
     if (r.view === 'results') renderResults(r.params);
+    if (r.view === 'calendar') renderCalendar(r.params.get('month') || '');
     if (r.view === 'search') {
       const q = r.params.get('q') || '';
       const input = $('global-search');
@@ -76,6 +77,7 @@
     // Horse names open the horse's record in a pop-up over the current page.
     const horse = a.getAttribute('href').match(/^\/horse\/(\d+)$/);
     if (horse) { openHorse(Number(horse[1])); return; }
+    if (a.hasAttribute('data-close-modal')) closeOverlays();
     navigate(a.getAttribute('href'));
   });
   if (!MEMORY) window.addEventListener('popstate', render);
@@ -99,6 +101,7 @@
     if (/training/i.test(c)) return 'Training';
     return 'Other';
   }
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function weekOf(iso) {
     if (!iso) return '';
@@ -161,7 +164,12 @@
       let eventId = null, cls = null;
       for (const h of rows) {
         if (h.event_id !== eventId) {
-          html += `<tr class="grp-event"><td colspan="5"><b>${esc(h.event_name)}</b><span>${esc(h.date_text)}</span></td></tr>`;
+          const evRows = rows.filter(x => x.event_id === h.event_id);
+          const classes = new Set(evRows.map(x => x.class_name)).size;
+          const details = [h.date_text, h.country, `${classes} class${classes === 1 ? '' : 'es'}`, `${evRows.length} Irish-bred placing${evRows.length === 1 ? '' : 's'}`]
+            .filter(Boolean).map(esc).join(' · ');
+          const source = h.article_url ? ` · <a href="${esc(h.article_url)}" target="_blank" rel="noopener">Horse Sport Ireland report ↗</a>` : '';
+          html += `<tr class="grp-event"><td colspan="5"><b>${esc(h.event_name)}</b><span>${details}${source}</span></td></tr>`;
           eventId = h.event_id; cls = null;
         }
         if (h.class_name !== cls) { html += `<tr class="grp-class"><td colspan="5">${esc(h.class_name)}</td></tr>`; cls = h.class_name; }
@@ -210,8 +218,17 @@
     sel.value = items.some(([v]) => v === value) ? value : '';
   }
 
+  // Month tabs within the season: only months that have results.
+  function renderMonths() {
+    const months = [...new Set(state.seasonRows.map(r => (r.start_date || '').slice(5, 7)).filter(Boolean))].sort();
+    if (state.month && !months.includes(state.month)) state.month = '';
+    $('month-toggle').innerHTML = months.length > 1 ? [['', 'All months'], ...months.map(m => [m, MONTH_NAMES[Number(m) - 1]])]
+      .map(([m, l]) => `<button class="chip ${m === state.month ? 'active' : ''}" data-month="${m}">${l}</button>`).join('') : '';
+  }
+
   function applyFilters(push) {
-    const rows = state.seasonRows;
+    renderMonths();
+    const rows = state.seasonRows.filter(r => !state.month || (r.start_date || '').slice(5, 7) === state.month);
     const f = filterVals();
     // Week and level narrow the event list, so the dropdowns never offer an empty combination.
     const weeks = [...new Set(rows.map(r => weekOf(r.start_date)).filter(Boolean))].sort().reverse();
@@ -225,13 +242,14 @@
     const shown = inLevel.filter(r => !$('f-event').value || String(r.event_id) === $('f-event').value);
 
     const active = filterVals();
-    $('f-count').textContent = `${shown.length} placing${shown.length === 1 ? '' : 's'}${active.week || active.event || active.level ? ' match these filters' : ''}`;
+    $('f-count').textContent = `${shown.length} placing${shown.length === 1 ? '' : 's'}${active.week || active.event || active.level || state.month ? ' match these filters' : ''}`;
     $('results-list').innerHTML = shown.length ? groupedTable(shown)
       : `<div class="empty-state">No results ${rows.length ? 'match these filters' : `for ${state.season} yet.${state.season < state.config.currentYear ? ' Earlier seasons are being added from the archive.' : ''}`}</div>`;
 
     if (push) {
       const p = new URLSearchParams();
       if (state.season !== state.config.currentYear) p.set('season', state.season);
+      if (state.month) p.set('month', state.month);
       for (const k of ['week', 'event', 'level']) if (active[k]) p.set(k, active[k]);
       setUrl('/results' + (p.toString() ? '?' + p : ''), true);
     }
@@ -256,6 +274,7 @@
         return;
       }
     }
+    state.month = /^\d{2}$/.test(params.get('month') || '') ? params.get('month') : '';
     // Selects are rebuilt in applyFilters; seed them with the URL values first.
     for (const k of ['week', 'event', 'level']) {
       const sel = $('f-' + k), v = params.get(k) || '';
@@ -266,7 +285,14 @@
   }
 
   ['f-week', 'f-level', 'f-event'].forEach(id => $(id).addEventListener('change', () => applyFilters(true)));
-  $('f-clear').addEventListener('click', () => { ['f-week', 'f-event', 'f-level'].forEach(id => { $(id).value = ''; }); applyFilters(true); });
+  $('f-clear').addEventListener('click', () => { ['f-week', 'f-event', 'f-level'].forEach(id => { $(id).value = ''; }); state.month = ''; applyFilters(true); });
+  $('month-toggle').addEventListener('click', e => {
+    const b = e.target.closest('button[data-month]');
+    if (!b) return;
+    state.month = b.dataset.month;
+    ['f-week', 'f-event'].forEach(id => { $(id).value = ''; });
+    applyFilters(true);
+  });
   $('season-toggle').addEventListener('click', e => {
     const b = e.target.closest('button[data-year]');
     if (!b) return;
@@ -276,6 +302,40 @@
   $('legend-toggle').addEventListener('click', e => {
     const open = $('legend').classList.toggle('open');
     e.currentTarget.setAttribute('aria-expanded', open);
+  });
+
+  /* ---------- Calendar: upcoming events, expected from past runs ---------- */
+  const shortDate = iso => { const d = new Date(iso + 'T00:00:00Z'); return `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}`; };
+  async function renderCalendar(month) {
+    if (!state.calendar) {
+      try { state.calendar = (await api('/api/calendar')).events; }
+      catch (e) { $('calendar-list').innerHTML = `<div class="empty-state">${esc(e.message)}</div>`; return; }
+    }
+    const all = state.calendar;
+    const ym = e => e.expected_start.slice(0, 7);
+    const months = [...new Set(all.map(ym))];
+    if (!months.includes(month)) month = '';
+    const label = k => `${MONTH_NAMES[Number(k.slice(5, 7)) - 1]} ${k.slice(0, 4)}`;
+    $('cal-months').innerHTML = months.length > 1 ? [['', 'All months'], ...months.map(m => [m, label(m)])]
+      .map(([m, l]) => `<button class="chip ${m === month ? 'active' : ''}" data-cal-month="${m}">${esc(l)}</button>`).join('') : '';
+    const shown = all.filter(e => !month || ym(e) === month);
+    if (!shown.length) { $('calendar-list').innerHTML = '<div class="empty-state">No upcoming events in the archive yet. They appear here once an event has run at least once.</div>'; return; }
+    let body = '', cur = null;
+    for (const e of shown) {
+      if (ym(e) !== cur) { cur = ym(e); body += `<tr class="grp-class"><td colspan="4">${esc(label(cur))}</td></tr>`; }
+      body += `<tr class="row">
+        <td data-label="Expected">${esc(shortDate(e.expected_start))}${e.expected_end ? ` – ${esc(shortDate(e.expected_end))}` : ''}</td>
+        <td class="c-horse">${esc(e.name)}</td>
+        <td data-label="Country">${esc(e.country)}</td>
+        <td data-label="Last ran">${esc(e.based_on)}</td></tr>`;
+    }
+    $('calendar-list').innerHTML = `<div class="rtable-wrap"><table class="rtable"><thead><tr><th>Expected</th><th>Event</th><th>Country</th><th>Last ran</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  }
+  $('cal-months').addEventListener('click', e => {
+    const b = e.target.closest('button[data-cal-month]');
+    if (!b) return;
+    setUrl(b.dataset.calMonth ? `/calendar?month=${b.dataset.calMonth}` : '/calendar', true);
+    renderCalendar(b.dataset.calMonth);
   });
 
   /* ---------- Search ---------- */
@@ -320,6 +380,23 @@
     : `<div class="ped ${cls} missing"><span>${role}</span><b>Not in the results</b></div>`;
 
   const CLOSE = '<button class="modal-close" aria-label="Close">&times;</button>';
+  const monthOf = iso => (iso ? `${MONTH_NAMES[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}` : 'Date not given');
+  const eventHref = r => `/results?${new URLSearchParams({ ...(r.season !== state.config.currentYear ? { season: r.season } : {}), month: r.start_date.slice(5, 7), event: r.event_id })}`;
+  // Form: an index of the horse's classes, grouped by month so it reads like an event calendar.
+  function formRows(runs) {
+    let month = null;
+    return runs.map(r => {
+      const m = monthOf(r.start_date);
+      const head = m !== month ? `<tr class="grp-class"><td colspan="5">${esc(m)}</td></tr>` : '';
+      month = m;
+      return `${head}<tr class="row">
+          <td class="c-pl">${esc(ordinal(r.position))}</td>
+          <td data-label="Date">${esc(r.date_text || niceDate(r.start_date))}</td>
+          <td class="c-horse"><a href="${esc(eventHref(r))}" data-link data-close-modal>${esc(r.event_name)}</a><span class="sub">${esc(r.country)}</span></td>
+          <td data-label="Class">${esc(r.class_name)}${r.verified ? '' : '<span class="unv-tag">Unverified</span>'}</td>
+          <td class="c-score">${scoreCell(r)}</td></tr>`;
+    }).join('');
+  }
   async function openHorse(id) {
     const el = $('horse-modal');
     el.innerHTML = `${CLOSE}<div class="empty-state">Loading…</div>`;
@@ -346,30 +423,23 @@
             ${ped('ss', "Sire's sire", '')}${ped('sd', "Sire's dam", '')}
             ${ped('ds', 'Dam sire', h.dam_sire)}${ped('dd', "Dam's dam", '')}
           </div>
-          <p class="note">The weekly results carry sire, dam and dam sire.</p>
         </div>
         <div>
           <h3 class="section-title">Record</h3>
           <div class="stats">
             <div><span>Runs recorded</span><b>${runs.length}</b></div>
-            <div><span>Best finish</span><b>${positions.length ? esc(ordinal(Math.min(...positions))) : '–'}</b></div>
-            <div><span>Wins</span><b>${positions.filter(p => p === 1).length}</b></div>
+            <div><span>Wins / Placings<small>1st / top three</small></span><b>${positions.filter(p => p === 1).length} / ${positions.filter(p => p <= 3).length}</b></div>
             <div><span>Best dressage</span><b>${dressage.length ? Math.min(...dressage) : '–'}</b></div>
             <div><span>Clear cross country</span><b>${xcKnown.length ? `${xcClear} of ${xcKnown.length}` : '–'}</b></div>
           </div>
         </div>
       </div>
       <h3 class="section-title">Form</h3>
-      <div class="rtable-wrap"><table class="rtable">
+      <div class="rtable-wrap"><table class="rtable form-table">
         <thead><tr><th>Pl</th><th>Date</th><th>Event</th><th>Class</th><th class="c-score">Score</th></tr></thead>
-        <tbody>${runs.map(r => `<tr class="row">
-          <td class="c-pl">${esc(ordinal(r.position))}</td>
-          <td data-label="Date">${esc(r.date_text || niceDate(r.start_date))}</td>
-          <td class="c-horse">${esc(r.event_name)}<span class="sub">${esc(r.country)}</span></td>
-          <td data-label="Class">${esc(r.class_name)}${r.verified ? '' : '<span class="unv-tag">Unverified</span>'}</td>
-          <td class="c-score">${scoreCell(r)}</td></tr>`).join('')}</tbody>
+        <tbody>${formRows(runs)}</tbody>
       </table></div>
-      <p class="note">Every recorded run for ${esc(h.horse_name)}, newest first.</p>`;
+      <p class="note">Every class ${esc(h.horse_name)} has run in, newest first, by month. Click an event to open its results.</p>`;
   }
 
   /* ---------- News ---------- */
@@ -513,9 +583,13 @@
      Banners show only when an ad is booked. The right-hand column runs the full height of the
      page. Each slot shows, in order of priority: the ad booked for that slot, otherwise a news
      card, otherwise an external link card. It never shows an empty box. */
+  // How the image sits in its box, as chosen in the owner area: cropped to fill (and which part stays in
+  // view), or the whole image shown.
+  const FOCUS = { center: 'center', top: 'center top', bottom: 'center bottom', left: 'left center', right: 'right center' };
+  const adImg = (ad, lazy) => `<img src="${imgUrl(ad.image_key)}" alt="${esc(ad.name)}"${lazy ? ' loading="lazy"' : ''}
+    style="object-fit:${ad.fit === 'contain' ? 'contain' : 'cover'};object-position:${FOCUS[ad.focus] || 'center'}">`;
   function bannerHTML(ad) {
-    const inner = ad.image_key ? `<img src="${imgUrl(ad.image_key)}" alt="${esc(ad.name)}">`
-      : `<span class="ad-eyebrow">Advertisement</span><span class="banner-name">${esc(ad.name)}</span>`;
+    const inner = ad.image_key ? adImg(ad) : `<span class="banner-name">${esc(ad.name)}</span>`;
     return ad.link ? `<a class="banner" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${inner}</a>` : `<div class="banner">${inner}</div>`;
   }
   function renderBanners() {
@@ -530,8 +604,8 @@
   const hostOf = url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
 
   function adSlotHTML(ad) {
-    const inner = ad.image_key ? `<img src="${imgUrl(ad.image_key)}" alt="${esc(ad.name)}" loading="lazy">` : `<span class="ad-name">${esc(ad.name)}</span>`;
-    const body = `<span class="ad-eyebrow">Advertisement</span><span class="ad-body">${inner}</span>`;
+    const inner = ad.image_key ? adImg(ad, true) : `<span class="ad-name">${esc(ad.name)}</span>`;
+    const body = `<span class="ad-body">${inner}</span>`;
     return ad.link ? `<a class="slot ad-box" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${body}</a>` : `<div class="slot ad-box">${body}</div>`;
   }
   function newsCardHTML(n) {

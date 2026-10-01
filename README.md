@@ -90,8 +90,9 @@ Do these once, in order. Everything is on the free plans to start.
 - [ ] Push to `main` → it deploys. The first deploy also creates the D1 database and the R2 bucket
 
 ### 2. Tables and launch content (automatic)
-- [ ] Nothing to run by hand: each deploy applies new files in `migrations/` once. (`0006_results_source.sql` and
-  `0007_hsi_2026_results.sql`, the 2026 Horse Sport Ireland results, are on the working branch until approved.) `0005_launch_content.sql`
+- [ ] Nothing to run by hand: each deploy applies new files in `migrations/` once. (`0006_results_source.sql`,
+  `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` (advert crop
+  settings) are on the working branch until approved.) `0005_launch_content.sql`
   loads Charlie's real results (14–16 February 2025 and the week of 6 April 2026), his four articles and
   the three link cards. It never adds example ads or the fictional sample weeks.
 - [ ] Open `https://irishbredeventers.<your-subdomain>.workers.dev` and check results show
@@ -182,7 +183,14 @@ results, so it adds nothing there.
 4. If a name looks like one already on file ("Sligo Candyboy" vs "Sligo Candy Boy", "Guidam" vs "Luidam"), choose **Same** or **Different**. Confirm stays locked until every one is answered. "Same" answers are remembered, so next week isn't asked again.
 5. Press **Confirm and save**. The summary shows how many results, horses, sires, dams and breeders were added. Pasting the same week twice adds nothing.
 
-Fix unverified rows later in the **Unverified** tab. A wrong upload can be removed whole under **Published uploads**.
+Fix unverified rows later in the **Unverified** tab. Under **Published uploads**, **Edit** opens an upload to rename it
+and correct or delete any of its results, and **Remove** takes the whole upload off the site.
+
+**Ads tab:** the form shows a preview of the advert in its real boxes as soon as an image is chosen (banner, or
+side box both square and stretched beside a long page, which is how it also looks on the home page). **Fit in the
+box** crops the image to fill the box (choose which part stays in view: centre, top, bottom, left or right) or shows
+the whole image. Each advert in **Current ads** has **Edit** (change anything; leave the image empty to keep it) and
+**Remove**. The site shows the advert without an "Advertisement" label.
 
 ### The right-hand column
 
@@ -214,6 +222,12 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
 - Riders are shown on the results pages when given (under the horse), and are never searchable: the search index
   covers horse, former names, sire, dam, dam sire and breeder only. They are stored in `results` (rider name and country).
 - The home page shows the first-placed horses from the latest week, with the usual banners and right-hand column around them.
+- Horse record: Runs recorded, Wins / Placings (1st / top three), Best dressage, Clear cross country. Form lists every
+  class the horse ran in, by month, and each event links to its results.
+- Results: year tabs, then month tabs within the year. Each event shows its dates, country, number of classes,
+  Irish-bred placings and a link to the Horse Sport Ireland report.
+- Calendar: upcoming events for the next twelve months, expected on the same weekday one year after they last ran
+  in the archive. Shown as a guide; the page tells people to check with the organiser.
 - No stallion page (stallion ads are just ads). No donation button. No scheduled newsletter.
 - Unverified results sit at the end of their own class, marked "Unverified".
 - Comments only appear after approval.

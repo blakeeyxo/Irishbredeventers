@@ -247,45 +247,79 @@
 
   async function loadBatches() {
     const d = await api('/api/admin/batches');
-    $('adm-batches').innerHTML = d.batches.length ? d.batches.map(b => `<div class="adm-card"><b>${esc(b.label || 'Upload')}</b>
+    $('adm-batches').innerHTML = d.batches.length ? d.batches.map(b => `<div class="adm-card" data-batch="${b.id}"><b>${esc(b.label || 'Upload')}</b>
       <div class="meta">${esc(niceDate(b.created_at))} · ${b.row_count} results · ${b.unverified_count} unverified</div>
-      <div class="adm-actions"><button class="btn sm alt" data-del-batch="${b.id}" data-name="${esc(b.label)}">Remove this upload</button></div></div>`).join('')
+      <div class="adm-actions"><button class="btn sm" data-edit-batch="${b.id}">Edit</button>
+        <button class="btn sm alt" data-del-batch="${b.id}" data-name="${esc(b.label)}">Remove</button></div>
+      <div class="batch-edit" hidden></div></div>`).join('')
       : '<div class="empty-state">Nothing uploaded yet.</div>';
   }
+  async function openBatch(card) {
+    const box = card.querySelector('.batch-edit');
+    if (!box.hidden) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    box.innerHTML = '<div class="empty-state">Loading…</div>';
+    const id = Number(card.dataset.batch), label = card.querySelector('b').textContent;
+    const d = await api(`/api/admin/batches?id=${id}`);
+    box.innerHTML = `<form class="form batch-label" data-id="${id}"><label>Upload name<input name="label" value="${esc(label)}" maxlength="120"></label>
+        <div class="adm-actions"><button class="btn sm" type="submit">Save name</button></div></form>
+      <p class="meta">${d.rows.length} results. Correct any field and press Save; Delete takes one result off the site.</p>
+      <div class="unv-list">${d.rows.map(rowEditCard).join('')}</div>`;
+  }
   $('adm-batches').addEventListener('click', async e => {
-    const b = e.target.closest('[data-del-batch]');
-    if (!b || !confirm(`Remove "${b.dataset.name}" and all its results from the site?`)) return;
-    await api(`/api/admin/batches?id=${b.dataset.delBatch}`, { method: 'DELETE' });
+    const del = e.target.closest('[data-del-batch]'), edit = e.target.closest('[data-edit-batch]');
+    if (edit) return openBatch(edit.closest('[data-batch]'));
+    if (!del || !confirm(`Remove "${del.dataset.name}" and all its results from the site?`)) return;
+    await api(`/api/admin/batches?id=${del.dataset.delBatch}`, { method: 'DELETE' });
     loadBatches(); refreshSummary();
+  });
+  $('adm-batches').addEventListener('submit', async e => {
+    const f = e.target.closest('form.batch-label');
+    if (!f) return;
+    e.preventDefault();
+    try { await api('/api/admin/batches', { method: 'POST', body: { id: Number(f.dataset.id), label: f.elements.label.value } }); f.closest('[data-batch]').querySelector('b').textContent = f.elements.label.value; }
+    catch (err) { alert(err.message); }
   });
 
   /* ---------- Unverified ---------- */
   const FIELDS = [['position', 'Pos'], ['horse_name', 'Horse'], ['former_name', 'Former name(s)'], ['breed', 'Breed'], ['foaled', 'Foaled'], ['sex', 'Sex'],
     ['sire', 'Sire'], ['dam', 'Dam'], ['dam_sire', 'Dam sire'], ['breeder', 'Breeder'], ['dressage', 'Dressage'], ['show_jumping', 'Show jumping'], ['cross_country', 'Cross country'], ['score', 'Final score']];
 
-  async function loadUnverified() {
-    const d = await api('/api/admin/unverified');
-    $('unv-list').innerHTML = d.rows.length ? d.rows.map(r => `<form class="adm-card" data-id="${r.id}">
-      <b>${esc(r.horse_name || '?')}</b> <span class="meta">${esc(r.country)} · ${esc(r.event_name)} · ${esc(r.class_name)}</span>
+  // One result as an editable card: in the Unverified tab, and under an upload opened with Edit.
+  function rowEditCard(r) {
+    return `<form class="adm-card" data-id="${r.id}" data-verified="${r.verified ? 1 : 0}">
+      <b>${esc(r.horse_name || '?')}</b>${r.verified ? '' : ' <span class="iss">Unverified</span>'} <span class="meta">${esc(r.country)} · ${esc(r.event_name)} · ${esc(r.class_name)}</span>
       ${r.raw_line ? `<p class="meta">${r.parse_ok ? 'As written' : 'Could not be read cleanly. As written'}${r.article_url ? ` (<a href="${esc(r.article_url)}" target="_blank" rel="noopener">article</a>)` : ''}: ${esc(r.raw_line)}</p>` : ''}
       <div class="adm-row-edit">${FIELDS.map(([k, l]) => `<label>${l}<input name="${k}" value="${esc(r[k] ?? '')}"></label>`).join('')}</div>
-      <div class="adm-actions">
-        <button class="btn sm" data-act="verify">Save and mark as verified</button>
-        <button class="btn sm alt" data-act="save">Save, keep unverified</button>
-        <button class="btn sm alt" data-act="remove">Delete</button>
-      </div></form>`).join('') : '<div class="empty-state">No unverified results.</div>';
+      <div class="adm-actions">${r.verified
+        ? '<button class="btn sm" data-act="save-verified">Save</button>'
+        : '<button class="btn sm" data-act="verify">Save and mark as verified</button><button class="btn sm alt" data-act="save">Save, keep unverified</button>'}
+        <button class="btn sm alt" data-act="remove">Delete</button><span class="form-done" role="status"></span>
+      </div></form>`;
   }
-  $('unv-list').addEventListener('click', async e => {
+  async function loadUnverified() {
+    const d = await api('/api/admin/unverified');
+    $('unv-list').innerHTML = d.rows.length ? d.rows.map(rowEditCard).join('') : '<div class="empty-state">No unverified results.</div>';
+  }
+  async function rowAction(e) {
     const b = e.target.closest('button[data-act]');
     if (!b) return;
     e.preventDefault();
-    const form = b.closest('form'), id = Number(form.dataset.id);
+    const form = b.closest('form'), id = Number(form.dataset.id), inUnverified = !!b.closest('#unv-list');
     if (b.dataset.act === 'remove' && !confirm('Delete this result from the site?')) return;
-    const body = b.dataset.act === 'remove' ? { id, remove: true } : { id, fields: Object.fromEntries(new FormData(form)), verify: b.dataset.act === 'verify' };
+    const body = b.dataset.act === 'remove' ? { id, remove: true }
+      : { id, fields: Object.fromEntries(new FormData(form)), verify: b.dataset.act === 'verify' || b.dataset.act === 'save-verified' };
     b.disabled = true;
-    try { await api('/api/admin/unverified', { method: 'POST', body }); loadUnverified(); refreshSummary(); }
-    catch (err) { alert(err.message); b.disabled = false; }
-  });
+    try {
+      await api('/api/admin/unverified', { method: 'POST', body });
+      refreshSummary();
+      if (inUnverified) return loadUnverified();
+      if (b.dataset.act === 'remove') form.remove();
+      else { b.disabled = false; form.querySelector('.form-done').textContent = 'Saved.'; }
+    } catch (err) { alert(err.message); b.disabled = false; }
+  }
+  $('unv-list').addEventListener('click', rowAction);
+  $('adm-batches').addEventListener('click', rowAction);
 
   /* ---------- Images: shrink before upload ---------- */
   function shrinkImage(file, maxW) {
@@ -384,22 +418,68 @@
     describe: l => `${l.card_date ? esc(niceDate(l.card_date)) + ' · ' : ''}${esc(l.source_name || '')} <a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.url)}</a>`
   });
 
-  /* ---------- Ads ---------- */
-  $('ad-form').addEventListener('submit', e => submitWithImage(e, '/api/admin/ads', 1940, 'Advert added. It is live on the site now.').then(loadAds));
+  /* ---------- Ads: add, preview, edit, remove ---------- */
+  // The preview uses the site's own banner and side-box styles, so it matches the live boxes on every page.
+  const AD_FOCUS = { center: 'center', top: 'center top', bottom: 'center bottom', left: 'left center', right: 'right center' };
+  const adForm = $('ad-form');
+  let ads = [], editingAd = null, previewUrl = null;
+  function adPreview() {
+    const f = adForm.elements, file = f.image.files[0];
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+    if (file) previewUrl = URL.createObjectURL(file);
+    const src = previewUrl || (editingAd && editingAd.image_key ? `/media/${editingAd.image_key}` : '');
+    const name = f.name.value.trim();
+    if (!src && !name) { $('ad-preview').hidden = true; return; }
+    const style = `object-fit:${f.fit.value};object-position:${AD_FOCUS[f.focus.value]}`;
+    const inner = cls => src ? `<img src="${esc(src)}" alt="" style="${style}">` : `<span class="${cls}">${esc(name)}</span>`;
+    $('ad-preview-boxes').innerHTML = f.tier.value === 'large'
+      ? `<div class="banner" style="height:auto;aspect-ratio:1256/110;">${inner('banner-name')}</div><p class="meta">Banner, shown at the same proportions as on a laptop screen.</p>`
+      : `<div class="ad-preview-row">
+          <figure><div class="ad-box" style="aspect-ratio:1/1;width:232px;"><span class="ad-body" style="padding:0">${inner('ad-name')}</span></div><figcaption>Side box</figcaption></figure>
+          <figure><div class="ad-box" style="aspect-ratio:auto;width:232px;height:300px;"><span class="ad-body" style="padding:0">${inner('ad-name')}</span></div><figcaption>Side box when the column stretches beside a long page</figcaption></figure>
+        </div>`;
+    $('ad-preview').hidden = false;
+  }
+  ['change', 'input'].forEach(ev => adForm.addEventListener(ev, adPreview));
+  function setEditingAd(ad) {
+    editingAd = ad;
+    adForm.reset();
+    adForm.elements.id.value = ad ? ad.id : '';
+    adForm.querySelectorAll('.edit-only').forEach(el => { el.hidden = !ad; });
+    $('ad-form-title').textContent = ad ? `Edit advert: ${ad.name}` : 'Add an advert';
+    adForm.querySelector('button[type=submit]').textContent = ad ? 'Save changes' : 'Add advert';
+    if (ad) {
+      for (const k of ['tier', 'name', 'link', 'slot', 'starts_on', 'ends_on', 'fit', 'focus']) adForm.elements[k].value = ad[k] ?? '';
+      adForm.scrollIntoView({ behavior: 'smooth' });
+    }
+    adPreview();
+  }
+  adForm.addEventListener('submit', async e => {
+    const editing = !!adForm.elements.id.value;
+    if (!(await submitWithImage(e, '/api/admin/ads', 1940, editing ? 'Saved. The change is live on the site now.' : 'Advert added. It is live on the site now.'))) return;
+    setEditingAd(null);
+    loadAds();
+  });
+  adForm.querySelector('[data-cancel]').addEventListener('click', () => setEditingAd(null));
   async function loadAds() {
-    const d = await api('/api/admin/ads');
+    ads = (await api('/api/admin/ads')).ads;
     const today = new Date().toISOString().slice(0, 10);
-    $('ad-list').innerHTML = d.ads.length ? d.ads.map(a => `<div class="adm-card">
-      ${a.image_key ? `<img class="adm-thumb" src="/media/${esc(a.image_key)}" alt="">` : ''}<b>${esc(a.name)}</b>
-      <div class="meta">${a.tier === 'large' ? 'Banner (top and bottom)' : `Side box · ${a.slot ? `slot ${a.slot}` : 'first free slot'}`}${a.starts_on ? ` · from ${esc(niceDate(a.starts_on))}` : ''}${a.ends_on ? ` · until ${esc(niceDate(a.ends_on))}` : ''}${a.ends_on && a.ends_on < today ? ' · <b class="iss">ended, no longer showing</b>' : ''}${a.link ? ` · ${esc(a.link)}` : ''}</div>
-      <div class="adm-actions"><button class="btn sm alt" data-del-ad="${a.id}">Remove</button></div></div>`).join('')
+    $('ad-list').innerHTML = ads.length ? ads.map((a, i) => `<div class="adm-card">
+      ${a.image_key ? `<img class="adm-thumb" src="/media/${esc(a.image_key)}" alt="" style="object-fit:${a.fit === 'contain' ? 'contain' : 'cover'};object-position:${AD_FOCUS[a.focus] || 'center'}">` : ''}<b>${esc(a.name)}</b>
+      <div class="meta">${a.tier === 'large' ? 'Banner (top and bottom)' : `Side box · ${a.slot ? `slot ${a.slot}` : 'first free slot'}`}${a.starts_on ? ` · from ${esc(niceDate(a.starts_on))}` : ''}${a.ends_on ? ` · until ${esc(niceDate(a.ends_on))}` : ''}${a.ends_on && a.ends_on < today ? ' · <b class="iss">ended, no longer showing</b>' : ''} · ${a.fit === 'contain' ? 'whole image' : `cropped, ${esc(a.focus || 'center')}`}${a.link ? ` · ${esc(a.link)}` : ''}</div>
+      <div class="adm-actions"><button class="btn sm" data-edit-ad="${i}">Edit</button><button class="btn sm alt" data-del-ad="${i}">Remove</button></div></div>`).join('')
       : '<div class="empty-state">No ads yet. The right-hand column shows news and link cards until one is booked.</div>';
   }
   $('ad-list').addEventListener('click', async e => {
-    const b = e.target.closest('[data-del-ad]');
-    if (!b || !confirm('Remove this advert?')) return;
-    await api(`/api/admin/ads?id=${b.dataset.delAd}`, { method: 'DELETE' });
-    loadAds();
+    const edit = e.target.closest('[data-edit-ad]'), del = e.target.closest('[data-del-ad]');
+    if (edit) setEditingAd(ads[Number(edit.dataset.editAd)]);
+    if (del) {
+      const ad = ads[Number(del.dataset.delAd)];
+      if (!confirm(`Remove the advert for "${ad.name}"? It comes off the site straight away.`)) return;
+      await api(`/api/admin/ads?id=${ad.id}`, { method: 'DELETE' });
+      if (editingAd && editingAd.id === ad.id) setEditingAd(null);
+      loadAds();
+    }
   });
 
   /* ---------- Comments ---------- */

@@ -70,3 +70,11 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
   .imp-table .opts { flex-direction: row; flex-wrap: wrap; }
 }
 
+
+/* Advert preview */
+.ad-preview { border: 1px dashed var(--rule-strong); padding: 14px; background: var(--cream); }
+.ad-preview-title { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 10px; }
+.ad-preview-row { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+.ad-preview-row figure { margin: 0; }
+.ad-preview-row figcaption { font-size: 12px; color: var(--ink-faint); margin-top: 6px; max-width: 232px; }
+.ad-preview .ad-box img, .ad-preview .banner img { width: 100%; height: 100%; display: block; }

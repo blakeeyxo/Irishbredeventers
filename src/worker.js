@@ -13,6 +13,7 @@
 import * as config from '../functions/api/config.js';
 import * as home from '../functions/api/home.js';
 import * as results from '../functions/api/results.js';
+import * as calendar from '../functions/api/calendar.js';
 import * as search from '../functions/api/search.js';
 import * as horse from '../functions/api/horse/[id].js';
 import * as news from '../functions/api/news.js';
@@ -43,6 +44,7 @@ const ROUTES = {
   '/api/config': config,
   '/api/home': home,
   '/api/results': results,
+  '/api/calendar': calendar,
   '/api/search': search,
   '/api/news': news,
   '/api/links': links,

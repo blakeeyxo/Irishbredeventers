@@ -126,6 +126,8 @@
     <h3>Ads</h3>
     <p class="intro">Banner ads run full width at the top and bottom of every page (use a wide image, about 1300 × 110). Side-box ads are square (about 480 × 480) and are booked into a slot in the right-hand column: slot 1 is the top. A booked ad replaces the news or link card in its slot automatically. Ads show from their start date to their end date.</p>
     <form class="form" id="ad-form">
+      <h3 id="ad-form-title" style="margin:0;">Add an advert</h3>
+      <input type="hidden" name="id">
       <label>Type<select name="tier"><option value="large">Banner (top and bottom)</option><option value="small" selected>Side box (right-hand column)</option></select></label>
       <label>Advertiser name<input type="text" name="name" maxlength="80" required></label>
       <label>Link (optional)<input type="text" name="link" placeholder="https://" inputmode="url"></label>
@@ -135,7 +137,19 @@
       </div>
       <label>Runs until (optional)<input type="date" name="ends_on"></label>
       <label>Advert image<input type="file" name="image" accept="image/*"></label>
-      <button class="btn" type="submit">Add advert</button>
+      <p class="meta edit-only" hidden>Leave the image empty to keep the current one.</p>
+      <div class="form-row">
+        <label>Fit in the box<select name="fit"><option value="cover" selected>Crop to fill the box</option><option value="contain">Show the whole image</option></select></label>
+        <label>When cropped, keep in view<select name="focus"><option value="center" selected>Centre</option><option value="top">Top</option><option value="bottom">Bottom</option><option value="left">Left</option><option value="right">Right</option></select></label>
+      </div>
+      <div class="ad-preview" id="ad-preview" hidden>
+        <p class="ad-preview-title">Preview: how it will look on the site (home page and every other page)</p>
+        <div id="ad-preview-boxes"></div>
+      </div>
+      <div class="adm-actions">
+        <button class="btn" type="submit">Add advert</button>
+        <button class="btn alt edit-only" type="button" data-cancel hidden>Cancel editing</button>
+      </div>
       <div class="form-done" role="status"></div>
     </form>
     <h3 style="margin-top:40px;">Current ads</h3>

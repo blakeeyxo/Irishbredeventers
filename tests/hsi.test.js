@@ -82,3 +82,13 @@ test('an event year a season behind the article is read as the article year and 
   assert.deepEqual([rows[0].start_date, rows[0].season], ['2026-08-08', 2026]);
   assert.match(review[0].problem, /read as 2026/);
 });
+
+test('Caber Farm Horse Trials is in Canada, not taken from the "Horse Trials" wording', () => {
+  const { rows, review } = collectResults([article('2026-08-17', [
+    'Caber Farm Horse Trials 14th – 16th August 2026',
+    'Open Training',
+    '1st A Horse (ISH) – 2015 mare by B (KWPN) out of C (ISH). Breeder: E. Rider: F (CAN) 30, 0, 0 = 30'
+  ])]);
+  assert.equal(rows[0].country, 'Canada');
+  assert.equal(review.filter(r => r.status === 'check').length, 0);
+});

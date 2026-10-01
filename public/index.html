@@ -33,6 +33,7 @@
       <nav class="nav" id="tabs" aria-label="Main">
         <a href="/" data-tab="home" data-link class="active">Home</a>
         <a href="/results" data-tab="results" data-link>Results</a>
+        <a href="/calendar" data-tab="calendar" data-link>Calendar</a>
         <a href="/news" data-tab="news" data-link>News</a>
         <a href="/about" data-tab="about" data-link>About</a>
       </nav>
@@ -73,8 +74,9 @@
   <section class="view" id="view-results">
     <p class="eyebrow">Results</p>
     <h2 class="page-title" id="results-title">Results</h2>
-    <p class="page-intro">Every Irish-bred placing, grouped by country, event and class. Filter by week, event or level.</p>
+    <p class="page-intro">Every Irish-bred placing, grouped by country, event and class. Choose a year and month, or filter by week, event or level.</p>
     <div class="seasons" id="season-toggle"></div>
+    <div class="seasons months" id="month-toggle"></div>
     <div class="filters" id="filters">
       <label>Week<select id="f-week"><option value="">All weeks</option></select></label>
       <label>Event<select id="f-event"><option value="">All events</option></select></label>
@@ -91,7 +93,7 @@
         <div><b>Sire × Dam</b><p>The dam's own sire is shown underneath as "dam by …".</p></div>
         <div><b>Score</b><p>Dressage, show jumping and cross country penalties, then the final score. Lowest wins.</p></div>
         <div><b>Former names</b><p>Shown under the horse and included in search.</p></div>
-        <div><b>Unverified</b><p>Results still being checked sit at the very end and move up once confirmed.</p></div>
+        <div><b>Unverified</b><p>Results still being checked sit at the end of their class and move up once confirmed.</p></div>
         <div><b>Horse pages</b><p>Click any horse for its full record.</p></div>
       </div>
     </div>
@@ -109,6 +111,15 @@
         <div class="form-done" role="status"></div>
       </form>
     </div>
+  </section>
+
+  <!-- CALENDAR -->
+  <section class="view" id="view-calendar">
+    <p class="eyebrow">Calendar</p>
+    <h2 class="page-title">Upcoming events</h2>
+    <p class="page-intro">Events expected over the next twelve months, worked out from when they ran before in our results archive. Dates are a guide only: check with the organiser before you enter or travel.</p>
+    <div class="seasons months" id="cal-months"></div>
+    <div id="calendar-list"><div class="empty-state">Loading…</div></div>
   </section>
 
   <!-- SEARCH -->
