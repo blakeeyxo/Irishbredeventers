@@ -124,13 +124,13 @@
   <!-- ADS -->
   <div class="adm-pane" id="adm-ads">
     <h3>Ads</h3>
-    <p class="intro">Banner ads run full width at the top and bottom of every page (use a wide image, about 1300 × 110). Side-box ads are square (about 480 × 480) and are booked into a slot in the right-hand column: slot 1 is the top. A booked ad replaces the news or link card in its slot automatically. Ads show from their start date to their end date.</p>
+    <p class="intro">Banner ads run full width at the top and bottom of every page (use a wide image, about 1300 × 110). Side-box ads are square (about 480 × 480) and always show at the top of the right-hand column, in their Order (1 = top). News and link cards fill the rest of the column automatically. Ads show from their start date to their end date.</p>
     <form class="form" id="ad-form">
       <label>Type<select name="tier"><option value="large">Banner (top and bottom)</option><option value="small" selected>Side box (right-hand column)</option></select></label>
       <label>Advertiser name<input type="text" name="name" maxlength="80" required></label>
       <label>Link (optional)<input type="text" name="link" placeholder="https://" inputmode="url"></label>
       <div class="form-row">
-        <label>Slot (side boxes; 1 = top, blank = first free)<input type="number" name="slot" min="1" max="40"></label>
+        <label>Order (side boxes; 1 = top, blank = after the numbered ads)<input type="number" name="slot" min="1" max="40"></label>
         <label>Starts on (optional)<input type="date" name="starts_on"></label>
       </div>
       <label>Runs until (optional)<input type="date" name="ends_on"></label>

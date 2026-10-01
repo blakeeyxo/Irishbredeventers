@@ -513,8 +513,9 @@
 
   /* ---------- Banners and the right-hand column ----------
      Banners show only when an ad is booked. The right-hand column runs the full height of the
-     page. Each slot shows, in order of priority: the ad booked for that slot, otherwise a news
-     card, otherwise an external link card. It never shows an empty box. */
+     page. Booked side-box ads come first, from the top (in their "Slot" order, then the rest);
+     only the slots left over are filled with news cards, then external link cards, repeating
+     as needed. It never shows an empty box. */
   function bannerHTML(ad) {
     const inner = ad.image_key ? `<img src="${imgUrl(ad.image_key)}" alt="${esc(ad.name)}">`
       : `<span class="ad-eyebrow">Advertisement</span><span class="banner-name">${esc(ad.name)}</span>`;
@@ -560,15 +561,13 @@
   let lastRail = '';
   function buildRail() {
     const n = slotCount();
-    const slots = new Array(n).fill(null);
-    // a) Booked ads in their slot; ads without a slot fill the first free slots from the top.
+    // a) Every booked ad, first: numbered ones by number, then unnumbered ones in booking order.
     const small = state.ads.small || [];
-    for (const ad of small.filter(a => a.slot)) if (ad.slot <= n && !slots[ad.slot - 1]) slots[ad.slot - 1] = adSlotHTML(ad);
-    for (const ad of small.filter(a => !a.slot)) { const i = slots.indexOf(null); if (i >= 0) slots[i] = adSlotHTML(ad); }
-    // b) News cards, then c) external link cards. If slots remain, the cards repeat so there is never a gap.
+    const ads = small.filter(a => a.slot).sort((a, b) => a.slot - b.slot).concat(small.filter(a => !a.slot));
+    const slots = ads.map(adSlotHTML);
+    // b) Any slots left: news cards, then external link cards, repeating so there is never a gap.
     const pool = (state.news || []).map(newsCardHTML).concat((state.links || []).map(linkCardHTML));
-    let k = 0;
-    for (let i = 0; i < n; i++) if (!slots[i] && pool.length) slots[i] = pool[k++ % pool.length];
+    for (let k = 0; slots.length < n && pool.length; k++) slots.push(pool[k % pool.length]);
     const html = slots.filter(Boolean).join('');
     if (html !== lastRail) { $('rail').innerHTML = html; lastRail = html; }
     $('rail').hidden = !html;

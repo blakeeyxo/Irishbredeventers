@@ -64,7 +64,7 @@ npm run dev                           # http://localhost:8787  (owner area: /adm
 # in a second terminal, while dev is running:
 npm run import:local -- seed/sample-results-2-weeks.txt   # two fictional weeks (asks about near-matches;
                                                           #   add --same sire,dam to answer "same" for those)
-npm run ads:local                     # example ads: 2 banners + side boxes booked into slots 2, 5 and 8 (--all for all 8)
+npm run ads:local                     # example ads: 2 banners + side boxes ordered 2, 5 and 8 (they show at the top) (--all for all 8)
 npm run content:local                 # articles and link cards from seed/starter-content.json (content:remote loads them on the live site)
 npm test                              # parser, matching, Word reader, search and login tests
 ```
@@ -148,7 +148,7 @@ Fix unverified rows later in the **Unverified** tab. A wrong upload can be remov
 
 ### The right-hand column
 
-The column runs the full height of every page. Each slot shows, in this order: the side-box ad booked for that slot (Ads tab: "Slot", 1 = top, with optional start and end dates), otherwise a news article card, otherwise an external link card (Link cards tab). It never shows an empty box. Articles and link cards can be added, edited, deleted and moved up or down in the owner area. Banners only show when a banner ad is booked. "Advertise here" appears only in the Advertise section of the About page.
+The column runs the full height of every page. Booked side-box ads always come first, from the top (Ads tab: "Order", 1 = top, with optional start and end dates). Only the slots left over are filled: news article cards, then external link cards (Link cards tab), repeating as needed. It never shows an empty box. Articles and link cards can be added, edited, deleted and moved up or down in the owner area. Banners only show when a banner ad is booked. "Advertise here" appears only in the Advertise section of the About page.
 
 ### Breeding data
 
