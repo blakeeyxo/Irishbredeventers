@@ -28,22 +28,24 @@
       "bucket_name": "irishbredeventers-media"
     }
   ],
+  // Keep the variables set in the Cloudflare dashboard (Worker → Settings → Variables and Secrets)
+  // on every deploy. Only the values listed under "vars" below are set from this file; anything set
+  // here would overwrite the dashboard value of the same name, so the owner-login settings live ONLY
+  // in the dashboard:
+  //   ACCESS_TEAM_DOMAIN  Cloudflare Access team domain, e.g. yourteam.cloudflareaccess.com
+  //   ACCESS_AUD          Audience (AUD) tag of the Access application that guards /signin
+  //                       (not /admin: /admin must stay a plain 404 to the public)
+  //   ADMIN_EMAILS        Emails allowed into the owner area (comma separated)
+  //   TURNSTILE_SITE_KEY  Turnstile site key (public); the secret is the secret TURNSTILE_SECRET
+  //   ENQUIRY_EMAIL       Optional: where advertising enquiries are emailed
+  // Secrets (TURNSTILE_SECRET, MAIL_API_KEY) are never touched by a deploy.
+  "keep_vars": true,
   "vars": {
     // Public web address, used in email links. Change once the .ie domain is live.
-    "SITE_URL": "https://irishbredeventers.workers.dev",
-    // Cloudflare Access (Zero Trust) team domain and the Application Audience (AUD) tag of the
-    // Access application that guards /signin (not /admin: /admin must stay a plain 404 to the public).
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": "",
-    // Only these emails may use the owner area (comma separated).
-    "ADMIN_EMAILS": "",
-    // Turnstile site key (public). The secret is added as a secret: TURNSTILE_SECRET.
-    "TURNSTILE_SITE_KEY": "",
+    "SITE_URL": "https://irishbredeventers.emerblakeey.workers.dev",
     // Mailing service: "resend" or "brevo". The API key is added as a secret: MAIL_API_KEY.
     "MAIL_PROVIDER": "resend",
-    "MAIL_FROM": "IrishBredEventers <results@irishbredeventing.ie>",
-    // Where advertising enquiries are emailed (optional; they are always in the owner area).
-    "ENQUIRY_EMAIL": ""
+    "MAIL_FROM": "IrishBredEventers <results@irishbredeventing.ie>"
   },
   "observability": { "enabled": true }
 }

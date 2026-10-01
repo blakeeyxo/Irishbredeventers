@@ -103,7 +103,9 @@ holds only real content; it matches rows on names and dates, so running it again
     away. The Worker keeps them as a plain 404 for anyone who hasn't logged in through `/signin`.
 - [ ] Policy: **Allow**, include **Emails**: Charlie's and Emer's addresses
 - [ ] Copy the application's **Audience (AUD) tag**
-- [ ] In `wrangler.jsonc` set `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, and `ADMIN_EMAILS` (Charlie's and Emer's, comma separated). Push.
+- [ ] In the dashboard, Worker → **Settings → Variables and Secrets** (type: Text), add `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` and `ADMIN_EMAILS` (Charlie's and Emer's, comma separated).
+  Don't put them in `wrangler.jsonc`: it has `keep_vars: true`, so deploys keep dashboard values, but anything
+  listed in the file would overwrite them.
 - [ ] Test in a private window: `/admin/` → plain "Not found". `/signin` → email-code login → lands on `/admin/`
 
 The Worker checks the signed Access login on every owner page and API call, so they stay closed (and look
@@ -112,7 +114,7 @@ and they send `X-Robots-Tag: noindex`. Bookmark `/signin`; the login lasts for t
 
 ### 4. Spam protection (Turnstile)
 - [ ] Dashboard → **Turnstile** → **Add widget** → add the workers.dev hostname (and the .ie later) → mode **Managed**
-- [ ] Put the **site key** in `wrangler.jsonc` as `TURNSTILE_SITE_KEY` and push
+- [ ] Add the **site key** as `TURNSTILE_SITE_KEY` in Worker → **Settings → Variables and Secrets** (type: Text)
 - [ ] Add the **secret key**: Worker → **Settings → Variables and Secrets** → add secret `TURNSTILE_SECRET`
 - [ ] Without the secret, the public forms refuse posts (they fail closed)
 
@@ -128,7 +130,7 @@ Until `MAIL_API_KEY` is set, sign-ups are stored but no email is sent (the owner
 ### 6. Domain
 - [ ] Buy the .ie through Smarthost, then point its nameservers at Cloudflare (add the site in Cloudflare first to get them)
 - [ ] Worker → **Settings → Domains & Routes** → add the .ie as a custom domain
-- [ ] Update `SITE_URL` in `wrangler.jsonc`, add the .ie `/signin` path to the Access application and the Turnstile widget
+- [ ] Update `SITE_URL` in `wrangler.jsonc` (it lives in the file, not the dashboard), add the .ie `/signin` path to the Access application and the Turnstile widget
 - [ ] Business mailbox for the contact address: Cloudflare **Email Routing** can forward results@… to an existing inbox for free, or use a paid mailbox
 - [ ] Update the contact email and phone in `public/index.html` (About page and footer)
 
