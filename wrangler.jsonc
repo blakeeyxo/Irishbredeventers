@@ -45,7 +45,7 @@
     "SITE_URL": "https://irishbredeventers.emerblakeey.workers.dev",
     // Mailing service: "resend" or "brevo". The API key is added as a secret: MAIL_API_KEY.
     "MAIL_PROVIDER": "resend",
-    "MAIL_FROM": "IrishBredEventers <results@irishbredeventing.ie>"
+    "MAIL_FROM": "IrishBredEventingResults <info@iber.ie>"
   },
   "observability": { "enabled": true }
 }

@@ -418,55 +418,340 @@
     describe: l => `${l.card_date ? esc(niceDate(l.card_date)) + ' · ' : ''}${esc(l.source_name || '')} <a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.url)}</a>`
   });
 
-  /* ---------- Ads: add, preview, edit, remove ---------- */
-  // The preview uses the site's own banner and side-box styles, so it matches the live boxes on every page.
+  /* ---------- Ads: sizes, crop, preview, edit, remove ---------- */
   const AD_FOCUS = { center: 'center', top: 'center top', bottom: 'center bottom', left: 'left center', right: 'right center' };
   const adForm = $('ad-form');
-  let ads = [], editingAd = null, previewUrl = null;
+  const PIXEL_DENSITY = 2; // recommended images are twice the box size, so they stay sharp on high-resolution screens
+
+  // 1. Box sizes, measured from the live layout: the public home page is loaded out of sight at laptop and
+  //    phone width and the real banner and right-hand-column boxes are measured, so the recommendations follow
+  //    any change to the site's layout. If measuring fails, the sizes from the stylesheet are used.
+  const FALLBACK = { laptop: { banner: [1256, 110], box: [232, 232], home: [232, 232] }, phone: { banner: [358, 80], box: [171, 171], home: [171, 171] } };
+  function measureAt(width) {
+    return new Promise(resolve => {
+      const f = document.createElement('iframe');
+      f.style.cssText = `position:absolute;left:-10000px;top:0;width:${width}px;height:1000px;border:0;visibility:hidden;`;
+      f.setAttribute('aria-hidden', 'true');
+      f.tabIndex = -1;
+      let finished = false;
+      const done = v => { if (finished) return; finished = true; f.remove(); resolve(v); };
+      setTimeout(() => done(null), 20000);
+      f.onload = () => {
+        const d = f.contentDocument;
+        const size = el => { const b = el.getBoundingClientRect(); return [Math.round(b.width), Math.round(b.height)]; };
+        const measure = tries => {
+          const slots = d.querySelectorAll('#rail .slot');
+          if (!slots.length && tries < 40) return setTimeout(() => measure(tries + 1), 250);
+          const probe = d.createElement('div');
+          probe.innerHTML = '<div class="container banner-row"><div class="banner"></div></div>'
+            + '<div class="container page"><main></main><aside class="rail"><div class="slot ad-box"></div></aside></div>';
+          d.body.appendChild(probe);
+          done({ banner: size(probe.querySelector('.banner')), box: size(probe.querySelector('.ad-box')), home: slots.length ? size(slots[0]) : null });
+        };
+        measure(0);
+      };
+      f.src = '/?layout-probe';
+      document.body.appendChild(f);
+    });
+  }
+  let layout = { ...FALLBACK, measured: false };
+  const layoutReady = Promise.all([measureAt(1360), measureAt(390)]).then(([laptop, phone]) => {
+    const ok = v => v && v[0] > 0 && v[1] > 0;
+    const pick = (m, fb) => ({ banner: ok(m && m.banner) ? m.banner : fb.banner, box: ok(m && m.box) ? m.box : fb.box, home: ok(m && m.home) ? m.home : fb.home });
+    layout = { laptop: pick(laptop, FALLBACK.laptop), phone: pick(phone, FALLBACK.phone), measured: !!(laptop && phone) };
+    renderSizes();
+    return layout;
+  });
+  const recommended = ([w, h]) => [w * PIXEL_DENSITY, h * PIXEL_DENSITY];
+  const ratioText = ([w, h]) => { const r = w / h; return r >= 1 ? `${r.toFixed(r >= 10 ? 1 : 2).replace(/\.?0+$/, '')} : 1` : `1 : ${(1 / r).toFixed(2).replace(/\.?0+$/, '')}`; };
+  const px = ([w, h]) => `${w} × ${h}`;
+  // The shapes the crop tool offers, from the measured boxes.
+  function shapes(tier) {
+    const L = layout.laptop;
+    return tier === 'large'
+      ? [['banner', `Banner shape (${ratioText(L.banner)}, top and bottom banner)`, L.banner], ['free', 'Free shape', null]]
+      : [['box', `Side box (${ratioText(L.box)}, every page)`, L.box], ['home', `Home page box (${ratioText(L.home)})`, L.home], ['free', 'Free shape', null]];
+  }
+  function renderSizes() {
+    const L = layout.laptop, P = layout.phone;
+    const row = (name, where, lap, ph) => `<tr><th>${name}<small>${where}</small></th><td>${px(lap)} px<small>phone ${px(ph)}</small></td><td><b>${px(recommended(lap))} px</b><small>ratio ${ratioText(lap)}</small></td></tr>`;
+    $('ad-sizes').innerHTML = `<table class="ad-size-table"><thead><tr><th>Where it shows</th><th>Box on screen (laptop)</th><th>Recommended image</th></tr></thead><tbody>
+      ${row('Top banner', 'every page, under the header', L.banner, P.banner)}
+      ${row('Bottom banner', 'every page, above the footer (same advert and size as the top)', L.banner, P.banner)}
+      ${row('Side boxes', 'right-hand column on every page', L.box, P.box)}
+      ${row('Home page boxes', 'the same column on the home page, where the boxes stretch to the page height', L.home, P.home)}
+      </tbody></table>
+      <p class="meta">${layout.measured ? 'Measured from the site as it is now.' : 'Could not measure the site just now, so these are the sizes from the stylesheet.'}
+      The recommended size is twice the box so it stays sharp on high-resolution screens. A smaller image still works,
+      but you'll see a warning: it will be stretched to fit and may look soft or blurry. Side boxes also stretch beside long pages, so
+      "Crop to fill" may trim a little more from the edges there.</p>`;
+  }
+
+  // 2. Crop tool: the picture moves and zooms under a fixed crop box (or a free-shape box with corner handles).
+  const crop = { img: null, file: null, origUrl: '', shape: 'box', box: null, scale: 1, base: 1, tx: 0, ty: 0, changed: false };
+  const stage = $('crop-stage'), boxEl = $('crop-box'), imgEl = $('crop-img');
+  const stageSize = () => [stage.clientWidth, stage.clientHeight];
+  const shapeRatio = () => { const s = shapes(adForm.elements.tier.value).find(x => x[0] === crop.shape); return s && s[2] ? s[2][0] / s[2][1] : null; };
+  function fitBox(ratio) {
+    const [sw, sh] = stageSize(), m = 24, aw = sw - 2 * m, ah = sh - 2 * m;
+    let w = aw, h = aw / ratio;
+    if (h > ah) { h = ah; w = ah * ratio; }
+    return { x: (sw - w) / 2, y: (sh - h) / 2, w, h };
+  }
+  function clamp() {
+    const b = crop.box, W = crop.img.naturalWidth * crop.scale, H = crop.img.naturalHeight * crop.scale;
+    crop.tx = Math.min(b.x, Math.max(b.x + b.w - W, crop.tx));
+    crop.ty = Math.min(b.y, Math.max(b.y + b.h - H, crop.ty));
+  }
+  function setBase(keepZoom) {
+    const b = crop.box, z = keepZoom ? crop.scale / crop.base : 1;
+    crop.base = Math.max(b.w / crop.img.naturalWidth, b.h / crop.img.naturalHeight);
+    crop.scale = crop.base * z;
+    $('crop-zoom').value = z;
+  }
+  function drawCrop() {
+    if (!crop.img) return;
+    clamp();
+    const b = crop.box;
+    Object.assign(boxEl.style, { left: `${b.x}px`, top: `${b.y}px`, width: `${b.w}px`, height: `${b.h}px` });
+    boxEl.classList.toggle('free', crop.shape === 'free');
+    Object.assign(imgEl.style, { width: `${crop.img.naturalWidth * crop.scale}px`, transform: `translate(${crop.tx}px, ${crop.ty}px)` });
+    queuePreview();
+  }
+  // The crop as fractions of the original image.
+  function cropRect() {
+    const W = crop.img.naturalWidth, H = crop.img.naturalHeight, b = crop.box;
+    const x = Math.max(0, (b.x - crop.tx) / crop.scale), y = Math.max(0, (b.y - crop.ty) / crop.scale);
+    return { x: x / W, y: y / H, w: Math.min(W - x, b.w / crop.scale) / W, h: Math.min(H - y, b.h / crop.scale) / H, shape: crop.shape };
+  }
+  function resetCrop(saved) {
+    const sw = stageSize()[0];
+    if (!crop.img || !sw) return;
+    const ratio = shapeRatio();
+    if (saved && saved.w > 0) {
+      // Put a saved crop back: the box takes the crop's shape and the picture is placed under it.
+      const r = ratio || (saved.w * crop.img.naturalWidth) / (saved.h * crop.img.naturalHeight);
+      crop.box = fitBox(r);
+      crop.base = Math.max(crop.box.w / crop.img.naturalWidth, crop.box.h / crop.img.naturalHeight);
+      crop.scale = crop.box.w / (saved.w * crop.img.naturalWidth);
+      crop.tx = crop.box.x - saved.x * crop.img.naturalWidth * crop.scale;
+      crop.ty = crop.box.y - saved.y * crop.img.naturalHeight * crop.scale;
+      $('crop-zoom').value = crop.scale / crop.base;
+    } else {
+      crop.box = fitBox(ratio || crop.img.naturalWidth / crop.img.naturalHeight);
+      setBase(false);
+      crop.tx = crop.box.x + (crop.box.w - crop.img.naturalWidth * crop.scale) / 2;
+      crop.ty = crop.box.y + (crop.box.h - crop.img.naturalHeight * crop.scale) / 2;
+    }
+    drawCrop();
+  }
+  function zoomTo(z, cx, cy) {
+    if (!crop.img) return;
+    z = Math.min(6, Math.max(1, z));
+    const b = crop.box, ox = cx ?? b.x + b.w / 2, oy = cy ?? b.y + b.h / 2;
+    const k = (crop.base * z) / crop.scale;
+    crop.tx = ox - (ox - crop.tx) * k;
+    crop.ty = oy - (oy - crop.ty) * k;
+    crop.scale = crop.base * z;
+    $('crop-zoom').value = z;
+    crop.changed = true;
+    drawCrop();
+  }
+  $('crop-zoom').addEventListener('input', e => zoomTo(Number(e.target.value)));
+  $('crop-in').addEventListener('click', () => zoomTo(crop.scale / crop.base * 1.15));
+  $('crop-out').addEventListener('click', () => zoomTo(crop.scale / crop.base / 1.15));
+  $('crop-reset').addEventListener('click', () => { crop.changed = true; resetCrop(); });
+  stage.addEventListener('wheel', e => {
+    if (!crop.img) return;
+    e.preventDefault();
+    const r = stage.getBoundingClientRect();
+    zoomTo(crop.scale / crop.base * (e.deltaY < 0 ? 1.08 : 1 / 1.08), e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  // Drag the picture to move it; drag a corner of a free-shape box to resize it.
+  stage.addEventListener('pointerdown', e => {
+    if (!crop.img) return;
+    e.preventDefault();
+    stage.setPointerCapture(e.pointerId);
+    const handle = e.target.closest('.crop-handle');
+    const start = { x: e.clientX, y: e.clientY, tx: crop.tx, ty: crop.ty, box: { ...crop.box } };
+    const move = ev => {
+      const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
+      if (handle && crop.shape === 'free') {
+        const [sw, sh] = stageSize(), b = { ...start.box }, min = 30, h = handle.dataset.h;
+        if (h.includes('w')) { const nx = Math.min(b.x + b.w - min, Math.max(0, b.x + dx)); b.w += b.x - nx; b.x = nx; }
+        if (h.includes('e')) b.w = Math.min(sw - b.x, Math.max(min, b.w + dx));
+        if (h.includes('n')) { const ny = Math.min(b.y + b.h - min, Math.max(0, b.y + dy)); b.h += b.y - ny; b.y = ny; }
+        if (h.includes('s')) b.h = Math.min(sh - b.y, Math.max(min, b.h + dy));
+        crop.box = b;
+        setBase(true);
+      } else {
+        crop.tx = start.tx + dx;
+        crop.ty = start.ty + dy;
+      }
+      crop.changed = true;
+      drawCrop();
+    };
+    const up = () => { stage.removeEventListener('pointermove', move); stage.removeEventListener('pointerup', up); stage.removeEventListener('pointercancel', up); };
+    stage.addEventListener('pointermove', move);
+    stage.addEventListener('pointerup', up);
+    stage.addEventListener('pointercancel', up);
+  });
+  $('crop-shape').addEventListener('change', e => { crop.shape = e.target.value; crop.changed = true; resetCrop(); });
+  function fillShapes(selected) {
+    const list = shapes(adForm.elements.tier.value);
+    if (!list.some(x => x[0] === selected)) selected = list[0][0];
+    $('crop-shape').innerHTML = list.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('');
+    $('crop-shape').value = selected;
+    crop.shape = selected;
+  }
+  window.addEventListener('resize', () => { if (crop.img && !$('ad-cropper').hidden) resetCrop(crop.img && cropRect()); });
+
+  // The picture as it will be saved: the cropped part ("Crop to fill") or the whole image ("Show the whole image"),
+  // never enlarged, at most maxW wide.
+  function render(maxW) {
+    const W = crop.img.naturalWidth, H = crop.img.naturalHeight;
+    const r = adForm.elements.fit.value === 'contain' ? { x: 0, y: 0, w: 1, h: 1 } : cropRect();
+    const sw = r.w * W, sh = r.h * H, k = Math.min(1, maxW / sw);
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(sw * k)); c.height = Math.max(1, Math.round(sh * k));
+    c.getContext('2d').drawImage(crop.img, r.x * W, r.y * H, sw, sh, 0, 0, c.width, c.height);
+    return { canvas: c, w: Math.round(sw), h: Math.round(sh) };
+  }
+  const outputType = () => (crop.file && /png|gif|webp/.test(crop.file.type)) || /\.png$/i.test(crop.origUrl) ? 'image/png' : 'image/jpeg';
+  const toBlob = (canvas, type) => new Promise(res => canvas.toBlob(b => res(b), type, 0.9));
+
+  // 3. Warning when the picture (or the cropped part) is smaller than recommended for where it shows.
+  function sizeWarning(w, h) {
+    const tier = adForm.elements.tier.value, L = layout.laptop;
+    const target = tier === 'large' ? ['banner', L.banner] : crop.shape === 'home' ? ['home page box', L.home] : ['side box', L.box];
+    const [rw, rh] = recommended(target[1]);
+    const contain = adForm.elements.fit.value === 'contain';
+    // With the whole image shown, it only has to be big enough in the direction that touches the box edges.
+    const short = contain ? (w / h > rw / rh ? w < rw : h < rh) : (w < rw || h < rh);
+    const el = $('ad-warning');
+    el.hidden = !short;
+    if (short) el.textContent = `Smaller than recommended: ${contain ? 'this image' : 'the cropped part'} is ${w} × ${h} pixels and the recommended size for a ${target[0]} is ${rw} × ${rh}. `
+      + `It can still be saved, but it will be stretched to fit the box and may look soft or blurry, especially on high-resolution screens. `
+      + (contain ? 'Use a larger image if you have one.' : 'Zoom out, use a bigger crop box, or upload a larger image.');
+  }
+
+  // 4. Live preview in the site's own boxes, at their real (measured) proportions.
+  let previewQueued = false;
+  function queuePreview() { if (!previewQueued) { previewQueued = true; requestAnimationFrame(() => { previewQueued = false; adPreview(); }); } }
   function adPreview() {
-    const f = adForm.elements, file = f.image.files[0];
-    if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
-    if (file) previewUrl = URL.createObjectURL(file);
-    const src = previewUrl || (editingAd && editingAd.image_key ? `/media/${editingAd.image_key}` : '');
-    const name = f.name.value.trim();
-    if (!src && !name) { $('ad-preview').hidden = true; return; }
-    const style = `object-fit:${f.fit.value};object-position:${AD_FOCUS[f.focus.value]}`;
-    const inner = cls => src ? `<img src="${esc(src)}" alt="" style="${style}">` : `<span class="${cls}">${esc(name)}</span>`;
+    const f = adForm.elements, name = f.name.value.trim(), contain = f.fit.value === 'contain';
+    $('ad-cropper').hidden = !crop.img || contain;
+    adForm.querySelector('.bg-only').hidden = !contain;
+    if (!crop.img && !name) { $('ad-preview').hidden = true; $('ad-warning').hidden = true; return; }
+    let src = '';
+    if (crop.img) {
+      const out = render(900);
+      src = out.canvas.toDataURL('image/jpeg', 0.85);
+      sizeWarning(out.w, out.h);
+    }
+    const style = `width:100%;height:100%;display:block;object-fit:${contain ? `contain;background:${f.bg.value}` : 'cover'}`;
+    const inner = cls => src ? `<img src="${src}" alt="" style="${style}">` : `<span class="${cls}">${esc(name)}</span>`;
+    const L = layout.laptop, P = layout.phone;
+    const box = (size, label, scale = 1) => `<figure><div class="ad-box" style="aspect-ratio:auto;width:${Math.round(size[0] * scale)}px;height:${Math.round(size[1] * scale)}px;"><span class="ad-body" style="padding:0">${inner('ad-name')}</span></div><figcaption>${label}</figcaption></figure>`;
     $('ad-preview-boxes').innerHTML = f.tier.value === 'large'
-      ? `<div class="banner" style="height:auto;aspect-ratio:1256/110;">${inner('banner-name')}</div><p class="meta">Banner, shown at the same proportions as on a laptop screen.</p>`
-      : `<div class="ad-preview-row">
-          <figure><div class="ad-box" style="aspect-ratio:1/1;width:232px;"><span class="ad-body" style="padding:0">${inner('ad-name')}</span></div><figcaption>Side box</figcaption></figure>
-          <figure><div class="ad-box" style="aspect-ratio:auto;width:232px;height:300px;"><span class="ad-body" style="padding:0">${inner('ad-name')}</span></div><figcaption>Side box when the column stretches beside a long page</figcaption></figure>
-        </div>`;
+      ? `<div class="banner" style="height:auto;aspect-ratio:${L.banner[0]}/${L.banner[1]};">${inner('banner-name')}</div><p class="meta">Top and bottom banner on a laptop (${px(L.banner)})</p>
+         <div class="banner" style="height:${P.banner[1]}px;width:${P.banner[0]}px;max-width:100%;">${inner('banner-name')}</div><p class="meta">On a phone (${px(P.banner)})</p>`
+      : `<div class="ad-preview-row">${box(L.box, `Side box (${px(L.box)})`)}${box(L.home, `Home page box (${px(L.home)})`)}${box(P.box, `On a phone (${px(P.box)})`)}</div>`;
     $('ad-preview').hidden = false;
   }
-  ['change', 'input'].forEach(ev => adForm.addEventListener(ev, adPreview));
+
+  // Loading a picture into the crop tool: a new file, or the saved original when editing.
+  function loadPicture(url, saved) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        crop.img = img;
+        imgEl.src = url;
+        $('ad-cropper').hidden = adForm.elements.fit.value === 'contain';
+        requestAnimationFrame(() => { resetCrop(saved); adPreview(); resolve(true); });
+      };
+      img.onerror = () => { crop.img = null; resolve(false); };
+      img.src = url;
+    });
+  }
+  adForm.elements.image.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    crop.file = file; crop.changed = true;
+    if (crop.objectUrl) URL.revokeObjectURL(crop.objectUrl);
+    crop.objectUrl = URL.createObjectURL(file);
+    await loadPicture(crop.objectUrl);
+  });
+  adForm.elements.tier.addEventListener('change', () => { fillShapes(); if (crop.img) { crop.changed = true; resetCrop(); } adPreview(); });
+  ['input', 'change'].forEach(ev => adForm.addEventListener(ev, e => { if (e.target.name !== 'image' && e.target.name !== 'tier' && e.target.id !== 'crop-zoom') queuePreview(); }));
+  adForm.elements.fit.addEventListener('change', () => { crop.changed = true; if (crop.img) requestAnimationFrame(() => resetCrop(cropRect())); });
+
+  // 5. Add and edit.
+  let ads = [], editingAd = null;
   function setEditingAd(ad) {
     editingAd = ad;
     adForm.reset();
+    if (ad) adForm.querySelector('.form-done').textContent = '';
+    Object.assign(crop, { img: null, file: null, origUrl: '', changed: false });
     adForm.elements.id.value = ad ? ad.id : '';
     adForm.querySelectorAll('.edit-only').forEach(el => { el.hidden = !ad; });
     $('ad-form-title').textContent = ad ? `Edit advert: ${ad.name}` : 'Add an advert';
     adForm.querySelector('button[type=submit]').textContent = ad ? 'Save changes' : 'Add advert';
+    $('ad-cropper').hidden = true;
+    let saved = null;
     if (ad) {
-      for (const k of ['tier', 'name', 'link', 'slot', 'starts_on', 'ends_on', 'fit', 'focus']) adForm.elements[k].value = ad[k] ?? '';
+      for (const k of ['tier', 'name', 'link', 'slot', 'starts_on', 'ends_on', 'fit', 'bg']) adForm.elements[k].value = ad[k] ?? '';
+      if (!/^#[0-9a-f]{6}$/i.test(adForm.elements.bg.value)) adForm.elements.bg.value = '#ffffff';
+      try { saved = ad.crop ? JSON.parse(ad.crop) : null; } catch { saved = null; }
       adForm.scrollIntoView({ behavior: 'smooth' });
     }
-    adPreview();
+    fillShapes(saved && saved.shape);
+    const key = ad && (ad.orig_key || ad.image_key);
+    if (key) {
+      crop.origUrl = `/media/${key}`;
+      // If the original can't be loaded, start again from the picture as it shows now.
+      loadPicture(crop.origUrl, saved).then(ok => {
+        if (ok || key === ad.image_key || !ad.image_key) return adPreview();
+        crop.origUrl = `/media/${ad.image_key}`;
+        editingAd = { ...ad, orig_key: null };
+        loadPicture(crop.origUrl, null);
+      });
+    } else adPreview();
   }
   adForm.addEventListener('submit', async e => {
-    const editing = !!adForm.elements.id.value;
-    if (!(await submitWithImage(e, '/api/admin/ads', 1940, editing ? 'Saved. The change is live on the site now.' : 'Advert added. It is live on the site now.'))) return;
-    setEditingAd(null);
-    loadAds();
+    e.preventDefault();
+    const done = adForm.querySelector('.form-done'), btn = adForm.querySelector('button[type=submit]');
+    const form = new FormData(adForm);
+    form.delete('image');
+    if (crop.img) {
+      if (crop.file || crop.changed || !editingAd) {
+        const out = render(adForm.elements.tier.value === 'large' ? 2600 : 1400);
+        form.append('image', new File([await toBlob(out.canvas, outputType())], 'advert', { type: outputType() }));
+        form.append('crop', adForm.elements.fit.value === 'contain' ? '' : JSON.stringify(cropRect()));
+      } else {
+        form.append('crop', editingAd.crop || '');
+      }
+      // The untouched picture (kept so the advert can be re-cropped): a new upload, or an older advert's only picture.
+      if (crop.file) form.append('original', await shrinkImage(crop.file, 3000));
+      else if (editingAd && !editingAd.orig_key && crop.changed) form.append('original', new File([await (await fetch(crop.origUrl)).blob()], 'original', { type: outputType() }));
+    }
+    btn.disabled = true; done.textContent = 'Saving…';
+    try {
+      await api('/api/admin/ads', { method: 'POST', form });
+      done.textContent = editingAd ? 'Saved. The change is live on the site now.' : 'Advert added. It is live on the site now.';
+      setEditingAd(null);
+      loadAds();
+    } catch (err) { done.textContent = err.message; }
+    finally { btn.disabled = false; }
   });
   adForm.querySelector('[data-cancel]').addEventListener('click', () => setEditingAd(null));
   async function loadAds() {
+    layoutReady.then(() => { fillShapes(crop.shape); if (crop.img) resetCrop(cropRect()); });
     ads = (await api('/api/admin/ads')).ads;
     const today = new Date().toISOString().slice(0, 10);
     $('ad-list').innerHTML = ads.length ? ads.map((a, i) => `<div class="adm-card">
-      ${a.image_key ? `<img class="adm-thumb" src="/media/${esc(a.image_key)}" alt="" style="object-fit:${a.fit === 'contain' ? 'contain' : 'cover'};object-position:${AD_FOCUS[a.focus] || 'center'}">` : ''}<b>${esc(a.name)}</b>
-      <div class="meta">${a.tier === 'large' ? 'Banner (top and bottom)' : `Side box · ${a.slot ? `slot ${a.slot}` : 'first free slot'}`}${a.starts_on ? ` · from ${esc(niceDate(a.starts_on))}` : ''}${a.ends_on ? ` · until ${esc(niceDate(a.ends_on))}` : ''}${a.ends_on && a.ends_on < today ? ' · <b class="iss">ended, no longer showing</b>' : ''} · ${a.fit === 'contain' ? 'whole image' : `cropped, ${esc(a.focus || 'center')}`}${a.link ? ` · ${esc(a.link)}` : ''}</div>
+      ${a.image_key ? `<img class="adm-thumb" src="/media/${esc(a.image_key)}" alt="" style="object-fit:${a.fit === 'contain' ? `contain;background:${esc(a.bg || '#ffffff')}` : 'cover'};object-position:${AD_FOCUS[a.focus] || 'center'}">` : ''}<b>${esc(a.name)}</b>
+      <div class="meta">${a.tier === 'large' ? 'Banner (top and bottom)' : `Side box · ${a.slot ? `slot ${a.slot}` : 'first free slot'}`}${a.starts_on ? ` · from ${esc(niceDate(a.starts_on))}` : ''}${a.ends_on ? ` · until ${esc(niceDate(a.ends_on))}` : ''}${a.ends_on && a.ends_on < today ? ' · <b class="iss">ended, no longer showing</b>' : ''} · ${a.fit === 'contain' ? 'whole image' : 'cropped to fill'}${a.link ? ` · ${esc(a.link)}` : ''}</div>
       <div class="adm-actions"><button class="btn sm" data-edit-ad="${i}">Edit</button><button class="btn sm alt" data-del-ad="${i}">Remove</button></div></div>`).join('')
       : '<div class="empty-state">No ads yet. The right-hand column shows news and link cards until one is booked.</div>';
   }
@@ -481,6 +766,7 @@
       loadAds();
     }
   });
+  fillShapes();
 
   /* ---------- Comments ---------- */
   async function loadComments() {

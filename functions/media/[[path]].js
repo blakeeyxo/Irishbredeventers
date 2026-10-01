@@ -1,7 +1,7 @@
-// Serves news photos and ad images from R2 at /media/<key>.
+// Serves news photos and ad images from R2 at /media/<key> (advert originals kept for re-cropping are in ads/originals/).
 export async function onRequestGet({ env, params }) {
   const key = (params.path || []).join('/');
-  if (!/^(news|ads|links)\/[\w.-]+$/.test(key)) return new Response('Not found', { status: 404 });
+  if (!/^(news|ads|links|ads\/originals)\/[\w.-]+$/.test(key)) return new Response('Not found', { status: 404 });
   const obj = await env.MEDIA.get(key);
   if (!obj) return new Response('Not found', { status: 404 });
   const headers = new Headers();

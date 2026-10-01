@@ -217,12 +217,22 @@
     sel.value = items.some(([v]) => v === value) ? value : '';
   }
 
-  // Month tabs within the season: only months that have results.
+  // Month tabs within the season: all twelve months for every year. Months without results yet are shown
+  // lighter and fill in by themselves as results are imported (they come from the season's own rows).
+  const ALL_MONTHS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
   function renderMonths() {
-    const months = [...new Set(state.seasonRows.map(r => (r.start_date || '').slice(5, 7)).filter(Boolean))].sort();
-    if (state.month && !months.includes(state.month)) state.month = '';
-    $('month-toggle').innerHTML = months.length > 1 ? [['', 'All months'], ...months.map(m => [m, MONTH_NAMES[Number(m) - 1]])]
-      .map(([m, l]) => `<button class="chip ${m === state.month ? 'active' : ''}" data-month="${m}">${l}</button>`).join('') : '';
+    const withResults = new Set(state.seasonRows.map(r => (r.start_date || '').slice(5, 7)).filter(Boolean));
+    if (!ALL_MONTHS.includes(state.month)) state.month = '';
+    $('month-toggle').innerHTML = [['', 'All months'], ...ALL_MONTHS.map(m => [m, MONTH_NAMES[Number(m) - 1]])]
+      .map(([m, l]) => `<button class="chip ${m === state.month ? 'active' : ''}${m && !withResults.has(m) ? ' empty' : ''}" data-month="${m}"${m && !withResults.has(m) ? ' title="No results yet"' : ''}>${l}</button>`).join('');
+  }
+  // What an empty month or year says: future months haven't happened yet; earlier ones are still to come from the archive.
+  function emptyMessage() {
+    const name = state.month ? `${MONTH_NAMES[Number(state.month) - 1]} ${state.season}` : String(state.season);
+    const now = new Date(), thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const future = state.month ? `${state.season}-${state.month}` > thisMonth : state.season > now.getFullYear();
+    return future ? `No results for ${name} yet. They appear here once the events have run.`
+      : `Archive for ${name} coming soon. Results for this ${state.month ? 'month' : 'year'} are added as the archive is imported.`;
   }
 
   function applyFilters(push) {
@@ -243,7 +253,7 @@
     const active = filterVals();
     $('f-count').textContent = `${shown.length} placing${shown.length === 1 ? '' : 's'}${active.week || active.event || active.level || state.month ? ' match these filters' : ''}`;
     $('results-list').innerHTML = shown.length ? groupedTable(shown)
-      : `<div class="empty-state">No results ${rows.length ? 'match these filters' : `for ${state.season} yet.${state.season < state.config.currentYear ? ' Earlier seasons are being added from the archive.' : ''}`}</div>`;
+      : `<div class="empty-state">${rows.length ? 'No results match these filters.' : esc(emptyMessage())}</div>`;
 
     if (push) {
       const p = new URLSearchParams();
@@ -552,7 +562,7 @@
   // view), or the whole image shown.
   const FOCUS = { center: 'center', top: 'center top', bottom: 'center bottom', left: 'left center', right: 'right center' };
   const adImg = (ad, lazy) => `<img src="${imgUrl(ad.image_key)}" alt="${esc(ad.name)}"${lazy ? ' loading="lazy"' : ''}
-    style="object-fit:${ad.fit === 'contain' ? 'contain' : 'cover'};object-position:${FOCUS[ad.focus] || 'center'}">`;
+    style="object-fit:${ad.fit === 'contain' ? `contain;background:${/^#[0-9a-f]{6}$/i.test(ad.bg || '') ? ad.bg : '#ffffff'}` : 'cover'};object-position:${FOCUS[ad.focus] || 'center'}">`;
   function bannerHTML(ad) {
     const inner = ad.image_key ? adImg(ad) : `<span class="banner-name">${esc(ad.name)}</span>`;
     return ad.link ? `<a class="banner" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${inner}</a>` : `<div class="banner">${inner}</div>`;

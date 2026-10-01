@@ -91,8 +91,8 @@ Do these once, in order. Everything is on the free plans to start.
 
 ### 2. Tables and launch content (automatic)
 - [ ] Nothing to run by hand: each deploy applies new files in `migrations/` once. (`0006_results_source.sql`,
-  `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` (advert crop
-  settings) are on the working branch until approved.) `0005_launch_content.sql`
+  `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` / `0009_ad_crop.sql` (advert crop
+  settings) apply on deploy.) `0005_launch_content.sql`
   loads Charlie's real results (14–16 February 2025 and the week of 6 April 2026), his four articles and
   the three link cards. It never adds example ads or the fictional sample weeks.
 - [ ] Open `https://irishbredeventers.<your-subdomain>.workers.dev` and check results show
@@ -138,8 +138,8 @@ Until `MAIL_API_KEY` is set, sign-ups are stored but no email is sent (the owner
 - [ ] Buy the .ie through Smarthost, then point its nameservers at Cloudflare (add the site in Cloudflare first to get them)
 - [ ] Worker → **Settings → Domains & Routes** → add the .ie as a custom domain
 - [ ] Update `SITE_URL` in `wrangler.jsonc` (it lives in the file, not the dashboard), add the .ie `/signin` path to the Access application and the Turnstile widget
-- [ ] Business mailbox for the contact address: Cloudflare **Email Routing** can forward results@… to an existing inbox for free, or use a paid mailbox
-- [ ] Update the contact email and phone in `public/index.html` (About page and footer)
+- [ ] Business mailbox for the contact address: Cloudflare **Email Routing** can forward info@iber.ie to an existing inbox for free, or use a paid mailbox
+- [x] Contact email info@iber.ie and phone +353 87 216 5442 are on the About page and in the footer
 
 ---
 
@@ -186,11 +186,16 @@ results, so it adds nothing there.
 Fix unverified rows later in the **Unverified** tab. Under **Published uploads**, **Edit** opens an upload to rename it
 and correct or delete any of its results, and **Remove** takes the whole upload off the site.
 
-**Ads tab:** the form shows a preview of the advert in its real boxes as soon as an image is chosen (banner, or
-side box both square and stretched beside a long page, which is how it also looks on the home page). **Fit in the
-box** crops the image to fill the box (choose which part stays in view: centre, top, bottom, left or right) or shows
-the whole image. Each advert in **Current ads** has **Edit** (change anything; leave the image empty to keep it) and
-**Remove**. The site shows the advert without an "Advertisement" label.
+**Ads tab:** the form lists the recommended image size for each place (top banner, bottom banner, side boxes,
+home page boxes). The sizes are measured from the live site's layout at laptop and phone width each time the tab
+opens, so they stay right if the layout changes; the recommendation is twice the on-screen box so images stay sharp.
+After choosing an image: **Crop to fill the box** opens the crop tool (drag the picture to move it, zoom with the
+slider, − / + or the mouse wheel; the box takes the exact shape of the chosen place, or **Free shape** lets you drag its
+corners), or **Show the whole image** keeps the whole picture with a background colour around it. A warning appears
+when the picture or cropped part is smaller than recommended (it still saves, but may look soft). The preview shows
+the advert in its real boxes before saving. The cropped picture is what the site shows; the untouched upload and the
+crop are kept, so **Edit** can re-crop later. Each advert in **Current ads** has **Edit** and **Remove**. The site
+shows adverts without an "Advertisement" label.
 
 ### The right-hand column
 
@@ -224,7 +229,9 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
 - The home page shows the first-placed horses from the latest week, with the usual banners and right-hand column around them.
 - Horse record: Runs recorded, Wins / Placings (1st / top three), Best dressage, Clear cross country. Form lists every
   class the horse ran in, by month, and each event links to its results.
-- Results: year tabs, then month tabs within the year. Each event shows its dates, country, number of classes,
+- Results: year tabs, then all twelve month tabs within every year. Months without results are shown lighter and say
+  "Archive for this month coming soon" (or, for months still to come, that results appear once the events have run);
+  they fill in by themselves as results are imported. Each event shows its dates, country, number of classes,
   Irish-bred placings and a link to the Horse Sport Ireland report.
 - No stallion page (stallion ads are just ads). No donation button. No scheduled newsletter.
 - Unverified results sit at the end of their own class, marked "Unverified".
@@ -237,4 +244,3 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
 - Which mailing service
 - Ad prices for the two tiers (not shown on the site)
 - Charlie's real sample files for parser testing
-- Real phone number and final contact email for the About page and footer

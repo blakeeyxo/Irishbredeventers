@@ -78,3 +78,28 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .ad-preview-row figure { margin: 0; }
 .ad-preview-row figcaption { font-size: 12px; color: var(--ink-faint); margin-top: 6px; max-width: 232px; }
 .ad-preview .ad-box img, .ad-preview .banner img { width: 100%; height: 100%; display: block; }
+
+/* Recommended advert sizes */
+.ad-size-table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--paper); border: 1px solid var(--rule); }
+.ad-size-table th, .ad-size-table td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--rule); vertical-align: top; }
+.ad-size-table thead th { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); border-top: 0; }
+.ad-size-table small { display: block; font-size: 11.5px; color: var(--ink-faint); font-weight: 400; margin-top: 2px; }
+.ad-sizes .meta { margin: 6px 0 0; }
+
+/* Crop tool */
+.cropper { border: 1px solid var(--rule-strong); background: var(--paper); padding: 12px; }
+.crop-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
+.crop-tools label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; }
+.crop-zoom input { width: 160px; }
+.crop-stage { position: relative; height: 340px; overflow: hidden; background: #2b2f38; cursor: grab; touch-action: none; user-select: none; }
+.crop-stage:active { cursor: grabbing; }
+.crop-stage img { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; pointer-events: none; }
+.crop-box { position: absolute; box-shadow: 0 0 0 9999px rgba(20, 24, 32, .55); outline: 2px solid #fff; pointer-events: none; }
+.crop-handle { position: absolute; width: 14px; height: 14px; background: #fff; border: 1px solid var(--navy); display: none; pointer-events: auto; }
+.crop-box.free .crop-handle { display: block; }
+.crop-handle[data-h=nw] { left: -8px; top: -8px; cursor: nwse-resize; }
+.crop-handle[data-h=ne] { right: -8px; top: -8px; cursor: nesw-resize; }
+.crop-handle[data-h=sw] { left: -8px; bottom: -8px; cursor: nesw-resize; }
+.crop-handle[data-h=se] { right: -8px; bottom: -8px; cursor: nwse-resize; }
+.ad-warning { background: #FFF4E0; border-left: 3px solid var(--gold); padding: 10px 12px; font-size: 13.5px; margin: 0; }
+#ad-form input[type=color] { height: 44px; padding: 4px; width: 100%; cursor: pointer; }

@@ -162,9 +162,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 /* ---------- Filters ---------- */
 .seasons { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
 .seasons.months { margin-top: -8px; }
-.seasons.months:empty { display: none; }
 .months .chip { padding: 5px 10px; font-size: 11.5px; background: var(--cream); }
 .months .chip.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+.months .chip.empty { color: var(--ink-faint); border-style: dashed; font-weight: 500; }
+.months .chip.empty.active { background: var(--gold-pale); border-color: var(--gold); color: var(--navy); }
 .chip {
   appearance: none; background: var(--paper); border: 1px solid var(--rule-strong); color: var(--navy);
   font: 600 12.5px var(--sans); letter-spacing: .06em; padding: 7px 13px; cursor: pointer; transition: background .15s, border-color .15s;
