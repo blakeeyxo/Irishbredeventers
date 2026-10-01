@@ -1,21 +1,21 @@
 /* IrishBredEventingResults (IBER)
-   Laptop-first. Navy, warm cream and one gold accent. Fraunces headings, Inter body. */
+   Laptop-first. Irish flag colours: green (a darker shade of the flag green, so text reads clearly), white and orange. Fraunces headings, Inter body. */
 
 :root {
-  --navy: #16233F;
-  --navy-deep: #0D1526;
-  --navy-soft: #2A3957;
-  --gold: #96721F;
-  --gold-bright: #C29A3E;
-  --gold-pale: #F3EAD3;
-  --cream: #F8F5EE;
-  --cream-2: #EFE9DB;
+  --navy: #0F6741;            /* green: header, footer, headings, horse names */
+  --navy-deep: #0F6741;
+  --navy-soft: #0F6741;
+  --gold: #0F6741;            /* small labels and placings (flag orange is too light for text) */
+  --gold-bright: #FF883E;     /* flag orange: stripes, underlines, highlights */
+  --gold-pale: #FFFFFF;
+  --cream: #FFFFFF;
+  --cream-2: #F3F4F2;
   --paper: #FFFFFF;
   --ink: #1C1B17;
   --ink-soft: #46443C;
   --ink-faint: #6E6A5C;
-  --rule: #E4DDCC;
-  --rule-strong: #CFC5A8;
+  --rule: #E3E5E2;
+  --rule-strong: #C9CDC8;
   --alert: #9E1B2F;            /* errors and "Unverified" only */
   --serif: 'Fraunces', ui-serif, Georgia, serif;
   --sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -47,7 +47,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .container { max-width: var(--page); margin: 0 auto; padding: 0 32px; }
 
 /* ---------- Header ---------- */
-.site-header { background: var(--navy); color: #fff; border-bottom: 3px solid var(--gold); }
+.site-header { background: var(--navy); color: #fff; border-bottom: 3px solid var(--gold-bright); }
 .hdr-inner { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 22px 0 18px; }
 .brand { display: flex; align-items: center; gap: 16px; text-decoration: none; color: #fff; min-width: 0; }
 .brand-mark {
@@ -56,7 +56,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   font-size: 15px; letter-spacing: 0.08em; color: var(--gold-bright);
 }
 .brand-name { font-family: var(--serif); font-weight: 600; font-size: 36px; line-height: 1.05; letter-spacing: -0.01em; overflow-wrap: anywhere; margin: 0; }
-.brand-name span { color: var(--gold-bright); }
+.brand-name span { color: #fff; }
 .hdr-right { display: flex; flex-direction: column; align-items: flex-end; gap: 14px; flex: none; }
 .hdr-search { position: relative; width: 400px; margin: 0; }
 .hdr-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-faint); pointer-events: none; }
@@ -65,10 +65,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   font: 15px var(--sans); padding: 11px 14px 11px 40px;
 }
 .hdr-search input::placeholder { color: #8A8676; }
-.hdr-search input:focus { outline: none; border-color: var(--gold-bright); box-shadow: 0 0 0 3px rgba(194,154,62,.25); }
+.hdr-search input:focus { outline: none; border-color: var(--gold-bright); box-shadow: 0 0 0 3px rgba(255,136,62,.35); }
 .nav { display: flex; gap: 30px; }
 .nav a {
-  color: #D9DEE8; text-decoration: none; font-size: 13px; font-weight: 600; letter-spacing: 0.12em;
+  color: #FFFFFF; text-decoration: none; font-size: 13px; font-weight: 600; letter-spacing: 0.12em;
   text-transform: uppercase; padding: 4px 0; border-bottom: 1.5px solid transparent; transition: color .15s, border-color .15s;
 }
 .nav a:hover { color: #fff; }
@@ -122,7 +122,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   color: var(--ink-faint); padding: 12px 14px; border-bottom: 1px solid var(--rule-strong); background: var(--paper); white-space: nowrap;
 }
 .rtable td { padding: 13px 14px; border-top: 1px solid var(--rule); vertical-align: top; }
-.rtable tbody tr.row:hover td { background: #FCFAF4; }
+.rtable tbody tr.row:hover td { background: #FFFFFF; }
 .rtable .c-pl { width: 56px; font-family: var(--serif); font-weight: 600; color: var(--gold); font-size: 15px; white-space: nowrap; }
 .rtable .c-score { text-align: right; white-space: nowrap; }
 .rtable .c-score b { font-weight: 600; color: var(--ink); }
@@ -163,9 +163,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .seasons { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
 .seasons.months { margin-top: -8px; }
 .months .chip { padding: 5px 10px; font-size: 11.5px; background: var(--cream); }
-.months .chip.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+.months .chip.active { background: var(--gold-bright); border-color: var(--gold-bright); color: var(--ink); }
 .months .chip.empty { color: var(--ink-faint); border-style: dashed; font-weight: 500; }
-.months .chip.empty.active { background: var(--gold-pale); border-color: var(--gold); color: var(--navy); }
+.months .chip.empty.active { background: #FFE6D5; border-color: var(--gold-bright); color: var(--ink); }
 .chip {
   appearance: none; background: var(--paper); border: 1px solid var(--rule-strong); color: var(--navy);
   font: 600 12.5px var(--sans); letter-spacing: .06em; padding: 7px 13px; cursor: pointer; transition: background .15s, border-color .15s;
@@ -227,7 +227,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 /* ---------- Overlay (news article) ---------- */
 .overlay { display: none; position: fixed; inset: 0; background: rgba(13,21,38,.6); z-index: 50; padding: 6vh 16px; overflow-y: auto; }
 .overlay.active { display: block; }
-.modal { background: var(--paper); max-width: 720px; margin: 0 auto; padding: 36px 40px 40px; position: relative; border-top: 3px solid var(--gold); }
+.modal { background: var(--paper); max-width: 720px; margin: 0 auto; padding: 36px 40px 40px; position: relative; border-top: 3px solid var(--gold-bright); }
 .modal-close { position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; background: var(--paper); border: 1px solid var(--rule-strong); font-size: 20px; line-height: 1; cursor: pointer; color: var(--ink-soft); z-index: 1; }
 .modal-close:hover { border-color: var(--gold-bright); }
 .modal-photo { margin: -36px -40px 24px; max-height: 340px; overflow: hidden; }
@@ -244,7 +244,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .form input, .form textarea, .form select {
   font: 15px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--rule-strong); border-radius: 0; padding: 11px 13px; width: 100%;
 }
-.form input:focus, .form textarea:focus, .form select:focus { outline: none; border-color: var(--gold-bright); box-shadow: 0 0 0 3px rgba(194,154,62,.18); }
+.form input:focus, .form textarea:focus, .form select:focus { outline: none; border-color: var(--gold-bright); box-shadow: 0 0 0 3px rgba(255,136,62,.25); }
 .form textarea { min-height: 110px; resize: vertical; }
 .btn {
   appearance: none; justify-self: start; border: 0; background: var(--navy); color: #fff; font: 600 13.5px var(--sans);
@@ -266,13 +266,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 /* Sign-up */
 .signup { background: var(--navy); color: #fff; padding: 26px 28px; }
 .signup h3 { color: #fff; font-size: 22px; margin: 0 0 6px; }
-.signup p { color: #C8CEDB; font-size: 14.5px; margin: 0 0 16px; }
+.signup p { color: #FFFFFF; font-size: 14.5px; margin: 0 0 16px; }
 .signup-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .signup-row input { flex: 1 1 200px; min-width: 0; border: 0; padding: 12px 14px; font: 15px var(--sans); }
 .signup-row input:focus { outline: 2px solid var(--gold-bright); }
 .signup .btn { background: var(--gold); }
 .signup .btn:hover { background: #7D5F19; }
-.signup .form-note { color: #9AA3B5; margin-top: 10px; }
+.signup .form-note { color: rgba(255,255,255,.85); margin-top: 10px; }
 .signup .form-done { color: var(--gold-pale); margin-top: 10px; }
 .signup .ts-slot { margin-top: 10px; }
 
@@ -298,15 +298,15 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .notice { margin-top: 18px; background: var(--paper); border: 1px solid var(--rule); border-left: 2px solid var(--gold-bright); padding: 12px 16px; font-size: 14.5px; font-weight: 600; color: var(--navy); }
 
 /* ---------- Footer ---------- */
-.site-foot { background: var(--navy); color: #C8CEDB; font-size: 14px; border-top: 3px solid var(--gold); }
+.site-foot { background: var(--navy); color: #FFFFFF; font-size: 14px; border-top: 3px solid var(--gold-bright); }
 .foot-inner { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 32px; padding: 40px 0 28px; }
 .foot-brand { font-family: var(--serif); font-weight: 600; font-size: 22px; color: #fff; margin-bottom: 6px; overflow-wrap: anywhere; }
-.foot-brand span { color: var(--gold-bright); }
-.site-foot h4 { font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-bright); margin: 0 0 10px; }
+.foot-brand span { color: #fff; }
+.site-foot h4 { font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #fff; margin: 0 0 10px; }
 .site-foot a { color: #fff; text-decoration: none; }
 .site-foot a:hover { text-decoration: underline; }
 .site-foot p { margin: 0 0 6px; }
-.foot-base { border-top: 1px solid rgba(255,255,255,.12); padding: 16px 0 22px; font-size: 12.5px; color: #9AA3B5; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.foot-base { border-top: 1px solid rgba(255,255,255,.12); padding: 16px 0 22px; font-size: 12.5px; color: rgba(255,255,255,.85); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
 /* =========================================================
    Smaller screens. Laptop is the design target; these keep
