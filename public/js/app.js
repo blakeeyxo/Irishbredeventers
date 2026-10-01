@@ -18,7 +18,7 @@
   };
 
   /* ---------- Routing ---------- */
-  const VIEWS = ['home', 'results', 'calendar', 'search', 'horse', 'news', 'about'];
+  const VIEWS = ['home', 'results', 'search', 'horse', 'news', 'about'];
   // The design preview (a single static page) keeps the route in memory; the live site uses real paths.
   const MEMORY = window.IBE_MEMORY_ROUTES === true;
   let memoryUrl = '/';
@@ -42,7 +42,7 @@
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
     const tab = view === 'horse' || view === 'search' ? null : view;
     document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
-    const names = { home: SITE + ' (IBER)', results: 'Results', calendar: 'Calendar', search: 'Search', news: 'News', about: 'About' };
+    const names = { home: SITE + ' (IBER)', results: 'Results', search: 'Search', news: 'News', about: 'About' };
     if (view !== 'horse') document.title = view === 'home' ? names.home : `${names[view]} · ${SITE}`;
   }
 
@@ -55,7 +55,6 @@
     lastPath = path;
     if (r.view === 'home') renderHome();
     if (r.view === 'results') renderResults(r.params);
-    if (r.view === 'calendar') renderCalendar(r.params.get('month') || '');
     if (r.view === 'search') {
       const q = r.params.get('q') || '';
       const input = $('global-search');
@@ -302,40 +301,6 @@
   $('legend-toggle').addEventListener('click', e => {
     const open = $('legend').classList.toggle('open');
     e.currentTarget.setAttribute('aria-expanded', open);
-  });
-
-  /* ---------- Calendar: upcoming events, expected from past runs ---------- */
-  const shortDate = iso => { const d = new Date(iso + 'T00:00:00Z'); return `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}`; };
-  async function renderCalendar(month) {
-    if (!state.calendar) {
-      try { state.calendar = (await api('/api/calendar')).events; }
-      catch (e) { $('calendar-list').innerHTML = `<div class="empty-state">${esc(e.message)}</div>`; return; }
-    }
-    const all = state.calendar;
-    const ym = e => e.expected_start.slice(0, 7);
-    const months = [...new Set(all.map(ym))];
-    if (!months.includes(month)) month = '';
-    const label = k => `${MONTH_NAMES[Number(k.slice(5, 7)) - 1]} ${k.slice(0, 4)}`;
-    $('cal-months').innerHTML = months.length > 1 ? [['', 'All months'], ...months.map(m => [m, label(m)])]
-      .map(([m, l]) => `<button class="chip ${m === month ? 'active' : ''}" data-cal-month="${m}">${esc(l)}</button>`).join('') : '';
-    const shown = all.filter(e => !month || ym(e) === month);
-    if (!shown.length) { $('calendar-list').innerHTML = '<div class="empty-state">No upcoming events in the archive yet. They appear here once an event has run at least once.</div>'; return; }
-    let body = '', cur = null;
-    for (const e of shown) {
-      if (ym(e) !== cur) { cur = ym(e); body += `<tr class="grp-class"><td colspan="4">${esc(label(cur))}</td></tr>`; }
-      body += `<tr class="row">
-        <td data-label="Expected">${esc(shortDate(e.expected_start))}${e.expected_end ? ` – ${esc(shortDate(e.expected_end))}` : ''}</td>
-        <td class="c-horse">${esc(e.name)}</td>
-        <td data-label="Country">${esc(e.country)}</td>
-        <td data-label="Last ran">${esc(e.based_on)}</td></tr>`;
-    }
-    $('calendar-list').innerHTML = `<div class="rtable-wrap"><table class="rtable"><thead><tr><th>Expected</th><th>Event</th><th>Country</th><th>Last ran</th></tr></thead><tbody>${body}</tbody></table></div>`;
-  }
-  $('cal-months').addEventListener('click', e => {
-    const b = e.target.closest('button[data-cal-month]');
-    if (!b) return;
-    setUrl(b.dataset.calMonth ? `/calendar?month=${b.dataset.calMonth}` : '/calendar', true);
-    renderCalendar(b.dataset.calMonth);
   });
 
   /* ---------- Search ---------- */

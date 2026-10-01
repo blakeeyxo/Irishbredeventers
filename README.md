@@ -226,8 +226,6 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
   class the horse ran in, by month, and each event links to its results.
 - Results: year tabs, then month tabs within the year. Each event shows its dates, country, number of classes,
   Irish-bred placings and a link to the Horse Sport Ireland report.
-- Calendar: upcoming events for the next twelve months, expected on the same weekday one year after they last ran
-  in the archive. Shown as a guide; the page tells people to check with the organiser.
 - No stallion page (stallion ads are just ads). No donation button. No scheduled newsletter.
 - Unverified results sit at the end of their own class, marked "Unverified".
 - Comments only appear after approval.
