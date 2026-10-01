@@ -267,6 +267,7 @@
     const d = await api('/api/admin/unverified');
     $('unv-list').innerHTML = d.rows.length ? d.rows.map(r => `<form class="adm-card" data-id="${r.id}">
       <b>${esc(r.horse_name || '?')}</b> <span class="meta">${esc(r.country)} · ${esc(r.event_name)} · ${esc(r.class_name)}</span>
+      ${r.raw_line ? `<p class="meta">${r.parse_ok ? 'As written' : 'Could not be read cleanly. As written'}${r.article_url ? ` (<a href="${esc(r.article_url)}" target="_blank" rel="noopener">article</a>)` : ''}: ${esc(r.raw_line)}</p>` : ''}
       <div class="adm-row-edit">${FIELDS.map(([k, l]) => `<label>${l}<input name="${k}" value="${esc(r[k] ?? '')}"></label>`).join('')}</div>
       <div class="adm-actions">
         <button class="btn sm" data-act="verify">Save and mark as verified</button>

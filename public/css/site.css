@@ -145,8 +145,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .grp-event b { font-family: var(--serif); font-weight: 600; font-size: 17px; color: var(--navy); }
 .grp-event span { font-size: 12.5px; color: var(--ink-faint); margin-left: 10px; letter-spacing: .04em; }
 .grp-class td { padding: 10px 14px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); border-top: 1px solid var(--rule); }
-.grp-unv td { background: var(--paper); color: var(--alert); font-family: var(--serif); font-size: 19px; font-weight: 600; padding: 22px 14px 4px; border-top: 2px solid var(--alert); }
-.grp-unv small { display: block; font-family: var(--sans); font-weight: 400; font-size: 13px; color: var(--ink-faint); margin-top: 2px; }
 .more-row td { text-align: center; padding: 14px; }
 .btn-quiet {
   appearance: none; background: none; border: 1px solid var(--rule-strong); color: var(--navy); font: 600 13px var(--sans);

@@ -118,7 +118,8 @@
     const facts = [h.breed, h.foaled, h.sex].filter(Boolean).join(' · ');
     const former = h.former_name ? `was ${esc(h.former_name)}` : '';
     const sub = [facts && esc(facts), former].filter(Boolean).join(' · ');
-    return `<a class="horse-link" href="${horseHref(h)}" data-link>${esc(h.horse_name)}</a>${h.verified ? '' : '<span class="unv-tag">Unverified</span>'}${sub ? `<span class="sub">${sub}</span>` : ''}`;
+    const rider = h.rider_name ? `<span class="sub rider">Rider: ${esc(h.rider_name)}${h.rider_country ? ` (${esc(h.rider_country)})` : ''}</span>` : '';
+    return `<a class="horse-link" href="${horseHref(h)}" data-link>${esc(h.horse_name)}</a>${h.verified ? '' : '<span class="unv-tag">Unverified</span>'}${sub ? `<span class="sub">${sub}</span>` : ''}${rider}`;
   }
   function breedingCell(h) {
     return `${esc(h.sire || 'Sire not recorded')}<span class="x">×</span>${esc(h.dam || 'dam not recorded')}${h.dam_sire ? `<span class="sub">dam by ${esc(h.dam_sire)}</span>` : ''}`;
@@ -169,13 +170,9 @@
     }
     return html;
   }
+  // Unverified placings come last in their own class (the API orders them that way), marked "Unverified".
   function groupedTable(rows) {
-    const verified = rows.filter(h => h.verified), unverified = rows.filter(h => !h.verified);
-    let body = groupedBody(verified);
-    if (unverified.length) {
-      body += `<tr class="grp-unv"><td colspan="5">Unverified results<small>Still being checked. These move up into their class once confirmed.</small></td></tr>` + groupedBody(unverified);
-    }
-    return `<div class="rtable-wrap"><table class="rtable">${HEAD_GROUPED}<tbody>${body}</tbody></table></div>`;
+    return `<div class="rtable-wrap"><table class="rtable">${HEAD_GROUPED}<tbody>${groupedBody(rows)}</tbody></table></div>`;
   }
 
   /* ---------- Home ---------- */
@@ -190,11 +187,12 @@
         $('hero-link').setAttribute('href', `/news/${d.headline.id}`);
       }
       const rows = d.week || [];
-      if (!rows.length) { $('week-table').innerHTML = '<div class="empty-state">This week\'s results will appear here once they are published.</div>'; return; }
+      if (!rows.length) { $('week-table').innerHTML = '<div class="empty-state">This week\'s winners will appear here once the results are published.</div>'; return; }
       const dates = rows.map(r => r.start_date).filter(Boolean).sort();
       const events = new Set(rows.map(r => r.event_id)).size;
-      const range = dates.length ? weekLabel(weekOf(dates[0])) : '';
-      $('week-meta').innerHTML = `${range ? `<b>${esc(range)}</b> · ` : ''}${events} event${events === 1 ? '' : 's'} · ${rows.length} Irish-bred placings`;
+      // The week of the most recent event; a late result from an earlier week doesn't move the label back.
+      const range = dates.length ? weekLabel(weekOf(dates[dates.length - 1])) : '';
+      $('week-meta').innerHTML = `${range ? `<b>${esc(range)}</b> · ` : ''}${rows.length} Irish-bred winner${rows.length === 1 ? '' : 's'} across ${events} event${events === 1 ? '' : 's'}`;
       $('week-table').innerHTML = flatTable(rows, HOME_ROWS);
       const more = $('week-table').querySelector('[data-more]');
       if (more) more.addEventListener('click', () => { $('week-table').innerHTML = flatTable(rows); });

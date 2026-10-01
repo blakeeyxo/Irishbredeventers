@@ -34,6 +34,7 @@ lib/
   import-plan.js      Works out what an import will add and which names need a same/different answer
   import.js           Saves an import into the breeding tables and the results pages (safe to repeat)
   docx.js             Gets the text out of a Word .docx (no packages needed)
+  hsi.js              Reads Charlie's weekly Horse Sport Ireland articles and merges the weeks into one set of results
   results.js          Queries for the public results pages; removes a whole upload
   access.js           Checks the Cloudflare Access login on owner pages and API calls
   mail.js             Sends email through Resend or Brevo
@@ -47,6 +48,10 @@ scripts/
   import-file.mjs     Import a file into the LOCAL site: npm run import:local -- file.txt
   load-example-ads.mjs  Load the example ads into the LOCAL site: npm run ads:local
   build-content-sql.mjs  Builds seed/starter-content.sql for npm run content:local / content:remote
+  scrape-hsi.mjs      Downloads the 2026 Irish-Bred Results articles from horsesportireland.ie into .cache/hsi
+  build-hsi-migration.mjs  Turns those articles into migrations/0007_hsi_2026_results.sql and the review lists
+  sql-dump.mjs        Shared helpers for the migration builders (rows linked by name, not internal ids)
+reports/              Review lists from the Horse Sport Ireland import (open in Excel or Google Sheets)
 tests/                npm test
 ```
 
@@ -85,7 +90,8 @@ Do these once, in order. Everything is on the free plans to start.
 - [ ] Push to `main` → it deploys. The first deploy also creates the D1 database and the R2 bucket
 
 ### 2. Tables and launch content (automatic)
-- [ ] Nothing to run by hand: each deploy applies new files in `migrations/` once. `0005_launch_content.sql`
+- [ ] Nothing to run by hand: each deploy applies new files in `migrations/` once. (`0006_results_source.sql` and
+  `0007_hsi_2026_results.sql`, the 2026 Horse Sport Ireland results, are on the working branch until approved.) `0005_launch_content.sql`
   loads Charlie's real results (14–16 February 2025 and the week of 6 April 2026), his four articles and
   the three link cards. It never adds example ads or the fictional sample weeks.
 - [ ] Open `https://irishbredeventers.<your-subdomain>.workers.dev` and check results show
@@ -136,6 +142,38 @@ Until `MAIL_API_KEY` is set, sign-ups are stored but no email is sent (the owner
 
 ---
 
+## 2026 results from Horse Sport Ireland
+
+Charlie's 2026 season so far (37 weekly articles, 12 January to 28 September 2026) comes from the
+[Irish-Bred Results](https://www.horsesportireland.ie/category/breeding-production/irish-bred-results/) pages.
+
+```bash
+node scripts/scrape-hsi.mjs            # reads ?paged=1, 2, 3… 1.5 s apart, keeps the raw HTML in .cache/hsi (not committed)
+node scripts/build-hsi-migration.mjs   # writes migrations/0007_hsi_2026_results.sql and reports/hsi-2026-*.csv
+```
+
+How the weeks are merged (`lib/hsi.js`):
+- **One event across weeks.** Same country, overlapping dates and the same first word is one event, so Monday
+  classes and late verifications published a week later ("Alnwick International … Late Verification from Last
+  week") file under the event they belong to.
+- **Latest version wins.** A result is one horse in one class of one event. When a later article repeats it, the
+  later details are kept and it counts as confirmed.
+- **Verified.** Results Charlie publishes are verified. A line that can't be read cleanly is still saved, with its
+  raw line and `parse_ok = 0`, and shows as unverified at the end of its class until it is fixed in the
+  **Unverified** tab (which shows the line as written and a link to the article). A class marked "not verified"
+  in an article stays unverified until a later article confirms it.
+- **Nothing is merged on a guess.** Names that only look like an existing record ("Coolcorran" / "Coolcorron")
+  are saved as separate records and listed in `reports/hsi-2026-name-checks.csv`.
+
+`reports/hsi-2026-review.csv` lists every line that needs a person: `failed` (saved, unverified), `conflict`
+(the same horse twice in one class; the first is kept, unverified), `check` (read, but something was filled in,
+such as a country for a heading with no country code, or a date typo) and `skipped` (a horse line with no
+placing, such as a team list; not saved).
+
+The import runs on a fresh local database built from migrations 0001–0006, which already holds the live launch
+content, so the migration only adds what is new. The week of 6 April 2026 is already live and matches all 127
+results, so it adds nothing there.
+
 ## Charlie's weekly job
 
 1. Go to `/signin` (bookmark it) and log in with the emailed code. It opens the owner area.
@@ -173,9 +211,11 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
 ## Decisions (from the brief, not to reopen)
 
 - Menu: Home, Results, News, About. Search box on every page.
-- Riders are not shown on the public site and not searchable. Since the breeding-data build they are stored in `results` (rider name and country), as requested.
+- Riders are shown on the results pages when given (under the horse), and are never searchable: the search index
+  covers horse, former names, sire, dam, dam sire and breeder only. They are stored in `results` (rider name and country).
+- The home page shows the first-placed horses from the latest week, with the usual banners and right-hand column around them.
 - No stallion page (stallion ads are just ads). No donation button. No scheduled newsletter.
-- Unverified results always sit at the very end under their own heading.
+- Unverified results sit at the end of their own class, marked "Unverified".
 - Comments only appear after approval.
 
 ## Still open (for Emer)

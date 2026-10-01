@@ -6,3 +6,4 @@ node_modules/
 # Charlie's source Word files stay out of the repo
 *.docx
 *.doc
+.cache/

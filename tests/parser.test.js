@@ -85,7 +85,7 @@ test('"Breeder: X, Rider:" with a comma, and a malformed "[ISH)" tag', () => {
 });
 
 test('lines it cannot read are flagged, never guessed', () => {
-  const noBreeding = entry('9th Ross Joey (unk) - 2014 gelding OIO. Rider: Georgia Reece (GBR) 37.3, 0, 10.8 = 48.1');
+  const noBreeding = entry('9th Ross Joey (unk) - 2014 gelding. Rider: Georgia Reece (GBR) 37.3, 0, 10.8 = 48.1');
   assert.equal(noBreeding.verified, false);
   assert.ok(noBreeding.issues.includes('Breeding not found'));
   const twice = entry('2nd MBF Vital Finesse (ISH) - 2018 gelding by Ringwood Cassero (HOLST) out of Paddys Pride (TB)[IRL] out of Indian River (TB). Breeder: A. Rider: B (GBR) 29.5, 0, 0.0 = 29.5');
@@ -167,7 +167,7 @@ test('mockup sample week (older style) still reads, rider kept only in its own f
   assert.ok(clean.length >= horses.length - 4, `${clean.length} of ${horses.length} clean`);
   const unbracket = s => s.replace(/\[IRL\]/g, '').replace(/[[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
   r.rows.forEach((row, i) => {
-    const { rider_name, rider_country, raw, ...rest } = row;
+    const { rider_name, rider_country, raw, line, ...rest } = row;
     assert.ok(!JSON.stringify(rest).includes(horses[i].rider), `rider leaked into another field for ${row.horse_name}`);
     if (!row.issues.length) {
       assert.equal(row.horse_name, horses[i].name);
@@ -192,4 +192,85 @@ test('February 2025 variants: "32." score, OIO, dash before [was], [ISH} typo, c
   assert.deepEqual([brace.dam, brace.dam_breed, brace.dam_sire], ['Tullibards Pretty Young Thing', 'ISH', 'Cruising']);
   const two = entry('3rd MHE Briarhill Excel Star Cassondra (ISH)[was Briarhill Chacoa K, Briarhill Star Cass] – 2019 mare by Kings Cornet (ISH) out of Briarhill Temple (ISH) by Chacoa (HOLST). Breeder: Anne Coyne. Rider: Morgan Houberg (USA) 34.6, 12, 0.0 = 46.6.');
   assert.equal(two.former_name, 'Briarhill Chacoa K, Briarhill Star Cass');
+});
+
+test('OIO (of Irish origin) with no breeding is a complete line, not a failure', () => {
+  const r = entry('9th Ross Joey (unk) – 2014 gelding OIO. Rider: Georgia Reece (GBR) 37.3, 0, 10.8 = 48.1');
+  assert.deepEqual(r.issues, []);
+  assert.deepEqual([r.horse_name, r.breed, r.foaled, r.sex, r.sire, r.dam], ['Ross Joey', 'unk', 2014, 'Gelding', '', '']);
+  assert.ok(r.warnings.includes('Breeding not recorded (OIO)'));
+  const sireOnly = entry('6th Cooley For Sure (unk) – 2007 gelding OIO by Ramiro B (BWP). Rider: Greta Mason (AUS) 29.8, 0, 12.0 = 41.8');
+  assert.deepEqual(sireOnly.issues, []);
+  assert.equal(sireOnly.sire, 'Ramiro B');
+  const noSex = entry('6th JD High Hope (unk) – 2019 OIO. Rider: Evelyn Titterton (GBR) 34.5, 0, 0.0 = 34.5');
+  assert.deepEqual([noSex.issues, noSex.horse_name, noSex.foaled, noSex.sex], [[], 'JD High Hope', 2019, '']);
+});
+
+test('HSI article typos: missing year or sex, misspelt sex, "byName", "out pf", Breeder; and Rider without a colon', () => {
+  const noYear = entry('4th Class Move (ISH) – gelding by Capri Van Overis Z (ZANG) out of Charsworth Tasset (ISH)[TIH] by Tasset (TB). Breeder: John McDonald (Kilkenny). Rider: Jessica McCaldin (GBR) 33.2, 4, 0.0 = 37.2');
+  assert.deepEqual([noYear.issues, noYear.horse_name, noYear.foaled, noYear.sex, noYear.dam_sire], [[], 'Class Move', null, 'Gelding', 'Tasset']);
+  assert.ok(noYear.warnings.includes('No year given'));
+  const noSex = entry('5th Kilbunny Mistico (ISH) – 2019 by Malito de Rive (SF) out of Agonda (KWPN) by Silverstone(ZANG). Breeder: Richard O’Hara. Rider: Maisie Forbes (GBR) 39.0, 0, 42.4 = 81.4.');
+  assert.deepEqual([noSex.issues, noSex.foaled, noSex.sex, noSex.dam_sire, noSex.dam_sire_breed], [[], 2019, '', 'Silverstone', 'ZANG']);
+  const mre = entry('5th Tullymurry Grace (ISH) – 2018 mre by Chillout (ISH) out of Tullymurry Holly (ISH) by Cmiro de Haar Z (ISH). Breeder: Marian Turley. Rider: Daisy Minter (GBR) 34.5, 4, 3.2 = 41.7');
+  assert.deepEqual([mre.issues, mre.sex], [[], 'Mare']);
+  const glued = entry('1st Sing to me Cooley (ISH)[was Milchem Melody] – 2017 mare byTryon (KWPN) out of Milchem Dreamer (ISH) by Silvano (KWPN). Breeder: Ralph Conroy. Rider: Emma Whitaker (USA) 34.0, 0, 2.0 = 36.0');
+  assert.deepEqual([glued.issues, glued.sire, glued.former_name], [[], 'Tryon', 'Milchem Melody']);
+  const pf = entry('4th The Ferryman (ISH) – 2014 gelding by Ricardo Z (ZANG) out pf Warrenpoint Lass (TB). Breedwer: Pat McCartan. Rider: Sophie Callard (GBR) 27.5, 0, 0.8 = 28.3');
+  assert.deepEqual([pf.issues, pf.dam, pf.breeder], [[], 'Warrenpoint Lass', 'Pat McCartan']);
+  const semi = entry('2nd A Horse (ISH) – 2015 mare by B (KWPN) out of C (ISH). Breeder; Jane Doe. Rider:Ann Smith (IRL) 30, 0, 0 = 30');
+  assert.deepEqual([semi.issues, semi.breeder, semi.rider_name, semi.rider_country], [[], 'Jane Doe', 'Ann Smith', 'IRL']);
+  const noColon = entry('4th My Ballintoghers Cracker Jack (unk) – 2009 gelding OIO. Rider Alivia Tong (HKG) 31.3, 8, 0.0 = 39.3');
+  assert.deepEqual([noColon.rider_name, noColon.rider_country], ['Alivia Tong', 'HKG']);
+  const braces = entry('3rd A Horse (ISH){TIH} – 2015 mare by B (unk) out of C (ISH). Breeder: E. Rider: F (IRL) 30, 0, 0 = 30');
+  assert.deepEqual([braces.tih_flag, braces.sire_breed], [true, 'unk']);
+  const badYear = entry('6th LVS Vincenzo (ISH) – 2105 gelding by Vancouver (KWPN) out of Agonda (KWPN). Breeder: A. Rider: B (ITA) 28.9, 0, 8.0 = 36.9');
+  assert.equal(badYear.horse_name, 'LVS Vincenzo');
+  assert.ok(badYear.issues.includes('Year "2105" is not a year'));
+});
+
+test('HSI article headings: age classes, odd country codes, a place with no space after it', () => {
+  const text = [
+    'Little Downham One Day Event (GBR) 4th – 7th June 2026',
+    '7 Year Old Sec E',
+    '3rdFernhill Castlefield Clark (unk) – 2018 gelding by Clarcon (HOLST) out of Castlefield Sarah (unk) by Guy Cavalier (ISH). Breeder: unknown. Rider: Nicolas Touzaint (FRA) 28.9, 0, 0.0 = 28.9',
+    '5 in the Open Intermediate',
+    'Bouckaert Equestrian Horse Trials (USDA) 16th – 17th May 2026',
+    'Open Novice',
+    '1st A Horse (ISH) – 2015 mare by B (KWPN) out of C (ISH). Breeder: E. Rider: F (USA) 30, 0, 0 = 30'
+  ].join('\n');
+  const r = parseResults(text, { defaultYear: 2026 });
+  assert.equal(r.rows.length, 2);
+  assert.deepEqual([r.rows[0].class_name, r.rows[0].position, r.rows[0].horse_name], ['7 Year Old Sec E', 3, 'Fernhill Castlefield Clark']);
+  assert.deepEqual([r.rows[1].country, r.rows[1].event_name], ['United States', 'Bouckaert Equestrian Horse Trials']);
+  assert.deepEqual(r.notes, ['5 in the Open Intermediate']);
+  assert.deepEqual([parseEventLine('Ocala Summer Horse Trials (USA)) 15th – 16th August 2026', 2026).country,
+    parseEventLine('Flora Lea Fall Horse Trials USA 4th – 6th September 2026', 2026).country,
+    parseEventLine('Meerut International (IND) 1st – 5th March 2026', 2026).country,
+    parseEventLine('Montelibretti International (ITA) – 27th February – 2nd March 2026', 2026).name],
+    ['United States', 'United States', 'India', 'Montelibretti International']);
+  const noDash = parseEventLine('Fairhill International & Horse Trials (USA) 15th 17th May 2026', 2026);
+  assert.deepEqual([noDash.name, noDash.startDate, noDash.endDate], ['Fairhill International & Horse Trials', '2026-05-15', '2026-05-17']);
+});
+
+test('an event heading with no month is still an event (month from the article date), never a class', () => {
+  const text = [
+    'Eventing in the Park Canadian Championships (CAN) 25th -27th September 2026',
+    'CCI 2*',
+    '2nd Kilbunny Kanyou (ISH) – 2018 gelding by Kannan (KWPN) out of ISHD Cosmos (ISH). Breeder: R. Rider: S (CAN) 30, 0, 0 = 30',
+    'South of England International and One Day Event (GBR) 25th – 27th',
+    'CCI 3* Short Sec M',
+    '3rd Kilbunny Cyclone (ISH) – 2018 gelding by Canturo (HOLST) out of Agonda (KWPN). Breeder: R. Rider: S (GBR) 30, 0, 0 = 30',
+    'Some Event (GBR)',
+    'Novice',
+    '1st X (ISH) – 2018 gelding by Y (HOLST) out of Z (KWPN). Breeder: R. Rider: S (GBR) 30, 0, 0 = 30'
+  ].join('\n');
+  const r = parseResults(text, { defaultYear: 2026, refDate: '2026-09-28' });
+  assert.deepEqual([r.rows[1].event_name, r.rows[1].country, r.rows[1].start_date, r.rows[1].class_name],
+    ['South of England International and One Day Event', 'Great Britain', '2026-09-25', 'CCI 3* Short Sec M']);
+  assert.ok(r.rows[1].warnings.includes('No month in the event heading; taken as September 2026'));
+  // A heading it can't date stops the event above it, so the rows under it are flagged rather than misfiled.
+  assert.ok(r.rows[2].issues.includes('No event heading above it'));
+  const pasted = parseResults(text, { defaultYear: 2026 });
+  assert.equal(pasted.rows[1].start_date, '2026-09-25');
 });
