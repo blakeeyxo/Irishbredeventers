@@ -284,11 +284,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .panel { background: var(--paper); border: 1px solid var(--rule); padding: 28px 30px; margin-top: 30px; }
 .panel h2 { font-size: 26px; color: var(--navy); margin: 0 0 8px; }
 .panel > p { color: var(--ink-soft); margin: 0 0 18px; }
-.tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 0 0 22px; }
-.tier { border: 1px solid var(--rule); border-top: 2px solid var(--gold-bright); padding: 16px 18px; }
-.tier b { font-family: var(--serif); font-weight: 600; font-size: 17px; color: var(--navy); display: block; margin-bottom: 4px; }
-.tier span { font-size: 14px; color: var(--ink-soft); }
-.pdf-line { margin: 0 0 28px; font-size: 14.5px; color: var(--ink-soft); }
 .contact-list { display: grid; grid-template-columns: 130px 1fr; gap: 8px 16px; font-size: 15px; margin: 0; }
 .contact-list dt { color: var(--ink-faint); font-weight: 600; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; padding-top: 3px; }
 .contact-list dd { margin: 0; }
@@ -343,7 +338,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .page-title { font-size: 30px; }
   .rail { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .filters { grid-template-columns: 1fr; }
-  .legend-grid, .tiers, .form-row, .foot-inner { grid-template-columns: 1fr; }
+  .legend-grid, .form-row, .foot-inner { grid-template-columns: 1fr; }
   .facts { grid-template-columns: 1fr 1fr; }
   .facts div:nth-child(3) { border-left: 0; }
   .facts div:nth-child(n+3) { border-top: 1px solid var(--rule); }

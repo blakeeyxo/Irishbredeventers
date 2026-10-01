@@ -65,7 +65,6 @@
     }
     if (r.view === 'horse') { showView('results'); renderResults(new URLSearchParams()); openHorse(Number(r.id)); }
     if (r.view === 'news') renderNews().then(() => { if (r.id) openArticle(Number(r.id)); });
-    if (r.view === 'about') checkRateCard();
     if (r.hash) setTimeout(() => { const el = document.querySelector(r.hash); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 60);
   }
 
@@ -543,16 +542,6 @@
     form.addEventListener('submit', e => submitForm(e, '/api/subscribe', f => ({ email: f.get('email') }),
       'Nearly there. Check your inbox and tap the link to confirm.'));
   });
-
-  let rateCardChecked = false;
-  function checkRateCard() {
-    if (rateCardChecked) return;
-    rateCardChecked = true;
-    const link = $('pdf-link');
-    fetch(link.getAttribute('href'), { method: 'HEAD' })
-      .then(r => { if (!r.ok || !/pdf/i.test(r.headers.get('content-type') || '')) throw new Error(); })
-      .catch(() => { $('pdf-line').textContent = 'The rate card is on its way. Send an enquiry below and we will reply with current rates.'; });
-  }
 
   /* ---------- Banners and the right-hand column ----------
      Banners show only when an ad is booked. The right-hand column runs the full height of the
