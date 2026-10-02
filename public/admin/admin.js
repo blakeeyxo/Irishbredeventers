@@ -781,7 +781,8 @@
     form.delete('image');
     if (crop.img) {
       const contain = adForm.elements.fit.value === 'contain';
-      if (crop.file || crop.changed || !editingAd) {
+      const needsPhone = !contain && editingAd && !editingAd.phone_key;
+      if (crop.file || crop.changed || !editingAd || needsPhone) {
         const out = render(adForm.elements.tier.value === 'large' ? 2600 : 1400, 'laptop');
         form.append('image', new File([await toBlob(out.canvas, outputType())], 'advert', { type: outputType() }));
         form.append('crop', contain ? '' : JSON.stringify(rectOf(viewState('laptop'))));
