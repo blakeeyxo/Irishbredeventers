@@ -719,6 +719,12 @@
     history.replaceState(null, '', url.pathname + url.search + url.hash);
   }
 
+  // The fixed top section (header and banner) changes height with the screen; the side boxes sit just below it.
+  const topbar = $('topbar');
+  const setTopH = () => document.documentElement.style.setProperty('--top-h', `${topbar.offsetHeight}px`);
+  if (window.ResizeObserver) new ResizeObserver(setTopH).observe(topbar);
+  setTopH();
+
   /* ---------- Start ---------- */
   async function start() {
     $('year').textContent = new Date().getFullYear();

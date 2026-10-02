@@ -21,7 +21,6 @@
   --sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --page: 1320px;
   --side: 170px;
-  --banner-h: 110px;
 }
 
 * { box-sizing: border-box; }
@@ -76,7 +75,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .nav a.active { color: #fff; border-bottom-color: var(--gold-bright); }
 
 /* ---------- Adverts: each page's pinned top banner and its six side boxes ---------- */
-.banner-bar { position: sticky; top: 0; z-index: 40; background: var(--paper); border-bottom: 1px solid var(--rule); padding: 10px 0; }
+.topbar { position: sticky; top: 0; z-index: 40; }
+html { scroll-padding-top: calc(var(--top-h, 260px) + 12px); }
+.banner-bar { background: var(--paper); border-bottom: 1px solid var(--rule); padding: 10px 0; }
 .banner {
   display: flex; align-items: center; justify-content: center; height: 110px; background: var(--paper);
   border: 1px solid var(--rule); color: var(--ink-faint); text-decoration: none; overflow: hidden; position: relative;
@@ -100,11 +101,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   max-width: calc(var(--page) + 2 * var(--side) + 64px);
 }
 .container.page { padding-top: 32px; padding-bottom: 44px; }
-.side { position: sticky; top: calc(var(--banner-h) + 21px + 16px); display: grid; gap: 12px; }
+.side { position: sticky; top: calc(var(--top-h, 260px) + 16px); display: grid; gap: 12px; }
 .ad-box {
   display: flex; flex-direction: column; background: var(--paper); border: 1px solid var(--rule); position: relative;
   aspect-ratio: 1 / 1; text-decoration: none; color: inherit; overflow: hidden; transition: border-color .15s, box-shadow .15s;
-  max-height: calc((100vh - var(--banner-h) - 21px - 56px) / 3);
+  max-height: calc((100vh - var(--top-h, 260px) - 56px) / 3);
 }
 .ad-box:not(.ad-open):hover { border-color: var(--rule-strong); box-shadow: 0 2px 10px rgba(22,35,63,.06); }
 .ad-box .ad-body { flex: 1; min-height: 0; display: grid; place-items: center; }
@@ -352,7 +353,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .brand-name { font-size: 21px; }
   .nav { justify-content: space-between; gap: 8px; }
   .nav a { font-size: 12px; letter-spacing: .08em; }
-  :root { --banner-h: 56px; }
   .banner { height: 56px; }
   .banner-bar { padding: 6px 0; }
   .ad-open-text { font-size: 12px; }
