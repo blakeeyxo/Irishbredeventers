@@ -141,7 +141,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .grp-event td { background: var(--cream-2); padding: 12px 14px; border-top: 1px solid var(--rule-strong); }
 .grp-event b { font-family: var(--serif); font-weight: 600; font-size: 17px; color: var(--navy); }
 .grp-event span { font-size: 12.5px; color: var(--ink-faint); margin-left: 10px; letter-spacing: .04em; }
-.grp-event span a { color: var(--ink-soft); text-decoration: underline; text-underline-offset: 2px; }
 .grp-class td { padding: 10px 14px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); border-top: 1px solid var(--rule); }
 .more-row td { text-align: center; padding: 14px; }
 .btn-quiet {
@@ -404,3 +403,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .rail.fit { grid-auto-rows: 1fr; }
 .rail.fit > .slot { aspect-ratio: auto; min-height: 0; }
 .slot.ad-box .ad-body { padding: 0; }
+
+/* ---------- Phones (768px and under): a bigger site name and an easier menu ----------
+   Desktop and tablet layouts are not affected. The site name breaks only between its words
+   (IrishBred / Eventing / Results), never mid-word. */
+@media (max-width: 768px) {
+  .hdr-inner { padding-top: 26px; padding-bottom: 12px; gap: 18px; }
+  .brand { gap: 12px; }
+  .brand-mark { width: 50px; height: 50px; font-size: 12px; }
+  .brand-name { font-size: clamp(28px, 8.2vw, 38px); line-height: 1.02; overflow-wrap: normal; text-wrap: balance; }
+  .nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .nav a {
+    display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 4px;
+    font-size: 18px; letter-spacing: 0; text-transform: none; border-bottom-width: 3px;
+  }
+}

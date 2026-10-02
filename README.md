@@ -232,7 +232,7 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
 - Results: year tabs, then all twelve month tabs within every year. Months without results are shown lighter and say
   "Archive for this month coming soon" (or, for months still to come, that results appear once the events have run);
   they fill in by themselves as results are imported. Each event shows its dates, country, number of classes,
-  Irish-bred placings and a link to the Horse Sport Ireland report.
+  Irish-bred placings and the Horse Sport Ireland report it came from (as plain text: results never link out to HSI).
 - No stallion page (stallion ads are just ads). No donation button. No scheduled newsletter.
 - Unverified results sit at the end of their own class, marked "Unverified".
 - Comments only appear after approval.

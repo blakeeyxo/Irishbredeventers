@@ -289,7 +289,7 @@
   function rowEditCard(r) {
     return `<form class="adm-card" data-id="${r.id}" data-verified="${r.verified ? 1 : 0}">
       <b>${esc(r.horse_name || '?')}</b>${r.verified ? '' : ' <span class="iss">Unverified</span>'} <span class="meta">${esc(r.country)} · ${esc(r.event_name)} · ${esc(r.class_name)}</span>
-      ${r.raw_line ? `<p class="meta">${r.parse_ok ? 'As written' : 'Could not be read cleanly. As written'}${r.article_url ? ` (<a href="${esc(r.article_url)}" target="_blank" rel="noopener">article</a>)` : ''}: ${esc(r.raw_line)}</p>` : ''}
+      ${r.raw_line ? `<p class="meta">${r.parse_ok ? 'As written' : 'Could not be read cleanly. As written'}: ${esc(r.raw_line)}</p>` : ''}
       <div class="adm-row-edit">${FIELDS.map(([k, l]) => `<label>${l}<input name="${k}" value="${esc(r[k] ?? '')}"></label>`).join('')}</div>
       <div class="adm-actions">${r.verified
         ? '<button class="btn sm" data-act="save-verified">Save</button>'

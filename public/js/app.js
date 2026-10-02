@@ -166,7 +166,8 @@
           const classes = new Set(evRows.map(x => x.class_name)).size;
           const details = [h.date_text, h.country, `${classes} class${classes === 1 ? '' : 'es'}`, `${evRows.length} Irish-bred placing${evRows.length === 1 ? '' : 's'}`]
             .filter(Boolean).map(esc).join(' · ');
-          const source = h.article_url ? ` · <a href="${esc(h.article_url)}" target="_blank" rel="noopener">Horse Sport Ireland report ↗</a>` : '';
+          // Credited as plain text: results never link out to Horse Sport Ireland.
+          const source = h.article_url ? ' · Horse Sport Ireland report' : '';
           html += `<tr class="grp-event"><td colspan="5"><b>${esc(h.event_name)}</b><span>${details}${source}</span></td></tr>`;
           eventId = h.event_id; cls = null;
         }
