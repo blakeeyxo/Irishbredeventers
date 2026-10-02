@@ -551,8 +551,12 @@
   // How the image sits in its box, as chosen in the owner area: cropped to fill (and which part stays in
   // view), or the whole image shown.
   const FOCUS = { center: 'center', top: 'center top', bottom: 'center bottom', left: 'left center', right: 'right center' };
-  const adImg = (ad, lazy) => `<img src="${imgUrl(ad.image_key)}" alt="${esc(ad.name)}"${lazy ? ' loading="lazy"' : ''}
+  // Phones (720px and under, where the banner and boxes change shape) get the advert's own phone crop when it has one.
+  const adImg = (ad, lazy) => {
+    const img = `<img src="${imgUrl(ad.image_key)}" alt="${esc(ad.name)}"${lazy ? ' loading="lazy"' : ''}
     style="object-fit:${ad.fit === 'contain' ? `contain;background:${/^#[0-9a-f]{6}$/i.test(ad.bg || '') ? ad.bg : '#ffffff'}` : 'cover'};object-position:${FOCUS[ad.focus] || 'center'}">`;
+    return ad.phone_key ? `<picture><source media="(max-width: 720px)" srcset="${imgUrl(ad.phone_key)}">${img}</picture>` : img;
+  };
   function bannerHTML(ad) {
     const inner = ad.image_key ? adImg(ad) : `<span class="banner-name">${esc(ad.name)}</span>`;
     return ad.link ? `<a class="banner" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${inner}</a>` : `<div class="banner">${inner}</div>`;

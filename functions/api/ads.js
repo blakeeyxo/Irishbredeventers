@@ -4,7 +4,7 @@ import { json, today } from '../../lib/http.js';
 export async function onRequestGet({ env }) {
   const d = today();
   const { results } = await env.DB.prepare(
-    `SELECT id, tier, name, link, image_key, slot, fit, focus, bg FROM ads
+    `SELECT id, tier, name, link, image_key, phone_key, slot, fit, focus, bg FROM ads
      WHERE (ends_on IS NULL OR ends_on = '' OR ends_on >= ?1) AND (starts_on IS NULL OR starts_on = '' OR starts_on <= ?1)
      ORDER BY created_at DESC, id DESC`
   ).bind(d).all();

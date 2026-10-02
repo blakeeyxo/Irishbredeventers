@@ -84,6 +84,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .banner:hover { border-color: var(--rule-strong); }
 .banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.banner picture, .ad-box picture { display: block; width: 100%; height: 100%; }
 .adv-here { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
 .adv-here b { font-family: var(--serif); font-weight: 600; font-size: 19px; color: var(--navy); }
 .adv-here small { font-size: 12.5px; color: var(--ink-faint); }

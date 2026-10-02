@@ -103,3 +103,5 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .crop-handle[data-h=se] { right: -8px; bottom: -8px; cursor: nwse-resize; }
 .ad-warning { background: #FFF4E0; border-left: 3px solid var(--gold); padding: 10px 12px; font-size: 13.5px; margin: 0; }
 #ad-form input[type=color] { height: 44px; padding: 4px; width: 100%; cursor: pointer; }
+.crop-views { display: flex; gap: 6px; margin-bottom: 6px; }
+#crop-view-note { margin: 0 0 10px; }

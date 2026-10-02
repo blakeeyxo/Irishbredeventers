@@ -91,8 +91,8 @@ Do these once, in order. Everything is on the free plans to start.
 
 ### 2. Tables and launch content (automatic)
 - [ ] Nothing to run by hand: each deploy applies new files in `migrations/` once. (`0006_results_source.sql`,
-  `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` / `0009_ad_crop.sql` (advert crop
-  settings) apply on deploy.) `0005_launch_content.sql`
+  `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` / `0009_ad_crop.sql` / `0010_ad_phone_crop.sql`
+  (advert crop settings) apply on deploy.) `0005_launch_content.sql`
   loads Charlie's real results (14–16 February 2025 and the week of 6 April 2026), his four articles and
   the three link cards. It never adds example ads or the fictional sample weeks.
 - [ ] Open `https://irishbredeventers.<your-subdomain>.workers.dev` and check results show
@@ -193,8 +193,10 @@ After choosing an image: **Crop to fill the box** opens the crop tool (drag the 
 slider, − / + or the mouse wheel; the box takes the exact shape of the chosen place, or **Free shape** lets you drag its
 corners), or **Show the whole image** keeps the whole picture with a background colour around it. A warning appears
 when the picture or cropped part is smaller than recommended (it still saves, but may look soft). The preview shows
-the advert in its real boxes before saving. The cropped picture is what the site shows; the untouched upload and the
-crop are kept, so **Edit** can re-crop later. Each advert in **Current ads** has **Edit** and **Remove**. The site
+the advert in its real boxes before saving. The crop tool has two tabs: **Laptop & tablet crop** and **Phone crop**. Phones (720px wide and under) show the
+banner and boxes in a different shape (the banner is about 4.5 : 1 instead of 11 : 1), so each advert is framed
+separately for them; the preview shows both. The cropped pictures are what the site shows; the untouched upload and
+both crops are kept, so **Edit** can re-crop later. Each advert in **Current ads** has **Edit** and **Remove**. The site
 shows adverts without an "Advertisement" label.
 
 ### The right-hand column

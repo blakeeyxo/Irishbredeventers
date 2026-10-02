@@ -5,7 +5,7 @@ import { saveImage } from '../../../lib/images.js';
 
 const FITS = ['cover', 'contain'];
 const FOCUSES = ['center', 'top', 'bottom', 'left', 'right'];
-const SHAPES = ['banner', 'box', 'home', 'free'];
+const SHAPES = ['banner', 'box', 'home', 'phone-banner', 'phone-box', 'free'];
 
 // The crop as saved by the owner area's crop tool: fractions of the original image, and the shape used.
 function readCrop(raw) {
@@ -18,12 +18,13 @@ function readCrop(raw) {
 }
 
 export async function onRequestGet({ env }) {
-  const { results } = await env.DB.prepare(`SELECT id, tier, name, link, image_key, orig_key, crop, bg, slot, starts_on, ends_on, fit, focus, created_at
+  const { results } = await env.DB.prepare(`SELECT id, tier, name, link, image_key, orig_key, phone_key, crop, phone_crop, bg, slot, starts_on, ends_on, fit, focus, created_at
     FROM ads ORDER BY tier, slot IS NULL, slot, created_at DESC, id DESC`).all();
   return json({ ads: results });
 }
 
-// "image" is the picture as it will show (already cropped in the browser); "original" is the untouched upload.
+// "image" is the picture as it will show on laptops and tablets (already cropped in the browser), "phone_image" the
+// separate crop for phones, and "original" the untouched upload.
 export async function onRequestPost({ env, request }) {
   const form = await request.formData().catch(() => null);
   if (!form) return bad('Bad request');
@@ -43,33 +44,42 @@ export async function onRequestPost({ env, request }) {
   const focus = FOCUSES.includes(form.get('focus')) ? form.get('focus') : 'center';
   const bg = /^#[0-9a-f]{6}$/i.test(form.get('bg') || '') ? form.get('bg').toLowerCase() : '#ffffff';
   const crop = readCrop(str(form.get('crop'), 400));
-  if (crop === null) return bad('The crop could not be read. Try cropping again.');
+  const phoneCrop = readCrop(str(form.get('phone_crop'), 400));
+  if (crop === null || phoneCrop === null) return bad('The crop could not be read. Try cropping again.');
+  // "Show the whole image" needs no phone crop: phones then show the same picture.
+  const clearPhone = fit === 'contain' || form.get('phone_clear') === '1';
   const id = Number(form.get('id')) || null;
-  const existing = id ? await env.DB.prepare('SELECT image_key, orig_key FROM ads WHERE id = ?').bind(id).first() : null;
+  const existing = id ? await env.DB.prepare('SELECT image_key, orig_key, phone_key FROM ads WHERE id = ?').bind(id).first() : null;
   if (id && !existing) return bad('That advert no longer exists.', 404);
-  let imageKey = null, origKey = null;
+  let imageKey = null, origKey = null, phoneKey = null;
   try {
     imageKey = await saveImage(env, form.get('image'), 'ads');
     origKey = await saveImage(env, form.get('original'), 'ads/originals');
+    if (!clearPhone) phoneKey = await saveImage(env, form.get('phone_image'), 'ads');
   } catch (e) { return bad(e.message); }
   if (existing) {
-    await env.DB.prepare(`UPDATE ads SET tier = ?, name = ?, link = ?, image_key = IFNULL(?, image_key), orig_key = IFNULL(?, orig_key), crop = ?, bg = ?,
+    await env.DB.prepare(`UPDATE ads SET tier = ?, name = ?, link = ?, image_key = IFNULL(?, image_key), orig_key = IFNULL(?, orig_key),
+        phone_key = CASE WHEN ? THEN NULL ELSE IFNULL(?, phone_key) END, crop = ?, phone_crop = CASE WHEN ? THEN '' ELSE ? END, bg = ?,
         ends_on = ?, starts_on = ?, slot = ?, fit = ?, focus = ? WHERE id = ?`)
-      .bind(tier, name, link, imageKey, origKey, crop, bg, endsOn || null, startsOn || null, tier === 'small' ? slot : null, fit, focus, id).run();
+      .bind(tier, name, link, imageKey, origKey, clearPhone ? 1 : 0, phoneKey, crop, clearPhone ? 1 : 0, phoneCrop, bg,
+        endsOn || null, startsOn || null, tier === 'small' ? slot : null, fit, focus, id).run();
     // Replaced files are deleted. (For an advert saved before cropping existed, the owner area re-sends its
     // old picture as the original, so nothing is lost.)
     if (imageKey && existing.image_key) await env.MEDIA.delete(existing.image_key);
     if (origKey && existing.orig_key) await env.MEDIA.delete(existing.orig_key);
+    if ((phoneKey || clearPhone) && existing.phone_key) await env.MEDIA.delete(existing.phone_key);
     return json({ ok: true });
   }
-  await env.DB.prepare('INSERT INTO ads (tier, name, link, image_key, orig_key, crop, bg, ends_on, starts_on, slot, fit, focus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .bind(tier, name, link, imageKey, origKey, crop, bg, endsOn || null, startsOn || null, tier === 'small' ? slot : null, fit, focus).run();
+  await env.DB.prepare(`INSERT INTO ads (tier, name, link, image_key, orig_key, phone_key, crop, phone_crop, bg, ends_on, starts_on, slot, fit, focus)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .bind(tier, name, link, imageKey, origKey, phoneKey, crop, clearPhone ? '' : phoneCrop, bg, endsOn || null, startsOn || null, tier === 'small' ? slot : null, fit, focus).run();
   return json({ ok: true });
 }
 
 export async function onRequestDelete({ env, request }) {
   const id = Number(new URL(request.url).searchParams.get('id'));
-  const row = await env.DB.prepare('DELETE FROM ads WHERE id = ? RETURNING image_key, orig_key').bind(id).first();
+  const row = await env.DB.prepare('DELETE FROM ads WHERE id = ? RETURNING image_key, orig_key, phone_key').bind(id).first();
+  if (row && row.phone_key) await env.MEDIA.delete(row.phone_key);
   if (row && row.image_key) await env.MEDIA.delete(row.image_key);
   if (row && row.orig_key) await env.MEDIA.delete(row.orig_key);
   return json({ ok: true });

@@ -466,8 +466,13 @@
   const ratioText = ([w, h]) => { const r = w / h; return r >= 1 ? `${r.toFixed(r >= 10 ? 1 : 2).replace(/\.?0+$/, '')} : 1` : `1 : ${(1 / r).toFixed(2).replace(/\.?0+$/, '')}`; };
   const px = ([w, h]) => `${w} × ${h}`;
   // The shapes the crop tool offers, from the measured boxes.
-  function shapes(tier) {
-    const L = layout.laptop;
+  function shapes(tier, view = crop.view) {
+    const L = layout.laptop, P = layout.phone;
+    if (view === 'phone') {
+      return tier === 'large'
+        ? [['phone-banner', `Phone banner (${ratioText(P.banner)}, top and bottom)`, P.banner], ['free', 'Free shape', null]]
+        : [['phone-box', `Phone side box (${ratioText(P.box)})`, P.box], ['free', 'Free shape', null]];
+    }
     return tier === 'large'
       ? [['banner', `Banner shape (${ratioText(L.banner)}, top and bottom banner)`, L.banner], ['free', 'Free shape', null]]
       : [['box', `Side box (${ratioText(L.box)}, every page)`, L.box], ['home', `Home page box (${ratioText(L.home)})`, L.home], ['free', 'Free shape', null]];
@@ -488,7 +493,13 @@
   }
 
   // 2. Crop tool: the picture moves and zooms under a fixed crop box (or a free-shape box with corner handles).
-  const crop = { img: null, file: null, origUrl: '', shape: 'box', box: null, scale: 1, base: 1, tx: 0, ty: 0, changed: false };
+  // Two crops of the same picture: one for laptops and tablets, one for phones (720px and under), where the
+  // banner and boxes are a different shape. The tool edits one at a time; the other is kept in crop.views.
+  const crop = { img: null, file: null, origUrl: '', shape: 'box', box: null, scale: 1, base: 1, tx: 0, ty: 0, changed: false,
+    view: 'laptop', views: { laptop: null, phone: null } };
+  const VIEW_FIELDS = ['shape', 'box', 'scale', 'base', 'tx', 'ty'];
+  const snap = () => Object.fromEntries(VIEW_FIELDS.map(k => [k, k === 'box' && crop.box ? { ...crop.box } : crop[k]]));
+  const viewState = name => (name === crop.view ? snap() : crop.views[name]);
   const stage = $('crop-stage'), boxEl = $('crop-box'), imgEl = $('crop-img');
   const stageSize = () => [stage.clientWidth, stage.clientHeight];
   const shapeRatio = () => { const s = shapes(adForm.elements.tier.value).find(x => x[0] === crop.shape); return s && s[2] ? s[2][0] / s[2][1] : null; };
@@ -518,12 +529,40 @@
     Object.assign(imgEl.style, { width: `${crop.img.naturalWidth * crop.scale}px`, transform: `translate(${crop.tx}px, ${crop.ty}px)` });
     queuePreview();
   }
-  // The crop as fractions of the original image.
-  function cropRect() {
-    const W = crop.img.naturalWidth, H = crop.img.naturalHeight, b = crop.box;
-    const x = Math.max(0, (b.x - crop.tx) / crop.scale), y = Math.max(0, (b.y - crop.ty) / crop.scale);
-    return { x: x / W, y: y / H, w: Math.min(W - x, b.w / crop.scale) / W, h: Math.min(H - y, b.h / crop.scale) / H, shape: crop.shape };
+  // A crop as fractions of the original image (the one being edited, or the other view's).
+  function rectOf(v) {
+    const W = crop.img.naturalWidth, H = crop.img.naturalHeight, b = v.box;
+    const x = Math.max(0, (b.x - v.tx) / v.scale), y = Math.max(0, (b.y - v.ty) / v.scale);
+    return { x: x / W, y: y / H, w: Math.min(W - x, b.w / v.scale) / W, h: Math.min(H - y, b.h / v.scale) / H, shape: v.shape };
   }
+  const cropRect = () => rectOf(snap());
+  // Both crops from a picture just loaded: saved ones are put back, otherwise each is centred in its own shape.
+  function initViews(savedLaptop, savedPhone) {
+    for (const [name, saved] of [['phone', savedPhone], ['laptop', savedLaptop]]) {
+      crop.view = name;
+      fillShapes(saved && saved.shape);
+      resetCrop(saved);
+      crop.views[name] = snap();
+    }
+    showViewTabs();
+  }
+  function switchView(name) {
+    if (name === crop.view || !crop.img) return;
+    crop.views[crop.view] = snap();
+    crop.view = name;
+    const v = crop.views[name];
+    fillShapes(v && v.shape);
+    if (v) { Object.assign(crop, v, { box: { ...v.box } }); $('crop-zoom').value = crop.scale / crop.base; drawCrop(); } else resetCrop();
+    showViewTabs();
+  }
+  function showViewTabs() {
+    document.querySelectorAll('[data-crop-view]').forEach(b => b.classList.toggle('active', b.dataset.cropView === crop.view));
+    const P = layout.phone, big = adForm.elements.tier.value === 'large';
+    $('crop-view-note').textContent = crop.view === 'phone'
+      ? `Phones (up to 720px wide) show this crop. The ${big ? 'banner' : 'side box'} there is ${px(big ? P.banner : P.box)}, a different shape from laptops, so frame the picture for it here.`
+      : 'Laptops and tablets show this crop. Then open "Phone crop" to frame the picture for phones, where the box is a different shape.';
+  }
+  document.querySelectorAll('[data-crop-view]').forEach(b => b.addEventListener('click', () => switchView(b.dataset.cropView)));
   function resetCrop(saved) {
     const sw = stageSize()[0];
     if (!crop.img || !sw) return;
@@ -604,13 +643,13 @@
     $('crop-shape').value = selected;
     crop.shape = selected;
   }
-  window.addEventListener('resize', () => { if (crop.img && !$('ad-cropper').hidden) resetCrop(crop.img && cropRect()); });
+  window.addEventListener('resize', () => { if (crop.img && crop.box && !$('ad-cropper').hidden) resetCrop(cropRect()); });
 
   // The picture as it will be saved: the cropped part ("Crop to fill") or the whole image ("Show the whole image"),
   // never enlarged, at most maxW wide.
-  function render(maxW) {
+  function render(maxW, view = crop.view) {
     const W = crop.img.naturalWidth, H = crop.img.naturalHeight;
-    const r = adForm.elements.fit.value === 'contain' ? { x: 0, y: 0, w: 1, h: 1 } : cropRect();
+    const r = adForm.elements.fit.value === 'contain' ? { x: 0, y: 0, w: 1, h: 1 } : rectOf(viewState(view));
     const sw = r.w * W, sh = r.h * H, k = Math.min(1, maxW / sw);
     const c = document.createElement('canvas');
     c.width = Math.max(1, Math.round(sw * k)); c.height = Math.max(1, Math.round(sh * k));
@@ -621,18 +660,23 @@
   const toBlob = (canvas, type) => new Promise(res => canvas.toBlob(b => res(b), type, 0.9));
 
   // 3. Warning when the picture (or the cropped part) is smaller than recommended for where it shows.
-  function sizeWarning(w, h) {
-    const tier = adForm.elements.tier.value, L = layout.laptop;
-    const target = tier === 'large' ? ['banner', L.banner] : crop.shape === 'home' ? ['home page box', L.home] : ['side box', L.box];
-    const [rw, rh] = recommended(target[1]);
+  function sizeWarning(sizes) {
+    const tier = adForm.elements.tier.value, L = layout.laptop, P = layout.phone;
     const contain = adForm.elements.fit.value === 'contain';
-    // With the whole image shown, it only has to be big enough in the direction that touches the box edges.
-    const short = contain ? (w / h > rw / rh ? w < rw : h < rh) : (w < rw || h < rh);
+    const lines = [];
+    for (const [view, [w, h]] of sizes) {
+      const laptopShape = (crop.views.laptop || {}).shape;
+      const target = view === 'phone' ? (tier === 'large' ? ['phone banner', P.banner] : ['phone side box', P.box])
+        : tier === 'large' ? ['banner', L.banner] : laptopShape === 'home' ? ['home page box', L.home] : ['side box', L.box];
+      const [rw, rh] = recommended(target[1]);
+      // With the whole image shown, it only has to be big enough in the direction that touches the box edges.
+      const short = contain ? (w / h > rw / rh ? w < rw : h < rh) : (w < rw || h < rh);
+      if (short) lines.push(`${contain ? 'This image' : view === 'phone' ? 'The phone crop' : 'The laptop crop'} is ${w} × ${h} pixels; the recommended size for a ${target[0]} is ${rw} × ${rh}.`);
+    }
     const el = $('ad-warning');
-    el.hidden = !short;
-    if (short) el.textContent = `Smaller than recommended: ${contain ? 'this image' : 'the cropped part'} is ${w} × ${h} pixels and the recommended size for a ${target[0]} is ${rw} × ${rh}. `
-      + `It can still be saved, but it will be stretched to fit the box and may look soft or blurry, especially on high-resolution screens. `
-      + (contain ? 'Use a larger image if you have one.' : 'Zoom out, use a bigger crop box, or upload a larger image.');
+    el.hidden = !lines.length;
+    if (lines.length) el.textContent = `Smaller than recommended: ${lines.join(' ')} It can still be saved, but it will be stretched to fit the box and may look soft or blurry, `
+      + `especially on high-resolution screens. ${contain ? 'Use a larger image if you have one.' : 'Zoom out, use a bigger crop box, or upload a larger image.'}`;
   }
 
   // 4. Live preview in the site's own boxes, at their real (measured) proportions.
@@ -643,32 +687,38 @@
     $('ad-cropper').hidden = !crop.img || contain;
     adForm.querySelector('.bg-only').hidden = !contain;
     if (!crop.img && !name) { $('ad-preview').hidden = true; $('ad-warning').hidden = true; return; }
-    let src = '';
+    const src = { laptop: '', phone: '' };
     if (crop.img) {
-      const out = render(900);
-      src = out.canvas.toDataURL('image/jpeg', 0.85);
-      sizeWarning(out.w, out.h);
+      const sizes = [];
+      for (const view of contain ? ['laptop'] : ['laptop', 'phone']) {
+        if (!contain && !(viewState(view) || {}).box) continue;
+        const out = render(900, view);
+        src[view] = out.canvas.toDataURL('image/jpeg', 0.85);
+        sizes.push([view, [out.w, out.h]]);
+      }
+      if (contain) src.phone = src.laptop;
+      sizeWarning(sizes);
     }
     const style = `width:100%;height:100%;display:block;object-fit:${contain ? `contain;background:${f.bg.value}` : 'cover'}`;
-    const inner = cls => src ? `<img src="${src}" alt="" style="${style}">` : `<span class="${cls}">${esc(name)}</span>`;
+    const inner = (cls, view) => src[view] ? `<img src="${src[view]}" alt="" style="${style}">` : `<span class="${cls}">${esc(name)}</span>`;
     const L = layout.laptop, P = layout.phone;
-    const box = (size, label, scale = 1) => `<figure><div class="ad-box" style="aspect-ratio:auto;width:${Math.round(size[0] * scale)}px;height:${Math.round(size[1] * scale)}px;"><span class="ad-body" style="padding:0">${inner('ad-name')}</span></div><figcaption>${label}</figcaption></figure>`;
+    const box = (size, label, view) => `<figure><div class="ad-box" style="aspect-ratio:auto;width:${size[0]}px;height:${size[1]}px;"><span class="ad-body" style="padding:0">${inner('ad-name', view)}</span></div><figcaption>${label}</figcaption></figure>`;
     $('ad-preview-boxes').innerHTML = f.tier.value === 'large'
-      ? `<div class="banner" style="height:auto;aspect-ratio:${L.banner[0]}/${L.banner[1]};">${inner('banner-name')}</div><p class="meta">Top and bottom banner on a laptop (${px(L.banner)})</p>
-         <div class="banner" style="height:${P.banner[1]}px;width:${P.banner[0]}px;max-width:100%;">${inner('banner-name')}</div><p class="meta">On a phone (${px(P.banner)})</p>`
-      : `<div class="ad-preview-row">${box(L.box, `Side box (${px(L.box)})`)}${box(L.home, `Home page box (${px(L.home)})`)}${box(P.box, `On a phone (${px(P.box)})`)}</div>`;
+      ? `<div class="banner" style="height:auto;aspect-ratio:${L.banner[0]}/${L.banner[1]};">${inner('banner-name', 'laptop')}</div><p class="meta">Top and bottom banner on a laptop or tablet (${px(L.banner)}), from the laptop crop</p>
+         <div class="banner" style="height:${P.banner[1]}px;width:${P.banner[0]}px;max-width:100%;">${inner('banner-name', 'phone')}</div><p class="meta">On a phone (${px(P.banner)}), from the phone crop</p>`
+      : `<div class="ad-preview-row">${box(L.box, `Side box (${px(L.box)})`, 'laptop')}${box(L.home, `Home page box (${px(L.home)})`, 'laptop')}${box(P.box, `On a phone (${px(P.box)}), from the phone crop`, 'phone')}</div>`;
     $('ad-preview').hidden = false;
   }
 
   // Loading a picture into the crop tool: a new file, or the saved original when editing.
-  function loadPicture(url, saved) {
+  function loadPicture(url, saved, savedPhone) {
     return new Promise(resolve => {
       const img = new Image();
       img.onload = () => {
         crop.img = img;
         imgEl.src = url;
         $('ad-cropper').hidden = adForm.elements.fit.value === 'contain';
-        requestAnimationFrame(() => { resetCrop(saved); adPreview(); resolve(true); });
+        requestAnimationFrame(() => { initViews(saved, savedPhone); adPreview(); resolve(true); });
       };
       img.onerror = () => { crop.img = null; resolve(false); };
       img.src = url;
@@ -682,9 +732,14 @@
     crop.objectUrl = URL.createObjectURL(file);
     await loadPicture(crop.objectUrl);
   });
-  adForm.elements.tier.addEventListener('change', () => { fillShapes(); if (crop.img) { crop.changed = true; resetCrop(); } adPreview(); });
+  adForm.elements.tier.addEventListener('change', () => { if (crop.img) { crop.changed = true; initViews(null, null); } else fillShapes(); adPreview(); });
   ['input', 'change'].forEach(ev => adForm.addEventListener(ev, e => { if (e.target.name !== 'image' && e.target.name !== 'tier' && e.target.id !== 'crop-zoom') queuePreview(); }));
-  adForm.elements.fit.addEventListener('change', () => { crop.changed = true; if (crop.img) requestAnimationFrame(() => resetCrop(cropRect())); });
+  // Back to "Crop to fill": crops made while the tool was hidden are set up now it can be measured.
+  const savedRect = name => { const v = viewState(name); return v && v.box ? rectOf(v) : null; };
+  adForm.elements.fit.addEventListener('change', () => {
+    crop.changed = true;
+    if (crop.img) requestAnimationFrame(() => { $('ad-cropper').hidden = adForm.elements.fit.value === 'contain'; initViews(savedRect('laptop'), savedRect('phone')); adPreview(); });
+  });
 
   // 5. Add and edit.
   let ads = [], editingAd = null;
@@ -692,17 +747,18 @@
     editingAd = ad;
     adForm.reset();
     if (ad) adForm.querySelector('.form-done').textContent = '';
-    Object.assign(crop, { img: null, file: null, origUrl: '', changed: false });
+    Object.assign(crop, { img: null, file: null, origUrl: '', changed: false, view: 'laptop', views: { laptop: null, phone: null } });
     adForm.elements.id.value = ad ? ad.id : '';
     adForm.querySelectorAll('.edit-only').forEach(el => { el.hidden = !ad; });
     $('ad-form-title').textContent = ad ? `Edit advert: ${ad.name}` : 'Add an advert';
     adForm.querySelector('button[type=submit]').textContent = ad ? 'Save changes' : 'Add advert';
     $('ad-cropper').hidden = true;
-    let saved = null;
+    let saved = null, savedPhone = null;
     if (ad) {
       for (const k of ['tier', 'name', 'link', 'slot', 'starts_on', 'ends_on', 'fit', 'bg']) adForm.elements[k].value = ad[k] ?? '';
       if (!/^#[0-9a-f]{6}$/i.test(adForm.elements.bg.value)) adForm.elements.bg.value = '#ffffff';
       try { saved = ad.crop ? JSON.parse(ad.crop) : null; } catch { saved = null; }
+      try { savedPhone = ad.phone_crop ? JSON.parse(ad.phone_crop) : null; } catch { savedPhone = null; }
       adForm.scrollIntoView({ behavior: 'smooth' });
     }
     fillShapes(saved && saved.shape);
@@ -710,7 +766,7 @@
     if (key) {
       crop.origUrl = `/media/${key}`;
       // If the original can't be loaded, start again from the picture as it shows now.
-      loadPicture(crop.origUrl, saved).then(ok => {
+      loadPicture(crop.origUrl, saved, savedPhone).then(ok => {
         if (ok || key === ad.image_key || !ad.image_key) return adPreview();
         crop.origUrl = `/media/${ad.image_key}`;
         editingAd = { ...ad, orig_key: null };
@@ -724,12 +780,20 @@
     const form = new FormData(adForm);
     form.delete('image');
     if (crop.img) {
+      const contain = adForm.elements.fit.value === 'contain';
       if (crop.file || crop.changed || !editingAd) {
-        const out = render(adForm.elements.tier.value === 'large' ? 2600 : 1400);
+        const out = render(adForm.elements.tier.value === 'large' ? 2600 : 1400, 'laptop');
         form.append('image', new File([await toBlob(out.canvas, outputType())], 'advert', { type: outputType() }));
-        form.append('crop', adForm.elements.fit.value === 'contain' ? '' : JSON.stringify(cropRect()));
+        form.append('crop', contain ? '' : JSON.stringify(rectOf(viewState('laptop'))));
+        if (contain) form.append('phone_clear', '1');
+        else {
+          const phone = render(1400, 'phone');
+          form.append('phone_image', new File([await toBlob(phone.canvas, outputType())], 'advert-phone', { type: outputType() }));
+          form.append('phone_crop', JSON.stringify(rectOf(viewState('phone'))));
+        }
       } else {
         form.append('crop', editingAd.crop || '');
+        form.append('phone_crop', editingAd.phone_crop || '');
       }
       // The untouched picture (kept so the advert can be re-cropped): a new upload, or an older advert's only picture.
       if (crop.file) form.append('original', await shrinkImage(crop.file, 3000));
@@ -746,12 +810,12 @@
   });
   adForm.querySelector('[data-cancel]').addEventListener('click', () => setEditingAd(null));
   async function loadAds() {
-    layoutReady.then(() => { fillShapes(crop.shape); if (crop.img) resetCrop(cropRect()); });
+    layoutReady.then(() => { if (crop.img) initViews(savedRect('laptop'), savedRect('phone')); else fillShapes(crop.shape); });
     ads = (await api('/api/admin/ads')).ads;
     const today = new Date().toISOString().slice(0, 10);
     $('ad-list').innerHTML = ads.length ? ads.map((a, i) => `<div class="adm-card">
       ${a.image_key ? `<img class="adm-thumb" src="/media/${esc(a.image_key)}" alt="" style="object-fit:${a.fit === 'contain' ? `contain;background:${esc(a.bg || '#ffffff')}` : 'cover'};object-position:${AD_FOCUS[a.focus] || 'center'}">` : ''}<b>${esc(a.name)}</b>
-      <div class="meta">${a.tier === 'large' ? 'Banner (top and bottom)' : `Side box · ${a.slot ? `slot ${a.slot}` : 'first free slot'}`}${a.starts_on ? ` · from ${esc(niceDate(a.starts_on))}` : ''}${a.ends_on ? ` · until ${esc(niceDate(a.ends_on))}` : ''}${a.ends_on && a.ends_on < today ? ' · <b class="iss">ended, no longer showing</b>' : ''} · ${a.fit === 'contain' ? 'whole image' : 'cropped to fill'}${a.link ? ` · ${esc(a.link)}` : ''}</div>
+      <div class="meta">${a.tier === 'large' ? 'Banner (top and bottom)' : `Side box · ${a.slot ? `slot ${a.slot}` : 'first free slot'}`}${a.starts_on ? ` · from ${esc(niceDate(a.starts_on))}` : ''}${a.ends_on ? ` · until ${esc(niceDate(a.ends_on))}` : ''}${a.ends_on && a.ends_on < today ? ' · <b class="iss">ended, no longer showing</b>' : ''} · ${a.fit === 'contain' ? 'whole image' : a.phone_key ? 'cropped to fill, with a phone crop' : 'cropped to fill (no phone crop yet)'}${a.link ? ` · ${esc(a.link)}` : ''}</div>
       <div class="adm-actions"><button class="btn sm" data-edit-ad="${i}">Edit</button><button class="btn sm alt" data-del-ad="${i}">Remove</button></div></div>`).join('')
       : '<div class="empty-state">No ads yet. The right-hand column shows news and link cards until one is booked.</div>';
   }
