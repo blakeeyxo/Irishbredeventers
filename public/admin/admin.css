@@ -123,10 +123,8 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .si-side { min-height: 74px; }
 .si-name { font-weight: 600; color: var(--navy); }
 .si-who small { display: block; color: var(--ink-faint); }
-.si-price { margin-top: auto; font-weight: 600; color: var(--ink); }
 .si-tag { display: inline-block; font-size: 11px; font-weight: 600; color: #fff; background: var(--navy); padding: 1px 6px; margin-right: 4px; vertical-align: 1px; }
-.price-form { margin-bottom: 28px; }
-.price-form h3 small { font: 400 13px var(--sans); color: var(--ink-faint); }
+.slot-index + .form { margin-top: 10px; }
 .placement-pick { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 16px; align-items: start; }
 .mm { border: 1px solid var(--rule-strong); background: #fff; padding: 6px; font-size: 10px; color: var(--ink-faint); display: grid; gap: 4px; }
 .mm-head { font-weight: 600; color: var(--ink-soft); }

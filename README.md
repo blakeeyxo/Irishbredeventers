@@ -92,7 +92,7 @@ Do these once, in order. Everything is on the free plans to start.
 ### 2. Tables and launch content (automatic)
 - [ ] Nothing to run by hand: each deploy applies new files in `migrations/` once. (`0006_results_source.sql`,
   `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` / `0009_ad_crop.sql` / `0010_ad_phone_crop.sql`
-  (advert crop settings) and `0011_page_ad_slots_stallions.sql` (per-page ad slots, prices, stallion listings,
+  (advert crop settings) and `0011_page_ad_slots_stallions.sql` (per-page ad slots, stallion listings,
   comment spam flag) apply on deploy.) `0005_launch_content.sql`
   loads Charlie's real results (14–16 February 2025 and the week of 6 April 2026), his four articles and
   the three link cards. It never adds example ads or the fictional sample weeks.
@@ -190,8 +190,8 @@ and correct or delete any of its results, and **Remove** takes the whole upload 
 **Ads tab: slots.** Every page (Home, Results, News, Stallions, About) has its own seven slots, sold separately:
 **Top** (a banner pinned to the top of the screen) and six side boxes, **Left 1–3** and **Right 1–3** (1 is the top).
 They are named "Home – Top", "Home – Left 1" … "About – Right 3". The tab opens with the slot index: a small drawing of
-each page showing who is booked in every slot (or "Available") and its price. Click a slot to book or edit it. Prices
-per slot type (Top €3000, Side €600 to start) are stored in the `settings` table and only ever shown in the owner area.
+each page showing who is booked in every slot (or "Available"). Click a slot to book or edit it. Prices are agreed
+directly with each advertiser and are not stored on the site.
 Horse pages and search use the Results page's slots.
 
 On laptops the side boxes stay in view beside the page (three down each side). Below 1200px wide they sit in a block
@@ -262,5 +262,4 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
 - Horse Sport Ireland's answer on the CapallOir database (blocks the archive upload)
 - Domain and mailbox pricing with Smarthost
 - Which mailing service
-- Ad prices for the two tiers (not shown on the site)
 - Charlie's real sample files for parser testing

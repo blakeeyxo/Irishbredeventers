@@ -813,15 +813,13 @@
     finally { btn.disabled = false; }
   });
   adForm.querySelector('[data-cancel]').addEventListener('click', () => setEditingAd(null));
-  // 6. The slot index: every page's seven slots as a little page diagram, with who is booked in each and the price.
-  let slotPages = [], slotPositions = [], prices = {};
+  // 6. The slot index: every page's seven slots as a little page diagram, with who is booked in each.
+  let slotPages = [], slotPositions = [];
   const slotName = v => {
     const [page, pos] = String(v || '').split(':');
     const p = slotPages.find(x => x[0] === page), q = slotPositions.find(x => x[0] === pos);
     return p && q ? `${p[1]} – ${q[1]}` : 'No slot chosen';
   };
-  const priceOf = v => (String(v).endsWith(':top') ? prices.ad_price_top : prices.ad_price_side);
-  const euro = n => (n || n === 0 ? `€${Number(n).toLocaleString('en-IE')}` : '');
   const today = () => new Date().toISOString().slice(0, 10);
   const isLive = a => (!a.starts_on || a.starts_on <= today()) && (!a.ends_on || a.ends_on >= today());
   let nextPlacement = '';
@@ -845,8 +843,7 @@
       const now = here.find(isLive), next = here.filter(a => !isLive(a) && a.starts_on && a.starts_on > today()).sort((x, y) => x.starts_on.localeCompare(y.starts_on))[0];
       return `<button type="button" class="si-slot si-${pos === 'top' ? 'top' : 'side'}${now ? ' booked' : ''}" data-slot="${v}" title="${esc(slotName(v))}">
         <span class="si-name">${esc(slotName(v))}</span>
-        <span class="si-who">${now ? esc(now.name) : 'Available'}${now && now.ends_on ? ` <small>until ${esc(niceDate(now.ends_on))}</small>` : ''}${next ? ` <small>next: ${esc(next.name)} from ${esc(niceDate(next.starts_on))}</small>` : ''}</span>
-        <span class="si-price">${euro(priceOf(v))}</span></button>`;
+        <span class="si-who">${now ? esc(now.name) : 'Available'}${now && now.ends_on ? ` <small>until ${esc(niceDate(now.ends_on))}</small>` : ''}${next ? ` <small>next: ${esc(next.name)} from ${esc(niceDate(next.starts_on))}</small>` : ''}</span></button>`;
     };
     $('ad-index').innerHTML = slotPages.map(([page, label]) => `<section class="si-page"><h4>${esc(label)}</h4>${box(page, 'top')}
       <div class="si-body"><div class="si-col">${['left1', 'left2', 'left3'].map(p => box(page, p)).join('')}</div><div class="si-main">${esc(label)} page content</div><div class="si-col">${['right1', 'right2', 'right3'].map(p => box(page, p)).join('')}</div></div></section>`).join('');
@@ -861,25 +858,14 @@
     adPreview();
     adForm.scrollIntoView({ behavior: 'smooth' });
   });
-  $('price-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const f = e.target, done = f.querySelector('.form-done');
-    try {
-      await api('/api/admin/settings', { method: 'POST', body: { ad_price_top: Number(f.elements.ad_price_top.value), ad_price_side: Number(f.elements.ad_price_side.value) } });
-      done.textContent = 'Prices saved.';
-      loadAds();
-    } catch (err) { done.textContent = err.message; }
-  });
 
   async function loadAds() {
     layoutReady.then(() => { if (crop.img) initViews(savedRect('laptop'), savedRect('phone')); else fillShapes(crop.shape); });
     const d = await api('/api/admin/ads');
-    ads = d.ads; slotPages = d.pages; slotPositions = d.positions; prices = d.prices || {};
-    const pf = $('price-form').elements;
-    pf.ad_price_top.value = prices.ad_price_top ?? ''; pf.ad_price_side.value = prices.ad_price_side ?? '';
+    ads = d.ads; slotPages = d.pages; slotPositions = d.positions;
     const sel = adForm.elements.placement, keep = sel.value;
     sel.innerHTML = '<option value="">Choose a slot…</option>' + slotPages.map(([page, label]) => `<optgroup label="${esc(label)}">${slotPositions.map(([pos]) => {
-      const v = `${page}:${pos}`; return `<option value="${v}">${esc(slotName(v))} (${pos === 'top' ? 'banner' : 'side box'}, ${euro(priceOf(v))})</option>`; }).join('')}</optgroup>`).join('');
+      const v = `${page}:${pos}`; return `<option value="${v}">${esc(slotName(v))} (${pos === 'top' ? 'banner' : 'side box'})</option>`; }).join('')}</optgroup>`).join('');
     setPlacement(editingAd ? editingAd.placement || '' : keep);
     slotIndex();
     const order = v => { const i = slotPages.findIndex(p => v && v.startsWith(p[0] + ':')), j = slotPositions.findIndex(p => v && v.endsWith(':' + p[0])); return i < 0 ? 999 : i * 10 + j; };

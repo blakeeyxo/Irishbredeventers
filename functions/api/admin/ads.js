@@ -21,8 +21,7 @@ function readCrop(raw) {
 export async function onRequestGet({ env }) {
   const { results } = await env.DB.prepare(`SELECT id, placement, tier, name, link, image_key, orig_key, phone_key, crop, phone_crop, bg, slot, starts_on, ends_on, fit, focus, created_at
     FROM ads ORDER BY placement IS NULL, placement, created_at DESC, id DESC`).all();
-  const prices = Object.fromEntries((await env.DB.prepare("SELECT key, value FROM settings WHERE key LIKE 'ad_price_%'").all()).results.map(r => [r.key, Number(r.value)]));
-  return json({ ads: results, pages: PAGES, positions: POSITIONS, prices });
+  return json({ ads: results, pages: PAGES, positions: POSITIONS });
 }
 
 // "image" is the picture as it will show on laptops and tablets (already cropped in the browser), "phone_image" the
