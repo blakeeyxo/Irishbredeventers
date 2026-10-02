@@ -7,7 +7,7 @@
 
   const state = {
     config: { currentYear: new Date().getFullYear(), turnstileSiteKey: '' },
-    ads: { large: [], small: [] },
+    ads: { slots: {} },
     links: [],
     adOffset: Math.floor(Math.random() * 1000),
     season: null,
@@ -18,7 +18,7 @@
   };
 
   /* ---------- Routing ---------- */
-  const VIEWS = ['home', 'results', 'search', 'horse', 'news', 'about'];
+  const VIEWS = ['home', 'results', 'search', 'horse', 'news', 'stallions', 'about'];
   // The design preview (a single static page) keeps the route in memory; the live site uses real paths.
   const MEMORY = window.IBE_MEMORY_ROUTES === true;
   let memoryUrl = '/';
@@ -42,7 +42,7 @@
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
     const tab = view === 'horse' || view === 'search' ? null : view;
     document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
-    const names = { home: SITE + ' (IBER)', results: 'Results', search: 'Search', news: 'News', about: 'About' };
+    const names = { home: SITE + ' (IBER)', results: 'Results', search: 'Search', news: 'News', stallions: 'Stallions', about: 'About' };
     if (view !== 'horse') document.title = view === 'home' ? names.home : `${names[view]} · ${SITE}`;
   }
 
@@ -64,6 +64,8 @@
       renderSearch(q);
     }
     if (r.view === 'horse') { showView('results'); renderResults(new URLSearchParams()); openHorse(Number(r.id)); }
+    if (r.view === 'stallions') renderStallions(r.id);
+    renderAds(r.view);
     if (r.view === 'news') renderNews().then(() => { if (r.id) openArticle(Number(r.id)); });
     if (r.hash) setTimeout(() => { const el = document.querySelector(r.hash); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 60);
   }
@@ -115,14 +117,19 @@
 
   /* ---------- Results tables ---------- */
   const horseHref = h => `/horse/${h.id}`;
+  // OIO (Of Irish Origin): no breeding recorded. Not in doubt, so it keeps its place and isn't "Unverified".
+  const isOIO = h => !h.sire && !h.dam;
+  const statusTag = h => isOIO(h) ? '<span class="oio-tag" title="Of Irish Origin: breeding not recorded">OIO</span>'
+    : h.verified ? '' : '<span class="unv-tag" title="Details still being checked">Unverified</span>';
   function horseCell(h) {
     const facts = [h.breed, h.foaled, h.sex].filter(Boolean).join(' · ');
     const former = h.former_name ? `was ${esc(h.former_name)}` : '';
     const sub = [facts && esc(facts), former].filter(Boolean).join(' · ');
     const rider = h.rider_name ? `<span class="sub rider">Rider: ${esc(h.rider_name)}${h.rider_country ? ` (${esc(h.rider_country)})` : ''}</span>` : '';
-    return `<a class="horse-link" href="${horseHref(h)}" data-link>${esc(h.horse_name)}</a>${h.verified ? '' : '<span class="unv-tag">Unverified</span>'}${sub ? `<span class="sub">${sub}</span>` : ''}${rider}`;
+    return `<a class="horse-link" href="${horseHref(h)}" data-link>${esc(h.horse_name)}</a>${statusTag(h)}${sub ? `<span class="sub">${sub}</span>` : ''}${rider}`;
   }
   function breedingCell(h) {
+    if (isOIO(h)) return `OIO<span class="sub">Of Irish Origin: breeding not recorded</span>`;
     return `${esc(h.sire || 'Sire not recorded')}<span class="x">×</span>${esc(h.dam || 'dam not recorded')}${h.dam_sire ? `<span class="sub">dam by ${esc(h.dam_sire)}</span>` : ''}`;
   }
   function scoreCell(h) {
@@ -177,7 +184,8 @@
     }
     return html;
   }
-  // Unverified placings come last in their own class (the API orders them that way), marked "Unverified".
+  // Unverified placings (conflicting or doubtful details) come last in their class (the API orders them that way),
+  // marked "Unverified". OIO placings (no breeding recorded) keep their place.
   function groupedTable(rows) {
     return `<div class="rtable-wrap"><table class="rtable">${HEAD_GROUPED}<tbody>${groupedBody(rows)}</tbody></table></div>`;
   }
@@ -350,9 +358,9 @@
   });
 
   /* ---------- Horse page ---------- */
-  const ped = (cls, role, name) => name
+  const ped = (cls, role, name, missing = 'Not in the results') => name
     ? `<div class="ped ${cls}"><span>${role}</span><b>${esc(name)}</b></div>`
-    : `<div class="ped ${cls} missing"><span>${role}</span><b>Not in the results</b></div>`;
+    : `<div class="ped ${cls} missing"><span>${role}</span><b>${missing}</b></div>`;
 
   const CLOSE = '<button class="modal-close" aria-label="Close">&times;</button>';
   const monthOf = iso => (iso ? `${MONTH_NAMES[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}` : 'Date not given');
@@ -368,7 +376,7 @@
           <td class="c-pl">${esc(ordinal(r.position))}</td>
           <td data-label="Date">${esc(r.date_text || niceDate(r.start_date))}</td>
           <td class="c-horse"><a href="${esc(eventHref(r))}" data-link data-close-modal>${esc(r.event_name)}</a><span class="sub">${esc(r.country)}</span></td>
-          <td data-label="Class">${esc(r.class_name)}${r.verified ? '' : '<span class="unv-tag">Unverified</span>'}</td>
+          <td data-label="Class">${esc(r.class_name)}${statusTag(r)}</td>
           <td class="c-score">${scoreCell(r)}</td></tr>`;
     }).join('');
   }
@@ -394,7 +402,7 @@
         <div>
           <h3 class="section-title">Pedigree</h3>
           <div class="pedigree">
-            ${ped('sire', 'Sire', h.sire)}${ped('dam', 'Dam', h.dam)}
+            ${ped('sire', 'Sire', h.sire, isOIO(h) ? 'Not recorded (OIO)' : undefined)}${ped('dam', 'Dam', h.dam, isOIO(h) ? 'Not recorded (OIO)' : undefined)}
             ${ped('ss', "Sire's sire", '')}${ped('sd', "Sire's dam", '')}
             ${ped('ds', 'Dam sire', h.dam_sire)}${ped('dd', "Dam's dam", '')}
           </div>
@@ -443,6 +451,18 @@
           <div class="article-snippet">${esc(a.snippet)}</div>
         </div>
       </a>`).join('') : '<div class="empty-state">No news yet.</div>';
+    api('/api/links').then(d => {
+      const links = d.links || [];
+      $('news-links').innerHTML = links.length ? `<h3 class="section-title">Elsewhere</h3>${links.map(l => `
+        <a class="article" href="${esc(l.url)}" target="_blank" rel="noopener">
+          ${l.image_key ? `<div class="article-thumb"><img src="${imgUrl(l.image_key)}" alt="" loading="lazy"></div>` : ''}
+          <div>
+            <div class="article-date">${l.card_date ? `${esc(niceDate(l.card_date))} · ` : ''}${esc(l.source_name || hostOf(l.url))} ↗</div>
+            <div class="article-title">${esc(l.title)}</div>
+            ${l.teaser ? `<div class="article-snippet">${esc(l.teaser)}</div>` : ''}
+          </div>
+        </a>`).join('')}` : '';
+    }).catch(() => {});
   }
 
   let lastFocus = null;
@@ -514,7 +534,13 @@
     e.preventDefault();
     const form = e.target, done = form.querySelector('.form-done'), btn = form.querySelector('button[type=submit]');
     const body = build(new FormData(form));
-    body.turnstile = turnstileToken(form);
+    // The spam check runs quietly in the background; give it a moment if the form is sent straight away.
+    let token = turnstileToken(form);
+    for (let i = 0; !token && i < 24 && form.querySelector('.ts-slot[data-widget]'); i++) {
+      await new Promise(r => setTimeout(r, 250));
+      token = turnstileToken(form);
+    }
+    body.turnstile = token;
     btn.disabled = true;
     done.textContent = 'Sending…';
     try {
@@ -544,10 +570,10 @@
       'Nearly there. Check your inbox and tap the link to confirm.'));
   });
 
-  /* ---------- Banners and the right-hand column ----------
-     Banners show only when an ad is booked. The right-hand column runs the full height of the
-     page. Each slot shows, in order of priority: the ad booked for that slot, otherwise a news
-     card, otherwise an external link card. It never shows an empty box. */
+  /* ---------- Adverts: each page's own pinned top banner and six side boxes ----------
+     Every page (Home, Results, News, Stallions, About) has its own slots, sold separately: a top banner pinned
+     to the top of the screen and three boxes down each side that stay in view. Nothing rotates or moves.
+     A slot nobody has booked shows a small "available" box linking to the advertising enquiry. */
   // How the image sits in its box, as chosen in the owner area: cropped to fill (and which part stays in
   // view), or the whole image shown.
   const FOCUS = { center: 'center', top: 'center top', bottom: 'center bottom', left: 'left center', right: 'right center' };
@@ -557,71 +583,127 @@
     style="object-fit:${ad.fit === 'contain' ? `contain;background:${/^#[0-9a-f]{6}$/i.test(ad.bg || '') ? ad.bg : '#ffffff'}` : 'cover'};object-position:${FOCUS[ad.focus] || 'center'}">`;
     return ad.phone_key ? `<picture><source media="(max-width: 720px)" srcset="${imgUrl(ad.phone_key)}">${img}</picture>` : img;
   };
-  function bannerHTML(ad) {
-    const inner = ad.image_key ? adImg(ad) : `<span class="banner-name">${esc(ad.name)}</span>`;
-    return ad.link ? `<a class="banner" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${inner}</a>` : `<div class="banner">${inner}</div>`;
-  }
-  function renderBanners() {
-    const large = state.ads.large;
-    $('banner-top').innerHTML = large[0] ? bannerHTML(large[0]) : '';
-    $('banner-bottom').innerHTML = large[0] ? bannerHTML(large[1] || large[0]) : '';
-    $('banner-top').parentElement.hidden = !large[0];
-    $('banner-bottom').parentElement.hidden = !large[0];
-  }
-
-  const cardImage = key => key ? `<img src="${imgUrl(key)}" alt="" loading="lazy">` : '<span class="card-fallback" aria-hidden="true">IBER</span>';
   const hostOf = url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
-
-  function adSlotHTML(ad) {
-    const inner = ad.image_key ? adImg(ad, true) : `<span class="ad-name">${esc(ad.name)}</span>`;
-    const body = `<span class="ad-body">${inner}</span>`;
-    return ad.link ? `<a class="slot ad-box" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${body}</a>` : `<div class="slot ad-box">${body}</div>`;
+  const AD_PAGE = { home: 'home', results: 'results', horse: 'results', search: 'results', news: 'news', stallions: 'stallions', about: 'about' };
+  const AD_LABEL = '<span class="ad-label">Advertisement</span>';
+  function adHTML(ad, banner) {
+    const cls = banner ? 'banner' : 'slot ad-box';
+    if (!ad) {
+      return `<a class="${cls} ad-open" href="/about#advertise" data-link>${AD_LABEL}<span class="ad-open-text">${banner ? 'This banner space is available. Advertise here' : 'Advertise here'}</span></a>`;
+    }
+    const inner = ad.image_key ? adImg(ad, !banner) : `<span class="${banner ? 'banner-name' : 'ad-name'}">${esc(ad.name)}</span>`;
+    const body = banner ? `${AD_LABEL}${inner}` : `${AD_LABEL}<span class="ad-body">${inner}</span>`;
+    return ad.link ? `<a class="${cls}" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${body}</a>` : `<div class="${cls}">${body}</div>`;
   }
-  function newsCardHTML(n) {
-    return `<a class="slot rcard" href="/news/${n.id}" data-link>
-      <span class="card-img">${cardImage(n.image_key)}</span>
-      <span class="card-body"><span class="card-kicker">News</span><b>${esc(n.title)}</b><span class="card-teaser">${esc(n.snippet)}</span></span></a>`;
-  }
-  function linkCardHTML(l) {
-    const source = l.source_name || hostOf(l.url);
-    return `<a class="slot rcard" href="${esc(l.url)}" target="_blank" rel="noopener">
-      <span class="card-img">${cardImage(l.image_key)}</span>
-      <span class="card-body"><span class="card-kicker">${esc(source)} ↗</span><b>${esc(l.title)}</b>${l.teaser ? `<span class="card-teaser">${esc(l.teaser)}</span>` : ''}</span></a>`;
-  }
-
-  const GAP = 14;
-  const stackedRail = () => matchMedia('(max-width: 980px)').matches; // tablet and phone: the column sits under the page
-  // How many roughly square slots fit beside the page content.
-  function slotCount() {
-    if (stackedRail()) return 8;
-    const width = $('rail').clientWidth || 232;
-    return Math.max(1, Math.round(($('main').offsetHeight + GAP) / (width + GAP)));
+  let adsShown = null;
+  function renderAds(view) {
+    const page = AD_PAGE[view] || 'home';
+    if (!state.adsLoaded || page === adsShown) return;
+    adsShown = page;
+    const slot = pos => state.ads.slots[`${page}:${pos}`];
+    $('banner-top').innerHTML = adHTML(slot('top'), true);
+    $('side-left').innerHTML = ['left1', 'left2', 'left3'].map(p => adHTML(slot(p), false)).join('');
+    $('side-right').innerHTML = ['right1', 'right2', 'right3'].map(p => adHTML(slot(p), false)).join('');
   }
 
-  let lastRail = '';
-  function buildRail() {
-    const n = slotCount();
-    const slots = new Array(n).fill(null);
-    // a) Booked ads in their slot; ads without a slot fill the first free slots from the top.
-    const small = state.ads.small || [];
-    for (const ad of small.filter(a => a.slot)) if (ad.slot <= n && !slots[ad.slot - 1]) slots[ad.slot - 1] = adSlotHTML(ad);
-    for (const ad of small.filter(a => !a.slot)) { const i = slots.indexOf(null); if (i >= 0) slots[i] = adSlotHTML(ad); }
-    // b) News cards, then c) external link cards. If slots remain, the cards repeat so there is never a gap.
-    const pool = (state.news || []).map(newsCardHTML).concat((state.links || []).map(linkCardHTML));
-    let k = 0;
-    for (let i = 0; i < n; i++) if (!slots[i] && pool.length) slots[i] = pool[k++ % pool.length];
-    const html = slots.filter(Boolean).join('');
-    if (html !== lastRail) { $('rail').innerHTML = html; lastRail = html; }
-    $('rail').hidden = !html;
-    // Beside the page, stretch the slots evenly so the column ends exactly where the page ends.
-    const fit = !stackedRail() && !!html;
-    $('rail').classList.toggle('fit', fit);
-    $('rail').style.height = fit ? `${$('main').offsetHeight}px` : '';
+  /* ---------- Stallions: six paid listings, each with its progeny breakdown from the results ---------- */
+  const fmt = n => Number(n || 0).toLocaleString('en-IE');
+  const stallionPhoto = s => s.image_key ? `<img src="${imgUrl(s.image_key)}" alt="${esc(s.name)}" loading="lazy">` : '<span class="card-fallback" aria-hidden="true">IBER</span>';
+  async function renderStallions(slot) {
+    $('stallions-list').hidden = !!slot;
+    $('stallion-detail').hidden = !slot;
+    if (slot) return renderStallion(Number(slot));
+    if (state.loaded.stallions) return;
+    state.loaded.stallions = true;
+    try {
+      const d = await api('/api/stallions');
+      $('stallion-grid').innerHTML = d.listings.map(s => s.name ? `
+        <a class="stallion-card" href="/stallions/${s.slot}" data-link>
+          <span class="stallion-photo">${stallionPhoto(s)}</span>
+          <span class="stallion-body">
+            <b class="stallion-name">${esc(s.name)}</b>
+            ${s.blurb ? `<span class="stallion-blurb">${esc(s.blurb)}</span>` : ''}
+            <dl class="stallion-specs">
+              <div><dt>Progeny</dt><dd>${fmt(s.totals.horses)}</dd></div>
+              <div><dt>Placings</dt><dd>${fmt(s.totals.placings)}</dd></div>
+              <div><dt>Wins</dt><dd>${fmt(s.totals.wins)}</dd></div>
+            </dl>
+            <span class="btn sm">See the progeny</span>
+          </span>
+        </a>` : `
+        <a class="stallion-card open" href="/about#advertise" data-link>
+          <span class="stallion-open"><b>Stallion listing ${s.slot}</b>This space is available. List your stallion here</span>
+        </a>`).join('');
+    } catch (e) {
+      state.loaded.stallions = false;
+      $('stallion-grid').innerHTML = `<div class="empty-state">${esc(e.message)}</div>`;
+    }
   }
-  let railTimer;
-  const queueRail = () => { clearTimeout(railTimer); railTimer = setTimeout(buildRail, 80); };
-  if (window.ResizeObserver) new ResizeObserver(queueRail).observe($('main'));
-  window.addEventListener('resize', queueRail);
+  async function renderStallion(slot) {
+    const el = $('stallion-detail');
+    el.innerHTML = '<div class="empty-state">Loading…</div>';
+    let d;
+    try { d = await api(`/api/stallions/${slot}`); } catch (e) { el.innerHTML = `<p><a class="text-link" href="/stallions" data-link>← All stallions</a></p><div class="empty-state">That stallion listing is empty.</div>`; return; }
+    const s = d.stallion, t = d.totals, rows = d.rows;
+    // Placings, top-three finishes and wins by level, for the chart and its table.
+    const byLevel = LEVEL_ORDER.map(level => {
+      const at = rows.filter(r => levelOf(r.class_name) === level);
+      return { level, placings: at.length, top3: at.filter(r => r.placing && r.placing <= 3).length, wins: at.filter(r => r.placing === 1).length };
+    }).filter(x => x.placings);
+    const maxWins = Math.max(0, ...byLevel.map(x => x.wins));
+    // One row per horse: runs, wins, best placing and the latest run.
+    const horses = new Map();
+    for (const r of rows) {
+      const h = horses.get(r.horse_id) || { ...r, runs: 0, wins: 0, best: null };
+      h.runs++;
+      if (r.placing === 1) h.wins++;
+      if (r.placing && (h.best === null || r.placing < h.best)) h.best = r.placing;
+      horses.set(r.horse_id, h);
+    }
+    const list = [...horses.values()].sort((a, b) => b.wins - a.wins || (a.best ?? 99) - (b.best ?? 99) || b.runs - a.runs || a.horse.localeCompare(b.horse));
+    el.innerHTML = `
+      <p><a class="text-link" href="/stallions" data-link>← All stallions</a></p>
+      <div class="stallion-head">
+        <span class="stallion-photo">${stallionPhoto(s)}</span>
+        <div>
+          <p class="eyebrow">Stallion</p>
+          <h2 class="page-title">${esc(s.name)}</h2>
+          ${s.blurb ? `<p class="page-intro">${esc(s.blurb)}</p>` : ''}
+          ${s.link ? `<p><a class="text-link" href="${esc(s.link)}" target="_blank" rel="noopener">Visit the stud's website ↗</a></p>` : ''}
+        </div>
+      </div>
+      <h3 class="section-title">Progeny breakdown</h3>
+      <div class="stat-tiles">
+        <div><span>Progeny in the results</span><b>${fmt(t.horses)}</b></div>
+        <div><span>Placings</span><b>${fmt(t.placings)}</b></div>
+        <div><span>Top-three finishes</span><b>${fmt(t.top3)}</b></div>
+        <div><span>Wins</span><b>${fmt(t.wins)}</b></div>
+      </div>
+      ${rows.length ? `
+      <h3 class="section-title">Progeny wins by level</h3>
+      ${maxWins ? `<div class="bar-chart" role="img" aria-label="Progeny wins by level">${byLevel.filter(x => x.wins).map(x => `
+        <div class="bar-row" tabindex="0">
+          <span class="bar-label">${esc(x.level)}</span>
+          <span class="bar-track"><span class="bar" style="width:${Math.max(4, (x.wins / maxWins) * 100)}%"></span><span class="bar-value">${x.wins}</span></span>
+          <span class="bar-tip">${esc(x.level)}: ${x.wins} win${x.wins === 1 ? '' : 's'} from ${x.placings} placing${x.placings === 1 ? '' : 's'}</span>
+        </div>`).join('')}</div>` : '<p class="note">No wins recorded yet. Placings by level are in the table below.</p>'}
+      <div class="rtable-wrap"><table class="rtable level-table">
+        <thead><tr><th>Level</th><th class="c-score">Placings</th><th class="c-score">Top three</th><th class="c-score">Wins</th></tr></thead>
+        <tbody>${byLevel.map(x => `<tr class="row"><td>${esc(x.level)}</td><td class="c-score">${x.placings}</td><td class="c-score">${x.top3}</td><td class="c-score"><b>${x.wins}</b></td></tr>`).join('')}</tbody>
+      </table></div>
+      <h3 class="section-title">Progeny</h3>
+      <div class="rtable-wrap"><table class="rtable">
+        <thead><tr><th>Horse</th><th>Dam</th><th class="c-score">Runs</th><th class="c-score">Wins</th><th class="c-score">Best</th><th>Latest</th></tr></thead>
+        <tbody>${list.map(h => `<tr class="row">
+          <td class="c-horse">${h.placing_id ? `<a class="horse-link" href="/horse/${h.placing_id}" data-link>${esc(h.horse)}</a>` : esc(h.horse)}<span class="sub">${[h.birth_year, h.sex].filter(Boolean).map(esc).join(' · ')}</span></td>
+          <td data-label="Dam">${esc(h.dam || '–')}</td>
+          <td class="c-score" data-label="Runs">${h.runs}</td>
+          <td class="c-score" data-label="Wins"><b>${h.wins}</b></td>
+          <td class="c-score" data-label="Best">${esc(h.best ? ordinal(h.best) : '–')}</td>
+          <td data-label="Latest">${esc(h.event_name)}<span class="sub">${esc(h.class_name)} · ${esc(niceDate(h.start_date))}</span></td></tr>`).join('')}</tbody>
+      </table></div>
+      <p class="note">Counted from every IBER result for horses by ${esc(s.name)}.</p>` : '<div class="empty-state">No progeny in the results yet.</div>'}`;
+  }
 
   /* ---------- Notices (email confirm / unsubscribe) ---------- */
   function showNotice() {
@@ -645,11 +727,9 @@
     turnstileReady(state.config.turnstileSiteKey);
     document.querySelectorAll('form .ts-slot').forEach(s => mountTurnstile(s.closest('form')));
     render();
-    const [ads, , links] = await Promise.allSettled([api('/api/ads'), loadNews(), api('/api/links')]);
-    if (ads.status === 'fulfilled') state.ads = ads.value;
-    if (links.status === 'fulfilled') state.links = links.value.links;
-    renderBanners();
-    buildRail();
+    try { state.ads = await api('/api/ads'); } catch { /* the slots show as available */ }
+    state.adsLoaded = true;
+    renderAds(routeFromUrl().view);
   }
   start();
 })();

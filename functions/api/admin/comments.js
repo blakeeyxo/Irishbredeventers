@@ -3,7 +3,7 @@ import { json, bad, readJson } from '../../../lib/http.js';
 
 export async function onRequestGet({ env }) {
   const { results } = await env.DB.prepare(
-    `SELECT id, scope, name, body, status, created_at FROM comments ORDER BY status = 'pending' DESC, created_at DESC LIMIT 300`
+    `SELECT id, scope, name, body, status, spam_check, created_at FROM comments ORDER BY status = 'pending' DESC, created_at DESC LIMIT 300`
   ).all();
   return json({ comments: results });
 }

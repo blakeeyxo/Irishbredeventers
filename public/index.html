@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/site.css?v=2">
+<link rel="stylesheet" href="/css/site.css?v=3">
 </head>
 <body>
 
@@ -34,16 +34,19 @@
         <a href="/" data-tab="home" data-link class="active">Home</a>
         <a href="/results" data-tab="results" data-link>Results</a>
         <a href="/news" data-tab="news" data-link>News</a>
+        <a href="/stallions" data-tab="stallions" data-link>Stallions</a>
         <a href="/about" data-tab="about" data-link>About</a>
       </nav>
     </div>
   </div>
 </header>
 
-<div class="container banner-row" hidden><div id="banner-top"></div></div>
+<!-- Each page's own top banner, pinned to the top of the screen. -->
+<div class="banner-bar" id="banner-bar"><div class="container"><div id="banner-top"></div></div></div>
 <div class="container"><div id="notice" class="notice" role="status" hidden></div></div>
 
 <div class="container page">
+<aside class="side side-left" id="side-left" aria-label="Advertisements"></aside>
 <main id="main">
 
   <!-- HOME -->
@@ -92,7 +95,8 @@
         <div><b>Sire × Dam</b><p>The dam's own sire is shown underneath as "dam by …".</p></div>
         <div><b>Score</b><p>Dressage, show jumping and cross country penalties, then the final score. Lowest wins.</p></div>
         <div><b>Former names</b><p>Shown under the horse and included in search.</p></div>
-        <div><b>Unverified</b><p>Results still being checked sit at the end of their class and move up once confirmed.</p></div>
+        <div><b>OIO</b><p>Of Irish Origin: the horse's breeding is not recorded. It keeps its place in the class.</p></div>
+        <div><b>Unverified</b><p>Results whose details are still being checked (conflicting or doubtful) sit at the end of their class and move up once confirmed.</p></div>
         <div><b>Horse pages</b><p>Click any horse for its full record.</p></div>
       </div>
     </div>
@@ -110,6 +114,17 @@
         <div class="form-done" role="status"></div>
       </form>
     </div>
+  </section>
+
+  <!-- STALLIONS -->
+  <section class="view" id="view-stallions">
+    <div id="stallions-list">
+      <p class="eyebrow">Stallions</p>
+      <h2 class="page-title">Stallions</h2>
+      <p class="page-intro">Six stallions, with how their progeny are performing in the results.</p>
+      <div class="stallion-grid" id="stallion-grid"><div class="empty-state">Loading…</div></div>
+    </div>
+    <div id="stallion-detail" hidden></div>
   </section>
 
   <!-- SEARCH -->
@@ -134,6 +149,7 @@
     <h2 class="page-title">News &amp; commentary</h2>
     <p class="page-intro">The weekly write-up, notes on the results, and corrections.</p>
     <div id="news-list"><div class="empty-state">Loading…</div></div>
+    <div id="news-links"></div>
     <div class="block" id="news-comments"></div>
   </section>
 
@@ -153,7 +169,7 @@
       <dl class="contact-list">
         <dt>Email</dt><dd><a href="mailto:info@iber.ie">info@iber.ie</a></dd>
         <dt>Phone</dt><dd><a href="tel:+353872165442">+353 87 216 5442</a></dd>
-        <dt>Facebook</dt><dd>Irish Bred Eventing Results</dd>
+        <dt>Read more</dt><dd><a href="https://www.irishfield.ie" target="_blank" rel="noopener">The Irish Field</a> · <a href="https://www.horsesportireland.ie" target="_blank" rel="noopener">Horse Sport Ireland</a></dd>
       </dl>
     </div>
 
@@ -190,10 +206,8 @@
   </section>
 
 </main>
-<aside class="rail" id="rail" aria-label="Advertisements and news"></aside>
+<aside class="side side-right" id="side-right" aria-label="Advertisements"></aside>
 </div>
-
-<div class="container banner-row bottom" hidden><div id="banner-bottom"></div></div>
 
 <footer class="site-foot">
   <div class="container foot-inner">
@@ -205,6 +219,7 @@
       <h4>Explore</h4>
       <p><a href="/results" data-link>Results</a></p>
       <p><a href="/news" data-link>News</a></p>
+      <p><a href="/stallions" data-link>Stallions</a></p>
       <p><a href="/about" data-link>About</a></p>
       <p><a href="/about#advertise" data-link>Advertise</a></p>
     </div>
@@ -243,7 +258,7 @@
   <div class="modal horse-modal" id="horse-modal" role="dialog" aria-modal="true" aria-label="Horse record"></div>
 </div>
 
-<script src="/js/common.js?v=2"></script>
-<script src="/js/app.js?v=2"></script>
+<script src="/js/common.js?v=3"></script>
+<script src="/js/app.js?v=3"></script>
 </body>
 </html>

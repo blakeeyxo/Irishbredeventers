@@ -19,7 +19,9 @@ export async function onRequestPost({ env, request }) {
   const name = str(b.name, 60);
   const body = text(b.body, 600);
   if (!scope || !name || !body) return bad('Please add your name and a comment.');
-  if (!(await verifyTurnstile(env, b.turnstile, request))) return bad('The spam check did not pass. Please try again.', 403);
-  await env.DB.prepare('INSERT INTO comments (scope, name, body) VALUES (?, ?, ?)').bind(scope, name, body).run();
+  // Comments are held for approval anyway, so a failed or missing spam check doesn't turn a genuine comment
+  // away: it goes to the queue marked, and the owner decides.
+  const passed = await verifyTurnstile(env, b.turnstile, request).catch(() => false);
+  await env.DB.prepare('INSERT INTO comments (scope, name, body, spam_check) VALUES (?, ?, ?, ?)').bind(scope, name, body, passed ? 'passed' : 'failed').run();
   return json({ ok: true });
 }

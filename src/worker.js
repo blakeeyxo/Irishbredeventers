@@ -15,6 +15,10 @@ import * as home from '../functions/api/home.js';
 import * as results from '../functions/api/results.js';
 import * as search from '../functions/api/search.js';
 import * as horse from '../functions/api/horse/[id].js';
+import * as stallions from '../functions/api/stallions.js';
+import * as stallion from '../functions/api/stallions/[slot].js';
+import * as adminStallions from '../functions/api/admin/stallions.js';
+import * as adminSettings from '../functions/api/admin/settings.js';
 import * as news from '../functions/api/news.js';
 import * as links from '../functions/api/links.js';
 import * as ads from '../functions/api/ads.js';
@@ -43,6 +47,7 @@ const ROUTES = {
   '/api/config': config,
   '/api/home': home,
   '/api/results': results,
+  '/api/stallions': stallions,
   '/api/search': search,
   '/api/news': news,
   '/api/links': links,
@@ -61,6 +66,8 @@ const ROUTES = {
   '/api/admin/news': adminNews,
   '/api/admin/links': adminLinks,
   '/api/admin/ads': adminAds,
+  '/api/admin/stallions': adminStallions,
+  '/api/admin/settings': adminSettings,
   '/api/admin/comments': adminComments,
   '/api/admin/corrections': adminCorrections,
   '/api/admin/enquiries': adminEnquiries,
@@ -74,6 +81,8 @@ function match(pathname) {
   if (ROUTES[path]) return { mod: ROUTES[path], params: {} };
   const h = path.match(/^\/api\/horse\/([^/]+)$/);
   if (h) return { mod: horse, params: { id: decodeURIComponent(h[1]) } };
+  const st = path.match(/^\/api\/stallions\/(\d)$/);
+  if (st) return { mod: stallion, params: { slot: st[1] } };
   if (path.startsWith('/media/')) return { mod: media, params: { path: path.slice(7).split('/') } };
   return null;
 }

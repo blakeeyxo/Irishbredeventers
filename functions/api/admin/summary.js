@@ -4,7 +4,7 @@ import { COUNTRIES } from '../../../lib/parser.js';
 
 export async function onRequestGet({ env, data }) {
   const r = await env.DB.prepare(`SELECT
-      (SELECT COUNT(*) FROM placings WHERE verified = 0) AS unverified,
+      (SELECT COUNT(*) FROM placings WHERE verified = 0 AND NOT (sire = '' AND dam = '')) AS unverified,
       (SELECT COUNT(*) FROM comments WHERE status = 'pending') AS comments,
       (SELECT COUNT(*) FROM corrections WHERE status = 'open') AS corrections,
       (SELECT COUNT(*) FROM enquiries WHERE status = 'open') AS enquiries,

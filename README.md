@@ -92,7 +92,8 @@ Do these once, in order. Everything is on the free plans to start.
 ### 2. Tables and launch content (automatic)
 - [ ] Nothing to run by hand: each deploy applies new files in `migrations/` once. (`0006_results_source.sql`,
   `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` / `0009_ad_crop.sql` / `0010_ad_phone_crop.sql`
-  (advert crop settings) apply on deploy.) `0005_launch_content.sql`
+  (advert crop settings) and `0011_page_ad_slots_stallions.sql` (per-page ad slots, prices, stallion listings,
+  comment spam flag) apply on deploy.) `0005_launch_content.sql`
   loads Charlie's real results (14–16 February 2025 and the week of 6 April 2026), his four articles and
   the three link cards. It never adds example ads or the fictional sample weeks.
 - [ ] Open `https://irishbredeventers.<your-subdomain>.workers.dev` and check results show
@@ -186,22 +187,38 @@ results, so it adds nothing there.
 Fix unverified rows later in the **Unverified** tab. Under **Published uploads**, **Edit** opens an upload to rename it
 and correct or delete any of its results, and **Remove** takes the whole upload off the site.
 
-**Ads tab:** the form lists the recommended image size for each place (top banner, bottom banner, side boxes,
-home page boxes). The sizes are measured from the live site's layout at laptop and phone width each time the tab
-opens, so they stay right if the layout changes; the recommendation is twice the on-screen box so images stay sharp.
+**Ads tab: slots.** Every page (Home, Results, News, Stallions, About) has its own seven slots, sold separately:
+**Top** (a banner pinned to the top of the screen) and six side boxes, **Left 1–3** and **Right 1–3** (1 is the top).
+They are named "Home – Top", "Home – Left 1" … "About – Right 3". The tab opens with the slot index: a small drawing of
+each page showing who is booked in every slot (or "Available") and its price. Click a slot to book or edit it. Prices
+per slot type (Top €3000, Side €600 to start) are stored in the `settings` table and only ever shown in the owner area.
+Horse pages and search use the Results page's slots.
+
+On laptops the side boxes stay in view beside the page (three down each side). Below 1200px wide they sit in a block
+under the page content. Nothing rotates. An empty slot shows a small "Advertise here" box linking to the About page's
+enquiry form. Every advert carries a small "Advertisement" label in its top-left corner.
+
+**Ads tab: the form.** Choose the slot (a mini page drawing shows where it sits), then the image. The recommended image
+sizes are measured from the live site's layout at laptop and phone width each time the tab opens; the recommendation
+is twice the on-screen box so images stay sharp.
 After choosing an image: **Crop to fill the box** opens the crop tool (drag the picture to move it, zoom with the
-slider, − / + or the mouse wheel; the box takes the exact shape of the chosen place, or **Free shape** lets you drag its
+slider, − / + or the mouse wheel; the box takes the exact shape of the chosen slot, or **Free shape** lets you drag its
 corners), or **Show the whole image** keeps the whole picture with a background colour around it. A warning appears
 when the picture or cropped part is smaller than recommended (it still saves, but may look soft). The preview shows
-the advert in its real boxes before saving. The crop tool has two tabs: **Laptop & tablet crop** and **Phone crop**. Phones (720px wide and under) show the
-banner and boxes in a different shape (the banner is about 4.5 : 1 instead of 11 : 1), so each advert is framed
-separately for them; the preview shows both. The cropped pictures are what the site shows; the untouched upload and
-both crops are kept, so **Edit** can re-crop later. Each advert in **Current ads** has **Edit** and **Remove**. The site
-shows adverts without an "Advertisement" label.
+the advert in its real boxes before saving. The crop tool has two tabs: **Laptop & tablet crop** and **Phone crop**,
+because phones (720px wide and under) show the banner and boxes in a different shape. The cropped pictures are what
+the site shows; the untouched upload and both crops are kept, so **Edit** can re-crop later. **Every advert, by slot**
+lists each advert with **Edit** and **Remove**.
 
-### The right-hand column
+**Stallions tab.** Six listings, "Stallions – Listing 1" to "6", shown in that order on the Stallions page. Each has a
+name, photo, short blurb, stud website and "Sire name in the results". The progeny breakdown (wins by level, placings,
+top-three finishes and every horse) is counted from the results for horses whose sire matches those names. List
+every spelling used in the results, separated by commas. **Clear** shows the listing as available.
 
-The column runs the full height of every page. Each slot shows, in this order: the side-box ad booked for that slot (Ads tab: "Slot", 1 = top, with optional start and end dates), otherwise a news article card, otherwise an external link card (Link cards tab). It never shows an empty box. Articles and link cards can be added, edited, deleted and moved up or down in the owner area. Banners only show when a banner ad is booked. "Advertise here" appears only in the Advertise section of the About page.
+**Link cards** show on the News page under "Elsewhere".
+
+**Comments.** Every comment goes to the approval queue. If the Turnstile spam check did not pass, the comment is
+still queued but marked "Spam check did not pass" so it can be read carefully before approving.
 
 ### Breeding data
 
@@ -225,18 +242,19 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
 
 ## Decisions (from the brief, not to reopen)
 
-- Menu: Home, Results, News, About. Search box on every page.
+- Menu: Home, Results, News, Stallions, About. Search box on every page.
 - Riders are shown on the results pages when given (under the horse), and are never searchable: the search index
   covers horse, former names, sire, dam, dam sire and breeder only. They are stored in `results` (rider name and country).
-- The home page shows the first-placed horses from the latest week, with the usual banners and right-hand column around them.
+- The home page shows the first-placed horses from the latest week, with its own banner and side boxes around them.
 - Horse record: Runs recorded, Wins / Placings (1st / top three), Best dressage, Clear cross country. Form lists every
   class the horse ran in, by month, and each event links to its results.
 - Results: year tabs, then all twelve month tabs within every year. Months without results are shown lighter and say
   "Archive for this month coming soon" (or, for months still to come, that results appear once the events have run);
   they fill in by themselves as results are imported. Each event shows its dates, country, number of classes,
   Irish-bred placings and the Horse Sport Ireland report it came from (as plain text: results never link out to HSI).
-- No stallion page (stallion ads are just ads). No donation button. No scheduled newsletter.
-- Unverified results sit at the end of their own class, marked "Unverified".
+- Stallions page: six paid listings, each with its progeny breakdown. No donation button. No scheduled newsletter.
+- A horse with no breeding recorded is marked "OIO" (Of Irish Origin) and keeps its place. "Unverified" is only for
+  conflicting or doubtful details; those results sit at the end of their own class.
 - Comments only appear after approval.
 
 ## Still open (for Emer)

@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
 
   /* ---------- Tabs ---------- */
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), links: () => loadLinks(), ads: loadAds, comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), links: () => loadLinks(), ads: loadAds, stallions: loadStallions, comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -426,7 +426,7 @@
   // 1. Box sizes, measured from the live layout: the public home page is loaded out of sight at laptop and
   //    phone width and the real banner and right-hand-column boxes are measured, so the recommendations follow
   //    any change to the site's layout. If measuring fails, the sizes from the stylesheet are used.
-  const FALLBACK = { laptop: { banner: [1256, 110], box: [232, 232], home: [232, 232] }, phone: { banner: [358, 80], box: [171, 171], home: [171, 171] } };
+  const FALLBACK = { laptop: { banner: [1256, 110], box: [170, 170] }, phone: { banner: [358, 56], box: [112, 112] } };
   function measureAt(width) {
     return new Promise(resolve => {
       const f = document.createElement('iframe');
@@ -440,13 +440,9 @@
         const d = f.contentDocument;
         const size = el => { const b = el.getBoundingClientRect(); return [Math.round(b.width), Math.round(b.height)]; };
         const measure = tries => {
-          const slots = d.querySelectorAll('#rail .slot');
-          if (!slots.length && tries < 40) return setTimeout(() => measure(tries + 1), 250);
-          const probe = d.createElement('div');
-          probe.innerHTML = '<div class="container banner-row"><div class="banner"></div></div>'
-            + '<div class="container page"><main></main><aside class="rail"><div class="slot ad-box"></div></aside></div>';
-          d.body.appendChild(probe);
-          done({ banner: size(probe.querySelector('.banner')), box: size(probe.querySelector('.ad-box')), home: slots.length ? size(slots[0]) : null });
+          const banner = d.querySelector('#banner-top .banner'), box = d.querySelector('#side-left .ad-box');
+          if ((!banner || !box) && tries < 40) return setTimeout(() => measure(tries + 1), 250);
+          done(banner && box ? { banner: size(banner), box: size(box) } : null);
         };
         measure(0);
       };
@@ -457,7 +453,7 @@
   let layout = { ...FALLBACK, measured: false };
   const layoutReady = Promise.all([measureAt(1360), measureAt(390)]).then(([laptop, phone]) => {
     const ok = v => v && v[0] > 0 && v[1] > 0;
-    const pick = (m, fb) => ({ banner: ok(m && m.banner) ? m.banner : fb.banner, box: ok(m && m.box) ? m.box : fb.box, home: ok(m && m.home) ? m.home : fb.home });
+    const pick = (m, fb) => ({ banner: ok(m && m.banner) ? m.banner : fb.banner, box: ok(m && m.box) ? m.box : fb.box });
     layout = { laptop: pick(laptop, FALLBACK.laptop), phone: pick(phone, FALLBACK.phone), measured: !!(laptop && phone) };
     renderSizes();
     return layout;
@@ -470,26 +466,24 @@
     const L = layout.laptop, P = layout.phone;
     if (view === 'phone') {
       return tier === 'large'
-        ? [['phone-banner', `Phone banner (${ratioText(P.banner)}, top and bottom)`, P.banner], ['free', 'Free shape', null]]
+        ? [['phone-banner', `Phone top banner (${ratioText(P.banner)})`, P.banner], ['free', 'Free shape', null]]
         : [['phone-box', `Phone side box (${ratioText(P.box)})`, P.box], ['free', 'Free shape', null]];
     }
     return tier === 'large'
-      ? [['banner', `Banner shape (${ratioText(L.banner)}, top and bottom banner)`, L.banner], ['free', 'Free shape', null]]
-      : [['box', `Side box (${ratioText(L.box)}, every page)`, L.box], ['home', `Home page box (${ratioText(L.home)})`, L.home], ['free', 'Free shape', null]];
+      ? [['banner', `Top banner (${ratioText(L.banner)})`, L.banner], ['free', 'Free shape', null]]
+      : [['box', `Side box (${ratioText(L.box)})`, L.box], ['free', 'Free shape', null]];
   }
   function renderSizes() {
     const L = layout.laptop, P = layout.phone;
     const row = (name, where, lap, ph) => `<tr><th>${name}<small>${where}</small></th><td>${px(lap)} px<small>phone ${px(ph)}</small></td><td><b>${px(recommended(lap))} px</b><small>ratio ${ratioText(lap)}</small></td></tr>`;
     $('ad-sizes').innerHTML = `<table class="ad-size-table"><thead><tr><th>Where it shows</th><th>Box on screen (laptop)</th><th>Recommended image</th></tr></thead><tbody>
-      ${row('Top banner', 'every page, under the header', L.banner, P.banner)}
-      ${row('Bottom banner', 'every page, above the footer (same advert and size as the top)', L.banner, P.banner)}
-      ${row('Side boxes', 'right-hand column on every page', L.box, P.box)}
-      ${row('Home page boxes', 'the same column on the home page, where the boxes stretch to the page height', L.home, P.home)}
+      ${row('Top banner', 'pinned to the top of the screen on its page', L.banner, P.banner)}
+      ${row('Side boxes', 'Left 1–3 and Right 1–3; on phones, in a block under the page', L.box, P.box)}
       </tbody></table>
       <p class="meta">${layout.measured ? 'Measured from the site as it is now.' : 'Could not measure the site just now, so these are the sizes from the stylesheet.'}
       The recommended size is twice the box so it stays sharp on high-resolution screens. A smaller image still works,
-      but you'll see a warning: it will be stretched to fit and may look soft or blurry. Side boxes also stretch beside long pages, so
-      "Crop to fill" may trim a little more from the edges there.</p>`;
+      but you'll see a warning: it will be stretched to fit and may look soft or blurry. A small "Advertisement" label sits in the
+      top-left corner of every advert, so keep important words away from that corner.</p>`;
   }
 
   // 2. Crop tool: the picture moves and zooms under a fixed crop box (or a free-shape box with corner handles).
@@ -665,9 +659,8 @@
     const contain = adForm.elements.fit.value === 'contain';
     const lines = [];
     for (const [view, [w, h]] of sizes) {
-      const laptopShape = (crop.views.laptop || {}).shape;
-      const target = view === 'phone' ? (tier === 'large' ? ['phone banner', P.banner] : ['phone side box', P.box])
-        : tier === 'large' ? ['banner', L.banner] : laptopShape === 'home' ? ['home page box', L.home] : ['side box', L.box];
+      const target = view === 'phone' ? (tier === 'large' ? ['phone top banner', P.banner] : ['phone side box', P.box])
+        : tier === 'large' ? ['top banner', L.banner] : ['side box', L.box];
       const [rw, rh] = recommended(target[1]);
       // With the whole image shown, it only has to be big enough in the direction that touches the box edges.
       const short = contain ? (w / h > rw / rh ? w < rw : h < rh) : (w < rw || h < rh);
@@ -702,11 +695,13 @@
     const style = `width:100%;height:100%;display:block;object-fit:${contain ? `contain;background:${f.bg.value}` : 'cover'}`;
     const inner = (cls, view) => src[view] ? `<img src="${src[view]}" alt="" style="${style}">` : `<span class="${cls}">${esc(name)}</span>`;
     const L = layout.laptop, P = layout.phone;
-    const box = (size, label, view) => `<figure><div class="ad-box" style="aspect-ratio:auto;width:${size[0]}px;height:${size[1]}px;"><span class="ad-body" style="padding:0">${inner('ad-name', view)}</span></div><figcaption>${label}</figcaption></figure>`;
+    const label = '<span class="ad-label">Advertisement</span>';
+    const box = (size, text, view) => `<figure><div class="ad-box" style="aspect-ratio:auto;max-height:none;width:${size[0]}px;height:${size[1]}px;">${label}<span class="ad-body">${inner('ad-name', view)}</span></div><figcaption>${text}</figcaption></figure>`;
+    const where = esc(slotName(f.placement.value));
     $('ad-preview-boxes').innerHTML = f.tier.value === 'large'
-      ? `<div class="banner" style="height:auto;aspect-ratio:${L.banner[0]}/${L.banner[1]};">${inner('banner-name', 'laptop')}</div><p class="meta">Top and bottom banner on a laptop or tablet (${px(L.banner)}), from the laptop crop</p>
-         <div class="banner" style="height:${P.banner[1]}px;width:${P.banner[0]}px;max-width:100%;">${inner('banner-name', 'phone')}</div><p class="meta">On a phone (${px(P.banner)}), from the phone crop</p>`
-      : `<div class="ad-preview-row">${box(L.box, `Side box (${px(L.box)})`, 'laptop')}${box(L.home, `Home page box (${px(L.home)})`, 'laptop')}${box(P.box, `On a phone (${px(P.box)}), from the phone crop`, 'phone')}</div>`;
+      ? `<div class="banner" style="height:auto;aspect-ratio:${L.banner[0]}/${L.banner[1]};">${label}${inner('banner-name', 'laptop')}</div><p class="meta">${where} on a laptop or tablet (${px(L.banner)}), from the laptop crop</p>
+         <div class="banner" style="height:${P.banner[1]}px;width:${P.banner[0]}px;max-width:100%;">${label}${inner('banner-name', 'phone')}</div><p class="meta">${where} on a phone (${px(P.banner)}), from the phone crop</p>`
+      : `<div class="ad-preview-row">${box(L.box, `${where} on a laptop (${px(L.box)})`, 'laptop')}${box(P.box, `${where} on a phone (${px(P.box)}), from the phone crop`, 'phone')}</div>`;
     $('ad-preview').hidden = false;
   }
 
@@ -732,8 +727,14 @@
     crop.objectUrl = URL.createObjectURL(file);
     await loadPicture(crop.objectUrl);
   });
-  adForm.elements.tier.addEventListener('change', () => { if (crop.img) { crop.changed = true; initViews(null, null); } else fillShapes(); adPreview(); });
-  ['input', 'change'].forEach(ev => adForm.addEventListener(ev, e => { if (e.target.name !== 'image' && e.target.name !== 'tier' && e.target.id !== 'crop-zoom') queuePreview(); }));
+  // Choosing a slot: a top banner and a side box are different shapes, so changing between them starts the crop again.
+  adForm.elements.placement.addEventListener('change', () => {
+    const before = adForm.elements.tier.value;
+    setPlacement(adForm.elements.placement.value);
+    if (adForm.elements.tier.value !== before) { if (crop.img) { crop.changed = true; initViews(null, null); } else fillShapes(); }
+    adPreview();
+  });
+  ['input', 'change'].forEach(ev => adForm.addEventListener(ev, e => { if (e.target.name !== 'image' && e.target.name !== 'placement' && e.target.id !== 'crop-zoom') queuePreview(); }));
   // Back to "Crop to fill": crops made while the tool was hidden are set up now it can be measured.
   const savedRect = name => { const v = viewState(name); return v && v.box ? rectOf(v) : null; };
   adForm.elements.fit.addEventListener('change', () => {
@@ -754,8 +755,10 @@
     adForm.querySelector('button[type=submit]').textContent = ad ? 'Save changes' : 'Add advert';
     $('ad-cropper').hidden = true;
     let saved = null, savedPhone = null;
+    setPlacement(ad ? ad.placement || '' : nextPlacement);
+    nextPlacement = '';
     if (ad) {
-      for (const k of ['tier', 'name', 'link', 'slot', 'starts_on', 'ends_on', 'fit', 'bg']) adForm.elements[k].value = ad[k] ?? '';
+      for (const k of ['name', 'link', 'starts_on', 'ends_on', 'fit', 'bg']) adForm.elements[k].value = ad[k] ?? '';
       if (!/^#[0-9a-f]{6}$/i.test(adForm.elements.bg.value)) adForm.elements.bg.value = '#ffffff';
       try { saved = ad.crop ? JSON.parse(ad.crop) : null; } catch { saved = null; }
       try { savedPhone = ad.phone_crop ? JSON.parse(ad.phone_crop) : null; } catch { savedPhone = null; }
@@ -810,22 +813,90 @@
     finally { btn.disabled = false; }
   });
   adForm.querySelector('[data-cancel]').addEventListener('click', () => setEditingAd(null));
+  // 6. The slot index: every page's seven slots as a little page diagram, with who is booked in each and the price.
+  let slotPages = [], slotPositions = [], prices = {};
+  const slotName = v => {
+    const [page, pos] = String(v || '').split(':');
+    const p = slotPages.find(x => x[0] === page), q = slotPositions.find(x => x[0] === pos);
+    return p && q ? `${p[1]} – ${q[1]}` : 'No slot chosen';
+  };
+  const priceOf = v => (String(v).endsWith(':top') ? prices.ad_price_top : prices.ad_price_side);
+  const euro = n => (n || n === 0 ? `€${Number(n).toLocaleString('en-IE')}` : '');
+  const today = () => new Date().toISOString().slice(0, 10);
+  const isLive = a => (!a.starts_on || a.starts_on <= today()) && (!a.ends_on || a.ends_on >= today());
+  let nextPlacement = '';
+  function setPlacement(v) {
+    const sel = adForm.elements.placement;
+    sel.value = v;
+    if (sel.value !== v) sel.value = '';
+    adForm.elements.tier.value = String(sel.value).endsWith(':top') ? 'large' : 'small';
+    $('slot-mini').innerHTML = sel.value ? miniMap(sel.value) : '<p class="meta">Choose a slot to see where it sits on the page.</p>';
+  }
+  // A small drawing of a page with the chosen slot picked out.
+  function miniMap(selected) {
+    const page = selected.split(':')[0];
+    const cell = pos => `<span class="mm-${pos.startsWith('left') ? 'l' : pos.startsWith('right') ? 'r' : 't'}${`${page}:${pos}` === selected ? ' on' : ''}">${pos === 'top' ? 'Top' : pos.replace(/^left/, 'L').replace(/^right/, 'R')}</span>`;
+    return `<div class="mm"><div class="mm-head">${esc(slotName(`${page}:top`).split(' – ')[0])} page</div>${cell('top')}
+      <div class="mm-body"><div class="mm-col">${cell('left1')}${cell('left2')}${cell('left3')}</div><div class="mm-main">Page content</div><div class="mm-col">${cell('right1')}${cell('right2')}${cell('right3')}</div></div></div>`;
+  }
+  function slotIndex() {
+    const box = (page, pos) => {
+      const v = `${page}:${pos}`, here = ads.filter(a => a.placement === v);
+      const now = here.find(isLive), next = here.filter(a => !isLive(a) && a.starts_on && a.starts_on > today()).sort((x, y) => x.starts_on.localeCompare(y.starts_on))[0];
+      return `<button type="button" class="si-slot si-${pos === 'top' ? 'top' : 'side'}${now ? ' booked' : ''}" data-slot="${v}" title="${esc(slotName(v))}">
+        <span class="si-name">${esc(slotName(v))}</span>
+        <span class="si-who">${now ? esc(now.name) : 'Available'}${now && now.ends_on ? ` <small>until ${esc(niceDate(now.ends_on))}</small>` : ''}${next ? ` <small>next: ${esc(next.name)} from ${esc(niceDate(next.starts_on))}</small>` : ''}</span>
+        <span class="si-price">${euro(priceOf(v))}</span></button>`;
+    };
+    $('ad-index').innerHTML = slotPages.map(([page, label]) => `<section class="si-page"><h4>${esc(label)}</h4>${box(page, 'top')}
+      <div class="si-body"><div class="si-col">${['left1', 'left2', 'left3'].map(p => box(page, p)).join('')}</div><div class="si-main">${esc(label)} page content</div><div class="si-col">${['right1', 'right2', 'right3'].map(p => box(page, p)).join('')}</div></div></section>`).join('');
+  }
+  $('ad-index').addEventListener('click', e => {
+    const b = e.target.closest('[data-slot]');
+    if (!b) return;
+    const v = b.dataset.slot, live = ads.find(a => a.placement === v && isLive(a));
+    if (live) return setEditingAd(live);
+    nextPlacement = v;
+    setEditingAd(null);
+    adPreview();
+    adForm.scrollIntoView({ behavior: 'smooth' });
+  });
+  $('price-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, done = f.querySelector('.form-done');
+    try {
+      await api('/api/admin/settings', { method: 'POST', body: { ad_price_top: Number(f.elements.ad_price_top.value), ad_price_side: Number(f.elements.ad_price_side.value) } });
+      done.textContent = 'Prices saved.';
+      loadAds();
+    } catch (err) { done.textContent = err.message; }
+  });
+
   async function loadAds() {
     layoutReady.then(() => { if (crop.img) initViews(savedRect('laptop'), savedRect('phone')); else fillShapes(crop.shape); });
-    ads = (await api('/api/admin/ads')).ads;
-    const today = new Date().toISOString().slice(0, 10);
-    $('ad-list').innerHTML = ads.length ? ads.map((a, i) => `<div class="adm-card">
-      ${a.image_key ? `<img class="adm-thumb" src="/media/${esc(a.image_key)}" alt="" style="object-fit:${a.fit === 'contain' ? `contain;background:${esc(a.bg || '#ffffff')}` : 'cover'};object-position:${AD_FOCUS[a.focus] || 'center'}">` : ''}<b>${esc(a.name)}</b>
-      <div class="meta">${a.tier === 'large' ? 'Banner (top and bottom)' : `Side box · ${a.slot ? `slot ${a.slot}` : 'first free slot'}`}${a.starts_on ? ` · from ${esc(niceDate(a.starts_on))}` : ''}${a.ends_on ? ` · until ${esc(niceDate(a.ends_on))}` : ''}${a.ends_on && a.ends_on < today ? ' · <b class="iss">ended, no longer showing</b>' : ''} · ${a.fit === 'contain' ? 'whole image' : a.phone_key ? 'cropped to fill, with a phone crop' : 'cropped to fill (no phone crop yet)'}${a.link ? ` · ${esc(a.link)}` : ''}</div>
-      <div class="adm-actions"><button class="btn sm" data-edit-ad="${i}">Edit</button><button class="btn sm alt" data-del-ad="${i}">Remove</button></div></div>`).join('')
-      : '<div class="empty-state">No ads yet. The right-hand column shows news and link cards until one is booked.</div>';
+    const d = await api('/api/admin/ads');
+    ads = d.ads; slotPages = d.pages; slotPositions = d.positions; prices = d.prices || {};
+    const pf = $('price-form').elements;
+    pf.ad_price_top.value = prices.ad_price_top ?? ''; pf.ad_price_side.value = prices.ad_price_side ?? '';
+    const sel = adForm.elements.placement, keep = sel.value;
+    sel.innerHTML = '<option value="">Choose a slot…</option>' + slotPages.map(([page, label]) => `<optgroup label="${esc(label)}">${slotPositions.map(([pos]) => {
+      const v = `${page}:${pos}`; return `<option value="${v}">${esc(slotName(v))} (${pos === 'top' ? 'banner' : 'side box'}, ${euro(priceOf(v))})</option>`; }).join('')}</optgroup>`).join('');
+    setPlacement(editingAd ? editingAd.placement || '' : keep);
+    slotIndex();
+    const order = v => { const i = slotPages.findIndex(p => v && v.startsWith(p[0] + ':')), j = slotPositions.findIndex(p => v && v.endsWith(':' + p[0])); return i < 0 ? 999 : i * 10 + j; };
+    const sorted = [...ads].sort((a, b) => order(a.placement) - order(b.placement));
+    const t = today();
+    $('ad-list').innerHTML = sorted.length ? sorted.map(a => `<div class="adm-card">
+      ${a.image_key ? `<img class="adm-thumb" src="/media/${esc(a.image_key)}" alt="" style="object-fit:${a.fit === 'contain' ? `contain;background:${esc(a.bg || '#ffffff')}` : 'cover'};object-position:${AD_FOCUS[a.focus] || 'center'}">` : ''}<span class="si-tag">${esc(slotName(a.placement))}</span> <b>${esc(a.name)}</b>
+      <div class="meta">${a.placement ? '' : '<b class="iss">Not showing: choose a slot for it</b> · '}${a.starts_on ? `from ${esc(niceDate(a.starts_on))} · ` : ''}${a.ends_on ? `until ${esc(niceDate(a.ends_on))} · ` : ''}${a.ends_on && a.ends_on < t ? '<b class="iss">ended, no longer showing</b> · ' : ''}${a.starts_on && a.starts_on > t ? 'not started yet · ' : ''}${a.fit === 'contain' ? 'whole image' : a.phone_key ? 'cropped to fill, with a phone crop' : 'cropped to fill (no phone crop yet)'}${a.link ? ` · ${esc(a.link)}` : ''}</div>
+      <div class="adm-actions"><button class="btn sm" data-edit-ad="${a.id}">Edit</button><button class="btn sm alt" data-del-ad="${a.id}">Remove</button></div></div>`).join('')
+      : '<div class="empty-state">No adverts yet. Every slot shows a small "Advertise here" box until it is booked.</div>';
   }
   $('ad-list').addEventListener('click', async e => {
     const edit = e.target.closest('[data-edit-ad]'), del = e.target.closest('[data-del-ad]');
-    if (edit) setEditingAd(ads[Number(edit.dataset.editAd)]);
+    if (edit) setEditingAd(ads.find(a => a.id === Number(edit.dataset.editAd)));
     if (del) {
-      const ad = ads[Number(del.dataset.delAd)];
-      if (!confirm(`Remove the advert for "${ad.name}"? It comes off the site straight away.`)) return;
+      const ad = ads.find(a => a.id === Number(del.dataset.delAd));
+      if (!confirm(`Remove the advert for "${ad.name}" (${slotName(ad.placement)})? It comes off the site straight away.`)) return;
       await api(`/api/admin/ads?id=${ad.id}`, { method: 'DELETE' });
       if (editingAd && editingAd.id === ad.id) setEditingAd(null);
       loadAds();
@@ -833,11 +904,48 @@
   });
   fillShapes();
 
+  /* ---------- Stallions: the six listings on the Stallions page ---------- */
+  async function loadStallions(savedSlot) {
+    const d = await api('/api/admin/stallions');
+    $('sire-names').innerHTML = d.sires.map(n => `<option value="${esc(n)}">`).join('');
+    $('st-list').innerHTML = d.listings.map(s => `<form class="form st-card" data-slot="${s.slot}">
+      <h4>Stallions – Listing ${s.slot}${s.name ? '' : ' <small>(available)</small>'}</h4>
+      ${s.image_key ? `<img class="adm-thumb" src="/media/${esc(s.image_key)}" alt="">` : ''}
+      <label>Stallion name<input type="text" name="name" maxlength="80" value="${esc(s.name || '')}" required></label>
+      <label>Sire name in the results <small>(commas between spellings; blank = the stallion name)</small><input type="text" name="sire_names" maxlength="300" list="sire-names" value="${esc(s.sire_names || '')}"></label>
+      <label>Short blurb (optional)<textarea name="blurb" maxlength="400" style="min-height:70px;">${esc(s.blurb || '')}</textarea></label>
+      <label>Stud website (optional)<input type="text" name="link" placeholder="https://" inputmode="url" value="${esc(s.link || '')}"></label>
+      <label>Photo${s.image_key ? ' (leave empty to keep the current one)' : ''}<input type="file" name="image" accept="image/*"></label>
+      ${s.name ? `<p class="meta">Progeny found in the results: <b>${s.totals.horses}</b> horses, ${s.totals.placings} placings, ${s.totals.wins} wins. <a href="/stallions/${s.slot}" target="_blank" rel="noopener">See the page ↗</a></p>` : ''}
+      <div class="adm-actions"><button class="btn sm" type="submit">Save listing ${s.slot}</button>${s.name ? `<button class="btn sm alt" type="button" data-st-clear>Clear</button>` : ''}</div>
+      <div class="form-done" role="status">${s.slot === savedSlot ? 'Saved. It is live on the Stallions page now.' : ''}</div>
+    </form>`).join('');
+  }
+  $('st-list').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, done = f.querySelector('.form-done'), form = new FormData(f);
+    form.append('slot', f.dataset.slot);
+    const file = f.elements.image.files[0];
+    form.delete('image');
+    if (file) form.append('image', await shrinkImage(file, 1400));
+    done.textContent = 'Saving…';
+    try { await api('/api/admin/stallions', { method: 'POST', form }); await loadStallions(Number(f.dataset.slot)); }
+    catch (err) { done.textContent = err.message; }
+  });
+  $('st-list').addEventListener('click', async e => {
+    if (!e.target.closest('[data-st-clear]')) return;
+    const f = e.target.closest('form');
+    if (!confirm(`Clear Stallions – Listing ${f.dataset.slot}? It shows as available straight away.`)) return;
+    await api(`/api/admin/stallions?slot=${f.dataset.slot}`, { method: 'DELETE' });
+    loadStallions();
+  });
+
   /* ---------- Comments ---------- */
   async function loadComments() {
     const d = await api('/api/admin/comments');
     const pending = d.comments.filter(c => c.status === 'pending'), approved = d.comments.filter(c => c.status === 'approved');
     const item = c => `<div class="adm-card"><b>${esc(c.name)}</b> <span class="meta">${esc(niceDate(c.created_at))} · on ${c.scope === 'news' ? 'News' : 'Results'}</span>
+      ${c.spam_check === 'failed' ? '<div class="meta"><b class="iss">Spam check did not pass: read it carefully before approving</b></div>' : ''}
       <p style="margin:6px 0;">${esc(c.body)}</p><div class="adm-actions">
       ${c.status === 'pending' ? `<button class="btn sm" data-cm="approve" data-id="${c.id}">Approve</button>` : ''}
       <button class="btn sm alt" data-cm="delete" data-id="${c.id}">Delete</button></div></div>`;

@@ -6,7 +6,7 @@ const EDITABLE = ['horse_name', 'former_name', 'breed', 'sex', 'sire', 'dam', 'd
 
 export async function onRequestGet({ env }) {
   const { results } = await env.DB.prepare(`SELECT ${PLACING_COLUMNS}, IFNULL(r.raw_line, '') AS raw_line, IFNULL(r.parse_ok, 1) AS parse_ok,
-      IFNULL(r.article_url, '') AS article_url ${PLACING_JOIN} WHERE p.verified = 0 ${PLACING_ORDER} LIMIT 1000`).all();
+      IFNULL(r.article_url, '') AS article_url ${PLACING_JOIN} WHERE p.verified = 0 AND NOT (p.sire = '' AND p.dam = '') ${PLACING_ORDER} LIMIT 1000`).all();
   return json({ rows: results });
 }
 

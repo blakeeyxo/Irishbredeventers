@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/site.css?v=2">
-<link rel="stylesheet" href="/admin/admin.css">
+<link rel="stylesheet" href="/css/site.css?v=3">
+<link rel="stylesheet" href="/admin/admin.css?v=3">
 </head>
 <body>
 
@@ -35,6 +35,7 @@
     <button class="chip" data-a="news">News</button>
     <button class="chip" data-a="links">Link cards</button>
     <button class="chip" data-a="ads">Ads</button>
+    <button class="chip" data-a="stallions">Stallions</button>
     <button class="chip" data-a="comments">Comments <span class="count" id="n-comments" hidden></span></button>
     <button class="chip" data-a="corrections">Corrections <span class="count" id="n-corrections" hidden></span></button>
     <button class="chip" data-a="enquiries">Ad enquiries <span class="count" id="n-enquiries" hidden></span></button>
@@ -99,7 +100,7 @@
   <!-- LINK CARDS -->
   <div class="adm-pane" id="adm-links">
     <h3 id="links-form-title">Add a link card</h3>
-    <p class="intro">Link cards point to articles on other websites and open in a new tab. They fill the right-hand column after news articles, in the order below.</p>
+    <p class="intro">Link cards point to articles on other websites and open in a new tab. They show on the News page under "Elsewhere", in the order below.</p>
     <form class="form" id="links-form">
       <input type="hidden" name="id">
       <label>Headline<input type="text" name="title" maxlength="200" required></label>
@@ -124,18 +125,31 @@
   <!-- ADS -->
   <div class="adm-pane" id="adm-ads">
     <h3>Ads</h3>
-    <p class="intro">Banner ads run full width at the top and bottom of every page. Side-box ads sit in the right-hand column (on the home page too) and are booked into a slot in the right-hand column: slot 1 is the top. A booked ad replaces the news or link card in its slot automatically. Ads show from their start date to their end date. The recommended image sizes for each place are listed in the form below.</p>
+    <p class="intro">Every page (Home, Results, News, Stallions, About) has its own seven advert slots, sold separately: a <b>Top</b> banner pinned to the top of the screen and six side boxes, <b>Left 1–3</b> and <b>Right 1–3</b> (1 is the top box). On phones the side boxes sit in a block under the page. Nothing rotates: an advert stays in its slot from its start date to its end date. Click any slot below to book it or edit what's in it.</p>
+    <div class="slot-index" id="ad-index"><p class="meta">Loading the slots…</p></div>
+    <form class="form price-form" id="price-form">
+      <h3 style="margin:0;">Prices <small>(owner area only, never shown on the site)</small></h3>
+      <div class="form-row">
+        <label>Top banner, per slot (€)<input type="number" name="ad_price_top" min="0" step="1" required></label>
+        <label>Side box, per slot (€)<input type="number" name="ad_price_side" min="0" step="1" required></label>
+      </div>
+      <div class="adm-actions"><button class="btn" type="submit">Save prices</button></div>
+      <div class="form-done" role="status"></div>
+    </form>
     <form class="form" id="ad-form">
       <h3 id="ad-form-title" style="margin:0;">Add an advert</h3>
       <input type="hidden" name="id">
-      <label>Type<select name="tier"><option value="large">Banner (top and bottom)</option><option value="small" selected>Side box (right-hand column)</option></select></label>
+      <input type="hidden" name="tier" value="small">
+      <div class="placement-pick">
+        <label>Slot<select name="placement" required></select></label>
+        <div class="slot-mini" id="slot-mini" aria-hidden="true"></div>
+      </div>
       <label>Advertiser name<input type="text" name="name" maxlength="80" required></label>
       <label>Link (optional)<input type="text" name="link" placeholder="https://" inputmode="url"></label>
       <div class="form-row">
-        <label>Slot (side boxes; 1 = top, blank = first free)<input type="number" name="slot" min="1" max="40"></label>
         <label>Starts on (optional)<input type="date" name="starts_on"></label>
+        <label>Runs until (optional)<input type="date" name="ends_on"></label>
       </div>
-      <label>Runs until (optional)<input type="date" name="ends_on"></label>
       <div class="ad-sizes" id="ad-sizes"><p class="meta">Measuring the boxes on the site…</p></div>
       <label>Advert image<input type="file" name="image" accept="image/*"></label>
       <p class="meta edit-only" hidden>Leave the image empty to keep the current one. You can still re-crop it below.</p>
@@ -165,7 +179,7 @@
       </div>
       <p class="ad-warning" id="ad-warning" hidden></p>
       <div class="ad-preview" id="ad-preview" hidden>
-        <p class="ad-preview-title">Preview: how it will look on the site (home page and every other page)</p>
+        <p class="ad-preview-title">Preview: how it will look in this slot</p>
         <div id="ad-preview-boxes"></div>
       </div>
       <div class="adm-actions">
@@ -174,8 +188,16 @@
       </div>
       <div class="form-done" role="status"></div>
     </form>
-    <h3 style="margin-top:40px;">Current ads</h3>
+    <h3 style="margin-top:40px;">Every advert, by slot</h3>
     <div id="ad-list"></div>
+  </div>
+
+  <!-- STALLIONS -->
+  <div class="adm-pane" id="adm-stallions">
+    <h3>Stallions</h3>
+    <p class="intro">The Stallions page has six paid listings, <b>Stallions – Listing 1</b> to <b>6</b>, shown in that order (1 is top left). Each listing opens its own page with the progeny breakdown, counted from every result for horses whose sire matches the names in "Sire name in the results". If the sire is spelt more than one way in the results, list every spelling, separated by commas. Clear a listing to show it as available.</p>
+    <div class="stallion-admin" id="st-list"><p class="meta">Loading…</p></div>
+    <datalist id="sire-names"></datalist>
   </div>
 
   <!-- COMMENTS -->
@@ -207,7 +229,7 @@
   </div>
 </footer>
 
-<script src="/js/common.js?v=2"></script>
-<script src="/admin/admin.js"></script>
+<script src="/js/common.js?v=3"></script>
+<script src="/admin/admin.js?v=3"></script>
 </body>
 </html>

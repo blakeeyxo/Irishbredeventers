@@ -2,6 +2,7 @@
 // POST with an id edits that advert; a new image replaces the old one, no image keeps it.
 import { json, bad, str } from '../../../lib/http.js';
 import { saveImage } from '../../../lib/images.js';
+import { PAGES, POSITIONS, isPlacement, placementTier } from '../../../lib/slots.js';
 
 const FITS = ['cover', 'contain'];
 const FOCUSES = ['center', 'top', 'bottom', 'left', 'right'];
@@ -18,9 +19,10 @@ function readCrop(raw) {
 }
 
 export async function onRequestGet({ env }) {
-  const { results } = await env.DB.prepare(`SELECT id, tier, name, link, image_key, orig_key, phone_key, crop, phone_crop, bg, slot, starts_on, ends_on, fit, focus, created_at
-    FROM ads ORDER BY tier, slot IS NULL, slot, created_at DESC, id DESC`).all();
-  return json({ ads: results });
+  const { results } = await env.DB.prepare(`SELECT id, placement, tier, name, link, image_key, orig_key, phone_key, crop, phone_crop, bg, slot, starts_on, ends_on, fit, focus, created_at
+    FROM ads ORDER BY placement IS NULL, placement, created_at DESC, id DESC`).all();
+  const prices = Object.fromEntries((await env.DB.prepare("SELECT key, value FROM settings WHERE key LIKE 'ad_price_%'").all()).results.map(r => [r.key, Number(r.value)]));
+  return json({ ads: results, pages: PAGES, positions: POSITIONS, prices });
 }
 
 // "image" is the picture as it will show on laptops and tablets (already cropped in the browser), "phone_image" the
@@ -28,14 +30,16 @@ export async function onRequestGet({ env }) {
 export async function onRequestPost({ env, request }) {
   const form = await request.formData().catch(() => null);
   if (!form) return bad('Bad request');
-  const tier = form.get('tier') === 'large' ? 'large' : 'small';
+  // Every advert belongs to a page slot ("results:left2"); a top banner is a wide advert, a side box a square one.
+  const placement = form.get('placement');
+  if (!isPlacement(placement)) return bad('Choose the slot this advert goes in.');
+  const tier = placementTier(placement);
   const name = str(form.get('name'), 80);
   let link = str(form.get('link'), 500);
   const endsOn = str(form.get('ends_on'), 10);
   const startsOn = str(form.get('starts_on'), 10);
-  const slot = Number(form.get('slot')) || null;
+  const slot = null;
   if (startsOn && !/^\d{4}-\d{2}-\d{2}$/.test(startsOn)) return bad('Bad start date');
-  if (slot !== null && (slot < 1 || slot > 40)) return bad('Slots are numbered from 1 (top).');
   if (!name) return bad('Add the advertiser name.');
   if (link && !/^https?:\/\//i.test(link)) link = 'https://' + link;
   if (link) { try { new URL(link); } catch { return bad('That link does not look right.'); } }
@@ -58,10 +62,10 @@ export async function onRequestPost({ env, request }) {
     if (!clearPhone) phoneKey = await saveImage(env, form.get('phone_image'), 'ads');
   } catch (e) { return bad(e.message); }
   if (existing) {
-    await env.DB.prepare(`UPDATE ads SET tier = ?, name = ?, link = ?, image_key = IFNULL(?, image_key), orig_key = IFNULL(?, orig_key),
+    await env.DB.prepare(`UPDATE ads SET placement = ?, tier = ?, name = ?, link = ?, image_key = IFNULL(?, image_key), orig_key = IFNULL(?, orig_key),
         phone_key = CASE WHEN ? THEN NULL ELSE IFNULL(?, phone_key) END, crop = ?, phone_crop = CASE WHEN ? THEN '' ELSE ? END, bg = ?,
         ends_on = ?, starts_on = ?, slot = ?, fit = ?, focus = ? WHERE id = ?`)
-      .bind(tier, name, link, imageKey, origKey, clearPhone ? 1 : 0, phoneKey, crop, clearPhone ? 1 : 0, phoneCrop, bg,
+      .bind(placement, tier, name, link, imageKey, origKey, clearPhone ? 1 : 0, phoneKey, crop, clearPhone ? 1 : 0, phoneCrop, bg,
         endsOn || null, startsOn || null, tier === 'small' ? slot : null, fit, focus, id).run();
     // Replaced files are deleted. (For an advert saved before cropping existed, the owner area re-sends its
     // old picture as the original, so nothing is lost.)
@@ -70,9 +74,9 @@ export async function onRequestPost({ env, request }) {
     if ((phoneKey || clearPhone) && existing.phone_key) await env.MEDIA.delete(existing.phone_key);
     return json({ ok: true });
   }
-  await env.DB.prepare(`INSERT INTO ads (tier, name, link, image_key, orig_key, phone_key, crop, phone_crop, bg, ends_on, starts_on, slot, fit, focus)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .bind(tier, name, link, imageKey, origKey, phoneKey, crop, clearPhone ? '' : phoneCrop, bg, endsOn || null, startsOn || null, tier === 'small' ? slot : null, fit, focus).run();
+  await env.DB.prepare(`INSERT INTO ads (placement, tier, name, link, image_key, orig_key, phone_key, crop, phone_crop, bg, ends_on, starts_on, slot, fit, focus)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .bind(placement, tier, name, link, imageKey, origKey, phoneKey, crop, clearPhone ? '' : phoneCrop, bg, endsOn || null, startsOn || null, tier === 'small' ? slot : null, fit, focus).run();
   return json({ ok: true });
 }
 
