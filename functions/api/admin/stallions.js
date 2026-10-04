@@ -1,17 +1,18 @@
 // Owner area: the six stallion listings (Stallions – Listing 1 to 6). POST saves one; DELETE empties it.
 import { json, bad, str, text } from '../../../lib/http.js';
 import { saveImage } from '../../../lib/images.js';
-import { progeny, summary } from '../../../lib/stallions.js';
+import { progeny, summary, rollingWindow } from '../../../lib/stallions.js';
 
 export async function onRequestGet({ env }) {
   const { results } = await env.DB.prepare('SELECT * FROM stallions ORDER BY slot').all();
+  const win = rollingWindow();
   const listings = [];
   for (let slot = 1; slot <= 6; slot++) {
     const s = results.find(x => x.slot === slot) || { slot };
-    listings.push({ ...s, totals: s.sire_names ? summary(await progeny(env.DB, s.sire_names)) : null });
+    listings.push({ ...s, totals: s.sire_names ? summary(await progeny(env.DB, s.sire_names, win)) : null });
   }
   const sires = (await env.DB.prepare('SELECT name FROM sires ORDER BY name').all()).results.map(r => r.name);
-  return json({ listings, sires });
+  return json({ window: win, listings, sires });
 }
 
 export async function onRequestPost({ env, request }) {

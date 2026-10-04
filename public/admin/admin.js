@@ -902,7 +902,7 @@
       <label>Short blurb (optional)<textarea name="blurb" maxlength="400" style="min-height:70px;">${esc(s.blurb || '')}</textarea></label>
       <label>Stud website (optional)<input type="text" name="link" placeholder="https://" inputmode="url" value="${esc(s.link || '')}"></label>
       <label>Photo${s.image_key ? ' (leave empty to keep the current one)' : ''}<input type="file" name="image" accept="image/*"></label>
-      ${s.name ? `<p class="meta">Progeny found in the results: <b>${s.totals.horses}</b> horses, ${s.totals.placings} placings, ${s.totals.wins} wins. <a href="/stallions/${s.slot}" target="_blank" rel="noopener">See the page ↗</a></p>` : ''}
+      ${s.name ? `<p class="meta">${esc(d.window.label)}: <b>${s.totals.mentions}</b> mentions by ${s.totals.horses} horses, ${s.totals.wins} wins. <a href="/stallions/${s.slot}" target="_blank" rel="noopener">See the page ↗</a></p>` : ''}
       <div class="adm-actions"><button class="btn sm" type="submit">Save listing ${s.slot}</button>${s.name ? `<button class="btn sm alt" type="button" data-st-clear>Clear</button>` : ''}</div>
       <div class="form-done" role="status">${s.slot === savedSlot ? 'Saved. It is live on the Stallions page now.' : ''}</div>
     </form>`).join('');

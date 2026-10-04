@@ -28,5 +28,13 @@ test('stallion progeny totals', () => {
   const rows = [
     { horse_id: 1, placing: 1 }, { horse_id: 1, placing: 4 }, { horse_id: 2, placing: 3 }, { horse_id: 3, placing: null }
   ];
-  assert.deepEqual(summary(rows), { horses: 3, placings: 4, wins: 1, top3: 2 });
+  assert.deepEqual(summary(rows), { mentions: 4, horses: 3, wins: 1, top3: 2 });
+});
+
+test('rolling 12-month window moves with today', async () => {
+  const { rollingWindow } = await import('../lib/stallions.js');
+  assert.deepEqual(rollingWindow(new Date('2026-10-04T12:00:00Z')), { start: '2025-11-01', end: '2026-10-31', label: 'Last 12 months (Nov 2025 – Oct 2026)' });
+  assert.deepEqual(rollingWindow(new Date('2026-11-01T00:00:00Z')), { start: '2025-12-01', end: '2026-11-30', label: 'Last 12 months (Dec 2025 – Nov 2026)' });
+  assert.deepEqual(rollingWindow(new Date('2026-12-15T00:00:00Z')), { start: '2026-01-01', end: '2026-12-31', label: 'Last 12 months (Jan 2026 – Dec 2026)' });
+  assert.equal(rollingWindow(new Date('2028-02-10T00:00:00Z')).end, '2028-02-29');
 });

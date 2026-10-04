@@ -3,6 +3,13 @@
 //
 //   node scripts/build-hsi-migration.mjs [--cache .cache/hsi] [--persist-to .wrangler/hsi-build]
 //
+// A later batch of articles is built the same way on top of everything already in migrations/, for example
+// November–December 2025:
+//   node scripts/build-hsi-migration.mjs --cache .cache/hsi2025 --season 2025 --since 2025-11-01 \
+//     --out migrations/0012_hsi_2025_nov_dec_results.sql --report hsi-2025-nov-dec
+// --since / --until keep only results whose event starts on or between those dates (the rest are listed
+// as "outside" in the review file). The cache needs an index.json: [{ url, title, date, file }].
+//
 // 1. Reads every cached article and merges the weeks (lib/hsi.js): the latest version of a result wins,
 //    a result repeated by a later article is confirmed, and lines that can't be read are kept with
 //    parse_ok = 0 (shown as unverified).
@@ -24,21 +31,44 @@ const args = process.argv.slice(2);
 const opt = (name, def) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : def; };
 const CACHE = opt('--cache', '.cache/hsi');
 const PERSIST = opt('--persist-to', '.wrangler/hsi-build');
-const OUT = 'migrations/0007_hsi_2026_results.sql';
-const SEASON = 2026;
+const OUT = opt('--out', 'migrations/0007_hsi_2026_results.sql');
+const SEASON = Number(opt('--season', '2026'));
+const REPORT = opt('--report', `hsi-${SEASON}`);
+const SINCE = opt('--since', ''), UNTIL = opt('--until', '');
+// --near single: a name that looks like exactly one existing record (a typo in the article, "Touchdownm" for
+// Touchdown) is linked to it. Without it nothing is merged on a guess and each becomes its own record.
+const NEAR_SINGLE = opt('--near', '') === 'single';
+// The database the import is checked against: every migration before the one being written (0001–0006
+// for the 2026 build, which replaced nothing live; everything up to now for a later batch).
+const BASE = readdirSync('migrations').filter(f => /^\d{4}_.*\.sql$/.test(f) && f < OUT.split('/').pop()).sort();
 
 // 1. Articles → merged rows
 const index = JSON.parse(readFileSync(join(CACHE, 'index.json'), 'utf8')).filter(a => !a.missing);
 const articles = index.map(a => ({ ...readArticle(readFileSync(join(CACHE, a.file), 'utf8')), url: a.url, title: a.title, date: a.date }));
-const { rows, review } = collectResults(articles);
+const collected = collectResults(articles);
+const { review } = collected;
+// Only events inside the dates asked for; the rest are listed in the review file, not saved.
+const inside = r => (!SINCE || r.start_date >= SINCE) && (!UNTIL || r.start_date <= UNTIL);
+const rows = collected.rows.filter(inside);
+const outside = new Map();
+for (const r of collected.rows.filter(r => !inside(r))) {
+  const k = `${r.event_name}|${r.start_date}`;
+  outside.set(k, { ...(outside.get(k) || { event: r.event_name, start: r.start_date, article: r.article_date, n: 0 }), n: (outside.get(k)?.n || 0) + 1 });
+}
+for (const o of outside.values()) review.push({ status: 'outside', article_date: o.article, event: o.event, problem: `Event starts ${o.start}, outside ${SINCE || '…'} to ${UNTIL || '…'}: ${o.n} results not imported` });
+// Review notes for lines that were not imported only make the list longer.
+for (let i = review.length - 1; i >= 0; i--) {
+  const x = review[i];
+  if (x.status !== 'outside' && x.event && collected.rows.some(r => r.event_name === x.event && !inside(r)) && !rows.some(r => r.event_name === x.event)) review.splice(i, 1);
+}
 
 // 2. Review list
 mkdirSync('reports', { recursive: true });
-writeFileSync('reports/hsi-2026-review.csv', reviewCsv(review));
+writeFileSync(`reports/${REPORT}-review.csv`, reviewCsv(review));
 
 // 3. Fresh local database with the live schema and launch content
 rmSync(PERSIST, { recursive: true, force: true });
-for (const file of readdirSync('migrations').filter(f => /^000[1-6]_.*\.sql$/.test(f)).sort()) {
+for (const file of BASE) {
   const r = spawnSync('npx', ['wrangler', 'd1', 'execute', 'irishbredeventers', '--local', '--persist-to', PERSIST, '--file', join('migrations', file)], { encoding: 'utf8' });
   if (r.status !== 0) throw new Error(`${file}: ${r.stderr || r.stdout}`);
 }
@@ -57,7 +87,10 @@ for (const a of [...articles].sort((x, y) => x.date.localeCompare(y.date))) {
   let res = await importResults(env.DB, list, { decisions, weekLabel: weekLabel(a.date) });
   while (res.needsDecision) {
     // Nothing is merged on a guess: a name that only looks like an existing one becomes its own record.
-    for (const qn of res.needsDecision) { decisions[qn.key] = 'new'; questions.push({ article_date: a.date, ...qn }); }
+    for (const qn of res.needsDecision) {
+      decisions[qn.key] = NEAR_SINGLE && qn.candidates.length === 1 ? qn.candidates[0].id : 'new';
+      questions.push({ article_date: a.date, ...qn, decision: decisions[qn.key] === 'new' ? 'saved as a new record' : 'linked to the existing record' });
+    }
     res = await importResults(env.DB, list, { decisions, weekLabel: weekLabel(a.date) });
   }
   added += res.results;
@@ -66,8 +99,8 @@ for (const a of [...articles].sort((x, y) => x.date.localeCompare(y.date))) {
 await dispose();
 
 const cell = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
-writeFileSync('reports/hsi-2026-name-checks.csv', ['article_date,kind,name,context,looks_like', ...questions.map(x =>
-  [x.article_date, x.kind, x.name, x.context, x.candidates.map(c => `${c.label} (${c.detail})`).join(' | ')].map(cell).join(','))].join('\n') + '\n');
+writeFileSync(`reports/${REPORT}-name-checks.csv`, ['article_date,kind,name,context,looks_like,decision', ...questions.map(x =>
+  [x.article_date, x.kind, x.name, x.context, x.candidates.map(c => `${c.label} (${c.detail})`).join(' | '), x.decision].map(cell).join(','))].join('\n') + '\n');
 
 // 4. SQL for everything the import added
 const rowsOf = sql => queryLocal(PERSIST, sql);
@@ -76,7 +109,7 @@ const out = [
   `-- Charlie Ripman's ${SEASON} Irish-Bred Results from horsesportireland.ie: ${articles.length} weekly articles,`,
   `-- ${articles[0] ? [...articles].sort((x, y) => x.date.localeCompare(y.date))[0].date : ''} to ${articles[0] ? [...articles].sort((x, y) => y.date.localeCompare(x.date))[0].date : ''}. One upload per article.`,
   '-- Generated by scripts/build-hsi-migration.mjs; do not edit by hand. Lines that could not be read are saved',
-  '-- with parse_ok = 0 and verified = 0; see reports/hsi-2026-review.csv.',
+  `-- with parse_ok = 0 and verified = 0; see reports/${REPORT}-review.csv.${SINCE || UNTIL ? ` Only events starting ${SINCE || '…'} to ${UNTIL || '…'}.` : ''}`,
   '-- Safe to run more than once: rows are matched on their natural identity and never duplicated.',
   ''
 ];
@@ -106,7 +139,7 @@ for (const e of rowsOf(`SELECT name, date_text, start_date, end_date, country, s
     VALUES (${q(e.name)}, ${q(e.date_text)}, ${q(e.start_date)}, ${q(e.end_date)}, ${q(e.country)}, ${e.season}, ${q(e.source_notes)}, ${q(e.article_url)}, ${q(e.article_date)})`);
 }
 // Events that were already live (e.g. the week of 6 April 2026) take the article they appeared in.
-for (const e of rowsOf(`SELECT name, start_date, country, article_url, article_date FROM events e WHERE NOT (${after('e', 'events')}) AND article_url <> '' ORDER BY id`)) {
+for (const e of rowsOf(`SELECT name, start_date, country, article_url, article_date FROM events e WHERE NOT (${after('e', 'events')}) AND article_url IN (${articles.map(x => q(x.url)).join(', ')}) ORDER BY id`)) {
   add(`UPDATE events SET article_url = ${q(e.article_url)}, article_date = ${q(e.article_date)}
     WHERE name = ${q(e.name)} AND start_date = ${q(e.start_date)} AND country = ${q(e.country)} AND article_date < ${q(e.article_date)}`);
 }
@@ -142,11 +175,12 @@ for (const p of rowsOf(`SELECT p.position, p.horse_name, p.former_name, p.breed,
 }
 for (const label of new Set(rowsOf(`SELECT DISTINCT b.label FROM placings p JOIN batches b ON b.id = p.batch_id WHERE ${after('p', 'placings')}`).map(b => b.label))) {
   add(`UPDATE batches SET row_count = (SELECT COUNT(*) FROM placings WHERE batch_id = batches.id),
-    unverified_count = (SELECT COUNT(*) FROM placings WHERE batch_id = batches.id AND verified = 0) WHERE label = ${q(label)}`);
+    unverified_count = (SELECT COUNT(*) FROM placings WHERE batch_id = batches.id AND verified = 0 AND NOT (sire = '' AND dam = ''))
+    WHERE label = ${q(label)}`);
 }
 
 writeFileSync(OUT, out.join('\n') + '\n');
 const by = s => review.filter(r => r.status === s).length;
 console.log(`\n${OUT}: ${out.length - 6} statements. ${rows.length} results read, ${added} new; ${rows.filter(r => !r.parse_ok).length} not read cleanly.`);
-console.log(`reports/hsi-2026-review.csv: ${by('failed')} failed, ${by('conflict')} conflicts, ${by('check')} to check, ${by('skipped')} skipped.`);
-console.log(`reports/hsi-2026-name-checks.csv: ${questions.length} names that look like an existing record (saved separately).`);
+console.log(`reports/${REPORT}-review.csv: ${by('failed')} failed, ${by('conflict')} conflicts, ${by('check')} to check, ${by('skipped')} skipped, ${by('outside')} events outside the dates.`);
+console.log(`reports/${REPORT}-name-checks.csv: ${questions.length} names that look like an existing record (${NEAR_SINGLE ? 'linked when there was exactly one' : 'saved separately'}).`);

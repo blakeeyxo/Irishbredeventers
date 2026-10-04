@@ -606,7 +606,9 @@
     $('side-right').innerHTML = ['right1', 'right2', 'right3'].map(p => adHTML(slot(p), false)).join('');
   }
 
-  /* ---------- Stallions: six paid listings, each with its progeny breakdown from the results ---------- */
+  /* ---------- Stallions: six paid listings, each with its progeny breakdown from the results ----------
+     Every number on these pages covers the same rolling 12 months (the API works it out from today's date)
+     and counts every appearance in the results, not only wins. */
   const fmt = n => Number(n || 0).toLocaleString('en-IE');
   const stallionPhoto = s => s.image_key ? `<img src="${imgUrl(s.image_key)}" alt="${esc(s.name)}" loading="lazy">` : '<span class="card-fallback" aria-hidden="true">IBER</span>';
   async function renderStallions(slot) {
@@ -617,6 +619,8 @@
     state.loaded.stallions = true;
     try {
       const d = await api('/api/stallions');
+      $('stallions-window').textContent = `Progeny numbers: ${d.window.label}`;
+      $('sire-chart-window').textContent = d.window.label;
       $('stallion-grid').innerHTML = d.listings.map(s => s.name ? `
         <a class="stallion-card" href="/stallions/${s.slot}" data-link>
           <span class="stallion-photo">${stallionPhoto(s)}</span>
@@ -624,8 +628,8 @@
             <b class="stallion-name">${esc(s.name)}</b>
             ${s.blurb ? `<span class="stallion-blurb">${esc(s.blurb)}</span>` : ''}
             <dl class="stallion-specs">
+              <div><dt>Mentions</dt><dd>${fmt(s.totals.mentions)}</dd></div>
               <div><dt>Progeny</dt><dd>${fmt(s.totals.horses)}</dd></div>
-              <div><dt>Placings</dt><dd>${fmt(s.totals.placings)}</dd></div>
               <div><dt>Wins</dt><dd>${fmt(s.totals.wins)}</dd></div>
             </dl>
             <span class="btn sm">See the progeny</span>
@@ -634,6 +638,20 @@
         <a class="stallion-card open" href="/about#advertise" data-link>
           <span class="stallion-open"><b>Stallion listing ${s.slot}</b>This space is available. List your stallion here</span>
         </a>`).join('');
+      // The sires mentioned most: every appearance of their progeny in the results over the same 12 months.
+      const top = d.top || [], max = Math.max(0, ...top.map(t => t.mentions));
+      $('sire-chart').innerHTML = top.length ? `
+        <div class="bar-chart" role="img" aria-label="Sires mentioned most in the results, ${esc(d.window.label)}">${top.map(t => `
+          <a class="bar-row" href="/search?${new URLSearchParams({ q: t.name, field: 'sire' })}" data-link>
+            <span class="bar-label">${esc(t.name)}</span>
+            <span class="bar-track"><span class="bar" style="width:${Math.max(4, (t.mentions / max) * 100)}%"></span><span class="bar-value">${t.mentions}</span></span>
+            <span class="bar-tip">${esc(t.name)}: ${t.mentions} mention${t.mentions === 1 ? '' : 's'} by ${t.horses} horse${t.horses === 1 ? '' : 's'}, ${t.wins} win${t.wins === 1 ? '' : 's'}</span>
+          </a>`).join('')}</div>
+        <details class="chart-table"><summary>Show as a table</summary>
+          <div class="rtable-wrap"><table class="rtable level-table">
+            <thead><tr><th>Sire</th><th class="c-score">Mentions</th><th class="c-score">Horses</th><th class="c-score">Wins</th></tr></thead>
+            <tbody>${top.map(t => `<tr class="row"><td>${esc(t.name)}</td><td class="c-score"><b>${t.mentions}</b></td><td class="c-score">${t.horses}</td><td class="c-score">${t.wins}</td></tr>`).join('')}</tbody>
+          </table></div></details>` : '<div class="empty-state">No results in the last 12 months yet.</div>';
     } catch (e) {
       state.loaded.stallions = false;
       $('stallion-grid').innerHTML = `<div class="empty-state">${esc(e.message)}</div>`;
@@ -644,13 +662,13 @@
     el.innerHTML = '<div class="empty-state">Loading…</div>';
     let d;
     try { d = await api(`/api/stallions/${slot}`); } catch (e) { el.innerHTML = `<p><a class="text-link" href="/stallions" data-link>← All stallions</a></p><div class="empty-state">That stallion listing is empty.</div>`; return; }
-    const s = d.stallion, t = d.totals, rows = d.rows;
-    // Placings, top-three finishes and wins by level, for the chart and its table.
+    const s = d.stallion, t = d.totals, rows = d.rows, win = d.window;
+    // Mentions (every placing), top-three finishes and wins by level, for the chart and its table.
     const byLevel = LEVEL_ORDER.map(level => {
       const at = rows.filter(r => levelOf(r.class_name) === level);
-      return { level, placings: at.length, top3: at.filter(r => r.placing && r.placing <= 3).length, wins: at.filter(r => r.placing === 1).length };
-    }).filter(x => x.placings);
-    const maxWins = Math.max(0, ...byLevel.map(x => x.wins));
+      return { level, mentions: at.length, top3: at.filter(r => r.placing && r.placing <= 3).length, wins: at.filter(r => r.placing === 1).length };
+    }).filter(x => x.mentions);
+    const maxMentions = Math.max(0, ...byLevel.map(x => x.mentions));
     // One row per horse: runs, wins, best placing and the latest run.
     const horses = new Map();
     for (const r of rows) {
@@ -673,23 +691,25 @@
         </div>
       </div>
       <h3 class="section-title">Progeny breakdown</h3>
+      <p class="window-label">${esc(win.label)}</p>
       <div class="stat-tiles">
-        <div><span>Progeny in the results</span><b>${fmt(t.horses)}</b></div>
-        <div><span>Placings</span><b>${fmt(t.placings)}</b></div>
+        <div><span>Mentions</span><b>${fmt(t.mentions)}</b></div>
+        <div><span>Progeny</span><b>${fmt(t.horses)}</b></div>
         <div><span>Top-three finishes</span><b>${fmt(t.top3)}</b></div>
         <div><span>Wins</span><b>${fmt(t.wins)}</b></div>
       </div>
       ${rows.length ? `
-      <h3 class="section-title">Progeny wins by level</h3>
-      ${maxWins ? `<div class="bar-chart" role="img" aria-label="Progeny wins by level">${byLevel.filter(x => x.wins).map(x => `
+      <h3 class="section-title">Mentions by level</h3>
+      <p class="window-label">${esc(win.label)}</p>
+      <div class="bar-chart" role="img" aria-label="Progeny mentions by level, ${esc(win.label)}">${byLevel.map(x => `
         <div class="bar-row" tabindex="0">
           <span class="bar-label">${esc(x.level)}</span>
-          <span class="bar-track"><span class="bar" style="width:${Math.max(4, (x.wins / maxWins) * 100)}%"></span><span class="bar-value">${x.wins}</span></span>
-          <span class="bar-tip">${esc(x.level)}: ${x.wins} win${x.wins === 1 ? '' : 's'} from ${x.placings} placing${x.placings === 1 ? '' : 's'}</span>
-        </div>`).join('')}</div>` : '<p class="note">No wins recorded yet. Placings by level are in the table below.</p>'}
+          <span class="bar-track"><span class="bar" style="width:${Math.max(4, (x.mentions / maxMentions) * 100)}%"></span><span class="bar-value">${x.mentions}</span></span>
+          <span class="bar-tip">${esc(x.level)}: ${x.mentions} mention${x.mentions === 1 ? '' : 's'}, ${x.top3} in the top three, ${x.wins} win${x.wins === 1 ? '' : 's'}</span>
+        </div>`).join('')}</div>
       <div class="rtable-wrap"><table class="rtable level-table">
-        <thead><tr><th>Level</th><th class="c-score">Placings</th><th class="c-score">Top three</th><th class="c-score">Wins</th></tr></thead>
-        <tbody>${byLevel.map(x => `<tr class="row"><td>${esc(x.level)}</td><td class="c-score">${x.placings}</td><td class="c-score">${x.top3}</td><td class="c-score"><b>${x.wins}</b></td></tr>`).join('')}</tbody>
+        <thead><tr><th>Level</th><th class="c-score">Mentions</th><th class="c-score">Top three</th><th class="c-score">Wins</th></tr></thead>
+        <tbody>${byLevel.map(x => `<tr class="row"><td>${esc(x.level)}</td><td class="c-score"><b>${x.mentions}</b></td><td class="c-score">${x.top3}</td><td class="c-score">${x.wins}</td></tr>`).join('')}</tbody>
       </table></div>
       <h3 class="section-title">Progeny</h3>
       <div class="rtable-wrap"><table class="rtable">
@@ -702,7 +722,8 @@
           <td class="c-score" data-label="Best">${esc(h.best ? ordinal(h.best) : '–')}</td>
           <td data-label="Latest">${esc(h.event_name)}<span class="sub">${esc(h.class_name)} · ${esc(niceDate(h.start_date))}</span></td></tr>`).join('')}</tbody>
       </table></div>
-      <p class="note">Counted from every IBER result for horses by ${esc(s.name)}.</p>` : '<div class="empty-state">No progeny in the results yet.</div>'}`;
+      <p class="note">Counted from every IBER result for horses by ${esc(s.name)} at events starting ${esc(niceDate(win.start))} to ${esc(niceDate(win.end))}. A mention is any placing, not only a win.</p>`
+      : `<div class="empty-state">No progeny in the results in the ${esc(win.label.replace(/^Last/, 'last'))}.</div>`}`;
   }
 
   /* ---------- Notices (email confirm / unsubscribe) ---------- */

@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/site.css?v=3">
+<link rel="stylesheet" href="/css/site.css?v=4">
 </head>
 <body>
 
@@ -125,7 +125,14 @@
       <p class="eyebrow">Stallions</p>
       <h2 class="page-title">Stallions</h2>
       <p class="page-intro">Six stallions, with how their progeny are performing in the results.</p>
+      <p class="window-label" id="stallions-window"></p>
       <div class="stallion-grid" id="stallion-grid"><div class="empty-state">Loading…</div></div>
+      <section class="sire-chart-block" aria-labelledby="sire-chart-title">
+        <h3 class="section-title" id="sire-chart-title">Sires mentioned most</h3>
+        <p class="window-label" id="sire-chart-window"></p>
+        <p class="page-intro">Every appearance of a sire's progeny in the results (every placing, not only wins). Click a sire to see the horses.</p>
+        <div id="sire-chart"><div class="empty-state">Loading…</div></div>
+      </section>
     </div>
     <div id="stallion-detail" hidden></div>
   </section>
@@ -262,6 +269,6 @@
 </div>
 
 <script src="/js/common.js?v=3"></script>
-<script src="/js/app.js?v=3"></script>
+<script src="/js/app.js?v=4"></script>
 </body>
 </html>

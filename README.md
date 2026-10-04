@@ -93,7 +93,7 @@ Do these once, in order. Everything is on the free plans to start.
 - [ ] Nothing to run by hand: each deploy applies new files in `migrations/` once. (`0006_results_source.sql`,
   `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` / `0009_ad_crop.sql` / `0010_ad_phone_crop.sql`
   (advert crop settings) and `0011_page_ad_slots_stallions.sql` (per-page ad slots, stallion listings,
-  comment spam flag) apply on deploy.) `0005_launch_content.sql`
+  comment spam flag) and `0012_hsi_2025_nov_dec_results.sql` (November–December 2025 results) apply on deploy.) `0005_launch_content.sql`
   loads Charlie's real results (14–16 February 2025 and the week of 6 April 2026), his four articles and
   the three link cards. It never adds example ads or the fictional sample weeks.
 - [ ] Open `https://irishbredeventers.<your-subdomain>.workers.dev` and check results show
@@ -154,6 +154,19 @@ node scripts/scrape-hsi.mjs            # reads ?paged=1, 2, 3… 1.5 s apart, ke
 node scripts/build-hsi-migration.mjs   # writes migrations/0007_hsi_2026_results.sql and reports/hsi-2026-*.csv
 ```
 
+November–December 2025 came from five named articles (plus the 12 January 2026 article, checked for December
+events; it had none), saved by hand into `.cache/hsi2025/articles` with an `index.json`, and built on top of
+everything already in `migrations/`:
+
+```bash
+node scripts/build-hsi-migration.mjs --cache .cache/hsi2025 --season 2025 --since 2025-11-01 --until 2025-12-31 \
+  --near single --out migrations/0012_hsi_2025_nov_dec_results.sql --report hsi-2025-nov-dec
+```
+
+`--since`/`--until` keep only events that start inside those dates (the rest are listed as `outside` in the
+review file). `--near single` links a name that looks like exactly one existing record (a typo in the article,
+"Touchdownm" for Touchdown); each one is listed in the name-checks file with its decision.
+
 How the weeks are merged (`lib/hsi.js`):
 - **One event across weeks.** Same country, overlapping dates and the same first word is one event, so Monday
   classes and late verifications published a week later ("Alnwick International … Late Verification from Last
@@ -211,8 +224,13 @@ the site shows; the untouched upload and both crops are kept, so **Edit** can re
 lists each advert with **Edit** and **Remove**.
 
 **Stallions tab.** Six listings, "Stallions – Listing 1" to "6", shown in that order on the Stallions page. Each has a
-name, photo, short blurb, stud website and "Sire name in the results". The progeny breakdown (wins by level, placings,
-top-three finishes and every horse) is counted from the results for horses whose sire matches those names. List
+name, photo, short blurb, stud website and "Sire name in the results". The progeny breakdown (mentions by level, top-three
+finishes, wins and every horse) is counted from the results for horses whose sire matches those names.
+
+Every Stallions number covers a rolling 12 months: the current month and the eleven before it, worked out from
+today's date (`rollingWindow` in `lib/stallions.js`), labelled on the page, e.g. "Last 12 months (Nov 2025 – Oct
+2026)". A **mention** is any placing, not only a win. Below the six listings, **Sires mentioned most** ranks the
+top ten sires in the same window; each links to a search for that sire. List
 every spelling used in the results, separated by commas. **Clear** shows the listing as available.
 
 **Link cards** show on the News page under "Elsewhere".

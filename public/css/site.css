@@ -453,30 +453,47 @@ html { scroll-padding-top: calc(var(--top-h, 260px) + 12px); }
 .stat-tiles span { display: block; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
 .stat-tiles b { font-family: var(--serif); font-weight: 600; font-size: 30px; color: var(--navy); }
 .bar-chart { display: grid; gap: 8px; background: var(--paper); border: 1px solid var(--rule); padding: 18px 18px 16px; margin-bottom: 14px; }
-.bar-row { position: relative; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; outline: none; }
+.bar-row { position: relative; display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; align-items: center; outline: none; }
 .bar-label { font-size: 13.5px; color: var(--ink-soft); }
 .bar-track { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .bar { display: block; height: 18px; background: var(--navy); border-radius: 0 4px 4px 0; transition: opacity .15s; }
 .bar-value { font-size: 13px; font-weight: 600; color: var(--ink); }
 .bar-chart:hover .bar-row:not(:hover) .bar { opacity: .55; }
 .bar-tip {
-  position: absolute; left: 162px; bottom: calc(100% + 4px); z-index: 2; background: var(--ink); color: #fff; font-size: 12.5px;
+  position: absolute; left: 182px; bottom: calc(100% + 4px); z-index: 2; background: var(--ink); color: #fff; font-size: 12.5px;
   padding: 5px 9px; border-radius: 3px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .12s;
 }
 .bar-row:hover .bar-tip, .bar-row:focus-visible .bar-tip { opacity: 1; }
 .level-table { margin-bottom: 0; }
 #stallion-detail .rtable-wrap { margin-bottom: 28px; }
+/* The window every stallion number covers, e.g. "Last 12 months (Nov 2025 – Oct 2026)". */
+.window-label { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--navy);
+  background: var(--cream-2); border-left: 3px solid var(--gold-bright); padding: 4px 10px; margin: -6px 0 18px; }
+.stallion-grid { margin-bottom: 0; align-items: stretch; }
+/* The chart sits in its own section, well clear of the six listings above it. */
+.sire-chart-block { clear: both; margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--rule-strong); }
+.sire-chart-block .page-intro { margin-bottom: 12px; }
+a.bar-row { text-decoration: none; color: inherit; padding: 2px 0; }
+a.bar-row:hover .bar-label { color: var(--navy); text-decoration: underline; text-underline-offset: 3px; }
+.bar-label { min-width: 0; overflow-wrap: anywhere; }
+.chart-table { margin-top: 4px; }
+.chart-table summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--navy); padding: 6px 0; }
+.chart-table .rtable-wrap { margin-top: 8px; }
 #news-links { margin-top: 30px; }
 @media (max-width: 980px) {
   .stallion-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
   .stallion-grid, .stallion-head { grid-template-columns: minmax(0, 1fr); }
+  .stallion-card.open { min-height: 140px; }
   .stat-tiles { grid-template-columns: 1fr 1fr; }
   .stat-tiles div:nth-child(3) { border-left: 0; }
   .stat-tiles div:nth-child(n+3) { border-top: 1px solid var(--rule); }
   .stat-tiles b { font-size: 24px; }
   .bar-row { grid-template-columns: 96px minmax(0, 1fr); gap: 8px; }
+  /* Sire names are long: on phones each name sits above its bar. */
+  .sire-chart-block { margin-top: 40px; padding-top: 22px; }
+  .sire-chart-block .bar-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .bar-label { font-size: 12.5px; }
   .bar-tip { left: auto; right: 0; white-space: normal; max-width: 100%; }
   /* The small level table stays a table on phones (four short columns fit). */
