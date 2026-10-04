@@ -288,7 +288,7 @@
   // One result as an editable card: in the Unverified tab, and under an upload opened with Edit.
   function rowEditCard(r) {
     return `<form class="adm-card" data-id="${r.id}" data-verified="${r.verified ? 1 : 0}">
-      <b>${esc(r.horse_name || '?')}</b>${r.verified ? '' : r.doubtful ? ' <span class="iss">Unverified on the site</span>' : ' <span class="gap-tag">Breeding unknown: shown on the site as OIO / UNK</span>'} <span class="meta">${esc(r.country)} · ${esc(r.event_name)} · ${esc(r.class_name)}</span>
+      <b>${esc(r.horse_name || '?')}</b>${r.doubtful ? ' <span class="iss">Unverified: hidden from the site until verified</span>' : r.oio ? ' <span class="gap-tag">OIO on the site</span>' : ''} <span class="meta">${esc(r.country)} · ${esc(r.event_name)} · ${esc(r.class_name)}</span>
       ${r.raw_line ? `<p class="meta">${r.parse_ok ? 'As written' : 'Could not be read cleanly. As written'}: ${esc(r.raw_line)}</p>` : ''}
       <div class="adm-row-edit">${FIELDS.map(([k, l]) => `<label>${l}<input name="${k}" value="${esc(r[k] ?? '')}"></label>`).join('')}</div>
       <div class="adm-actions">${r.verified
@@ -299,15 +299,7 @@
   }
   async function loadUnverified() {
     const d = await api('/api/admin/unverified');
-    // Two lists: results genuinely in doubt (shown as "Unverified" on the site), then horses that are only
-    // missing part of their breeding (shown on the site as OIO / UNK, no warning) for Charlie to check.
-    const doubt = d.rows.filter(r => r.doubtful), gaps = d.rows.filter(r => !r.doubtful);
-    $('unv-list').innerHTML = d.rows.length ? `
-      <h4 class="unv-head">In doubt: shown as "Unverified" on the site (${doubt.length})</h4>
-      ${doubt.map(rowEditCard).join('') || '<p class="meta">None.</p>'}
-      <h4 class="unv-head">Breeding unknown: check when you can (${gaps.length})</h4>
-      <p class="meta">These show on the site with an OIO badge where the sire or dam isn't known, and UNK for any missing sire, dam, dam sire or breeder. They are not marked Unverified. Fill in what you can find, then "Save and mark as verified".</p>
-      ${gaps.map(rowEditCard).join('') || '<p class="meta">None.</p>'}` : '<div class="empty-state">Nothing to check.</div>';
+    $('unv-list').innerHTML = d.rows.length ? d.rows.map(rowEditCard).join('') : '<div class="empty-state">Nothing to check. Every result is on the site.</div>';
   }
   async function rowAction(e) {
     const b = e.target.closest('button[data-act]');

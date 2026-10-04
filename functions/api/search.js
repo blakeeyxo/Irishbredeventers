@@ -1,7 +1,7 @@
 // Search horses (and former names), sires, dams, dam sires and breeders with SQLite FTS5. Riders are
 // shown in the results but are not indexed, so they never match a search.
 import { json } from '../../lib/http.js';
-import { PLACING_COLUMNS } from '../../lib/results.js';
+import { PLACING_COLUMNS, PUBLIC_SQL } from '../../lib/results.js';
 
 const FIELDS = {
   all: '',
@@ -28,9 +28,9 @@ export async function onRequestGet({ env, request }) {
     env.DB.prepare(`SELECT ${PLACING_COLUMNS} FROM placings_fts f
         JOIN placings p ON p.id = f.rowid JOIN classes c ON c.id = p.class_id JOIN events e ON e.id = c.event_id
         LEFT JOIN results r ON r.id = p.result_id
-      WHERE placings_fts MATCH ?1
+      WHERE placings_fts MATCH ?1 AND ${PUBLIC_SQL}
       ORDER BY f.rank, e.start_date DESC LIMIT ${LIMIT}`).bind(match).all(),
-    env.DB.prepare('SELECT COUNT(*) AS n FROM placings_fts WHERE placings_fts MATCH ?1').bind(match).first()
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM placings_fts f JOIN placings p ON p.id = f.rowid WHERE placings_fts MATCH ?1 AND ${PUBLIC_SQL}`).bind(match).first()
   ]);
   return json({ q, total: count.n, rows: rows.results }, { headers: { 'cache-control': 'public, max-age=60' } });
 }

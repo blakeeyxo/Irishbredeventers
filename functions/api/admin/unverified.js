@@ -1,5 +1,6 @@
-// Rows for Charlie to check: everything unverified, including horses with part of their breeding unknown (shown
-// on the site as OIO / UNK, not "Unverified"). Fix the details, then "Mark as verified".
+// Rows for Charlie to check: only real problems (misread, conflicting, marked not verified). They are hidden from
+// the public site until he fixes them and marks them verified. A gap in the breeding is not a problem: it shows
+// on the site as OIO / UNK and is not listed here.
 import { json, bad, readJson, str } from '../../../lib/http.js';
 import { PLACING_COLUMNS, PLACING_JOIN, PLACING_ORDER, TO_CHECK_SQL, refreshBatchCounts } from '../../../lib/results.js';
 

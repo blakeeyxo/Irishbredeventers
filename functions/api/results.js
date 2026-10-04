@@ -1,12 +1,13 @@
-// Results for one season (default: the current calendar year), plus the list of seasons.
+// Results for one season (default: the current calendar year), plus the list of seasons. Results with a real
+// problem stay hidden until Charlie marks them verified.
 import { json } from '../../lib/http.js';
-import { PLACING_COLUMNS, PLACING_JOIN, PLACING_ORDER } from '../../lib/results.js';
+import { PLACING_COLUMNS, PLACING_JOIN, PLACING_ORDER, PUBLIC_SQL } from '../../lib/results.js';
 
 export async function onRequestGet({ env, request }) {
   const current = new Date().getFullYear();
   const season = Number(new URL(request.url).searchParams.get('season')) || current;
   const [rows, seasons] = await Promise.all([
-    env.DB.prepare(`SELECT ${PLACING_COLUMNS} ${PLACING_JOIN} WHERE e.season = ? ${PLACING_ORDER}`).bind(season).all(),
+    env.DB.prepare(`SELECT ${PLACING_COLUMNS} ${PLACING_JOIN} WHERE e.season = ? AND ${PUBLIC_SQL} ${PLACING_ORDER}`).bind(season).all(),
     env.DB.prepare('SELECT DISTINCT season FROM events ORDER BY season DESC').all()
   ]);
   const years = new Set(seasons.results.map(s => s.season));

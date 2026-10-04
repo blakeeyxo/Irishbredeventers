@@ -117,15 +117,12 @@
 
   /* ---------- Results tables ---------- */
   const horseHref = h => `/horse/${h.id}`;
-  // Breeding that isn't known shows as UNK. OIO (Of Irish Origin): the sire or dam isn't known. Neither is a doubt,
-  // so the horse keeps its place and isn't "Unverified"; that is only for results genuinely in doubt (the API
-  // works both out: oio and doubtful).
+  // Breeding that isn't known shows as UNK, and the horse is OIO (Of Irish Origin). Results with a real problem
+  // never reach the site (the API leaves them out until Charlie verifies them), so there is no "Unverified" here.
   const isUnk = v => !v || /^(unk|unknown|n\/a|not known)$/i.test(String(v).trim());
   const unk = v => (isUnk(v) ? 'UNK' : v);
-  const isOIO = h => (h.oio !== undefined ? !!h.oio : isUnk(h.sire) || isUnk(h.dam));
-  const isDoubtful = h => (h.doubtful !== undefined ? !!h.doubtful : !h.verified);
-  const statusTag = h => isOIO(h) ? '<span class="oio-tag" title="Of Irish Origin: part of the breeding is not recorded">OIO</span>'
-    : isDoubtful(h) ? '<span class="unv-tag" title="Details still being checked">Unverified</span>' : '';
+  const isOIO = h => (h.oio !== undefined ? !!h.oio : isUnk(h.sire) || isUnk(h.dam) || isUnk(h.dam_sire));
+  const statusTag = h => (isOIO(h) ? '<span class="oio-tag" title="Of Irish Origin: part of the breeding is not recorded">OIO</span>' : '');
   function horseCell(h) {
     const facts = [h.breed, h.foaled, h.sex].filter(Boolean).join(' · ');
     const former = h.former_name ? `was ${esc(h.former_name)}` : '';
@@ -189,8 +186,6 @@
     }
     return html;
   }
-  // Unverified placings (conflicting or doubtful details) come last in their class (the API orders them that way),
-  // marked "Unverified". OIO placings (no breeding recorded) keep their place.
   function groupedTable(rows) {
     return `<div class="rtable-wrap"><table class="rtable">${HEAD_GROUPED}<tbody>${groupedBody(rows)}</tbody></table></div>`;
   }
