@@ -1,12 +1,13 @@
-// Unverified rows: fix the details, then "Mark as verified" moves them up into their class.
+// Rows for Charlie to check: everything unverified, including horses with part of their breeding unknown (shown
+// on the site as OIO / UNK, not "Unverified"). Fix the details, then "Mark as verified".
 import { json, bad, readJson, str } from '../../../lib/http.js';
-import { PLACING_COLUMNS, PLACING_JOIN, PLACING_ORDER, refreshBatchCounts } from '../../../lib/results.js';
+import { PLACING_COLUMNS, PLACING_JOIN, PLACING_ORDER, TO_CHECK_SQL, refreshBatchCounts } from '../../../lib/results.js';
 
 const EDITABLE = ['horse_name', 'former_name', 'breed', 'sex', 'sire', 'dam', 'dam_sire', 'breeder', 'dressage', 'show_jumping', 'cross_country'];
 
 export async function onRequestGet({ env }) {
   const { results } = await env.DB.prepare(`SELECT ${PLACING_COLUMNS}, IFNULL(r.raw_line, '') AS raw_line, IFNULL(r.parse_ok, 1) AS parse_ok,
-      IFNULL(r.article_url, '') AS article_url ${PLACING_JOIN} WHERE p.verified = 0 AND NOT (p.sire = '' AND p.dam = '') ${PLACING_ORDER} LIMIT 1000`).all();
+      IFNULL(r.article_url, '') AS article_url ${PLACING_JOIN} WHERE ${TO_CHECK_SQL} ${PLACING_ORDER} LIMIT 1000`).all();
   return json({ rows: results });
 }
 

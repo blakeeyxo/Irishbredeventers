@@ -150,3 +150,7 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .st-card .form-done { margin-top: 10px; padding: 8px 10px; font-size: 13.5px; line-height: 1.45; }
 .st-card .form-done.ok { background: #EEF5F1; border-left: 3px solid var(--navy); color: var(--navy); }
 .st-card .form-done.err { background: #FBEDEF; border-left: 3px solid var(--alert); color: var(--alert); }
+/* Unverified tab: a horse that is only missing part of its breeding (shown as OIO / UNK on the site). */
+.gap-tag { display: inline-block; font-size: 11px; font-weight: 600; color: var(--navy); border: 1px solid currentColor; padding: 0 6px; margin-left: 4px; }
+.unv-head { margin: 26px 0 6px; color: var(--navy); }
+.unv-head:first-child { margin-top: 0; }

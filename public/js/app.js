@@ -117,10 +117,15 @@
 
   /* ---------- Results tables ---------- */
   const horseHref = h => `/horse/${h.id}`;
-  // OIO (Of Irish Origin): no breeding recorded. Not in doubt, so it keeps its place and isn't "Unverified".
-  const isOIO = h => !h.sire && !h.dam;
-  const statusTag = h => isOIO(h) ? '<span class="oio-tag" title="Of Irish Origin: breeding not recorded">OIO</span>'
-    : h.verified ? '' : '<span class="unv-tag" title="Details still being checked">Unverified</span>';
+  // Breeding that isn't known shows as UNK. OIO (Of Irish Origin): the sire or dam isn't known. Neither is a doubt,
+  // so the horse keeps its place and isn't "Unverified"; that is only for results genuinely in doubt (the API
+  // works both out: oio and doubtful).
+  const isUnk = v => !v || /^(unk|unknown|n\/a|not known)$/i.test(String(v).trim());
+  const unk = v => (isUnk(v) ? 'UNK' : v);
+  const isOIO = h => (h.oio !== undefined ? !!h.oio : isUnk(h.sire) || isUnk(h.dam));
+  const isDoubtful = h => (h.doubtful !== undefined ? !!h.doubtful : !h.verified);
+  const statusTag = h => isOIO(h) ? '<span class="oio-tag" title="Of Irish Origin: part of the breeding is not recorded">OIO</span>'
+    : isDoubtful(h) ? '<span class="unv-tag" title="Details still being checked">Unverified</span>' : '';
   function horseCell(h) {
     const facts = [h.breed, h.foaled, h.sex].filter(Boolean).join(' · ');
     const former = h.former_name ? `was ${esc(h.former_name)}` : '';
@@ -129,8 +134,8 @@
     return `<a class="horse-link" href="${horseHref(h)}" data-link>${esc(h.horse_name)}</a>${statusTag(h)}${sub ? `<span class="sub">${sub}</span>` : ''}${rider}`;
   }
   function breedingCell(h) {
-    if (isOIO(h)) return `OIO<span class="sub">Of Irish Origin: breeding not recorded</span>`;
-    return `${esc(h.sire || 'Sire not recorded')}<span class="x">×</span>${esc(h.dam || 'dam not recorded')}${h.dam_sire ? `<span class="sub">dam by ${esc(h.dam_sire)}</span>` : ''}`;
+    // Unknown parts show as UNK; the dam's sire line only when the dam is known.
+    return `${esc(unk(h.sire))}<span class="x">×</span>${esc(unk(h.dam))}${!isUnk(h.dam) ? `<span class="sub">dam by ${esc(unk(h.dam_sire))}</span>` : ''}`;
   }
   function scoreCell(h) {
     if (h.score === null || h.score === undefined) return '<span class="sub">–</span>';
@@ -143,7 +148,7 @@
       <td class="c-pl">${esc(ordinal(h.position))}</td>
       <td class="c-horse">${horseCell(h)}</td>
       <td data-label="Sire × Dam">${breedingCell(h)}</td>
-      <td data-label="Breeder">${esc(h.breeder || '–')}</td>
+      <td data-label="Breeder">${esc(unk(h.breeder))}</td>
       ${ev}
       <td class="c-score">${scoreCell(h)}</td></tr>`;
   }
@@ -397,14 +402,14 @@
       <p class="eyebrow">Horse</p>
       <h2 class="page-title horse-title">${esc(h.horse_name)}</h2>
       ${formers.length ? `<p class="horse-former">Formerly competed as ${esc(formers.join(', '))}</p>` : ''}
-      <div class="facts">${fact('Breed', h.breed)}${fact('Foaled', h.foaled)}${fact('Sex', h.sex)}${fact('Breeder', h.breeder)}</div>
+      <div class="facts">${fact('Breed', h.breed)}${fact('Foaled', h.foaled)}${fact('Sex', h.sex)}${fact('Breeder', unk(h.breeder))}</div>
       <div class="horse-grid">
         <div>
           <h3 class="section-title">Pedigree</h3>
           <div class="pedigree">
-            ${ped('sire', 'Sire', h.sire, isOIO(h) ? 'Not recorded (OIO)' : undefined)}${ped('dam', 'Dam', h.dam, isOIO(h) ? 'Not recorded (OIO)' : undefined)}
+            ${ped('sire', 'Sire', isUnk(h.sire) ? '' : h.sire, 'UNK')}${ped('dam', 'Dam', isUnk(h.dam) ? '' : h.dam, 'UNK')}
             ${ped('ss', "Sire's sire", '')}${ped('sd', "Sire's dam", '')}
-            ${ped('ds', 'Dam sire', h.dam_sire)}${ped('dd', "Dam's dam", '')}
+            ${ped('ds', 'Dam sire', isUnk(h.dam_sire) ? '' : h.dam_sire, 'UNK')}${ped('dd', "Dam's dam", '')}
           </div>
         </div>
         <div>

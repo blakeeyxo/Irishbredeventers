@@ -271,8 +271,12 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
   they fill in by themselves as results are imported. Each event shows its dates, country, number of classes,
   Irish-bred placings and the Horse Sport Ireland report it came from (as plain text: results never link out to HSI).
 - Stallions page: six paid listings, each with its progeny breakdown. No donation button. No scheduled newsletter.
-- A horse with no breeding recorded is marked "OIO" (Of Irish Origin) and keeps its place. "Unverified" is only for
-  conflicting or doubtful details; those results sit at the end of their own class.
+- Any sire, dam, dam sire or breeder that isn't recorded shows as "UNK". A horse whose sire or dam isn't recorded
+  is also marked "OIO" (Of Irish Origin). Neither counts as a doubt: the horse keeps its place and is not marked
+  "Unverified" on the site. "Unverified" is only for conflicting or doubtful details (misread lines, "out of" twice,
+  marked not verified in the article); those results sit at the end of their own class. The owner area's
+  Unverified tab still lists every unverified result in two groups, "In doubt" and "Breeding unknown", for Charlie
+  to check. The rules are in `lib/results.js` (OIO_SQL, GAP_SQL, DOUBT_SQL).
 - Comments only appear after approval.
 
 ## Still open (for Emer)

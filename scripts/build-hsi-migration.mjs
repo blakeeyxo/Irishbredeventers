@@ -175,7 +175,7 @@ for (const p of rowsOf(`SELECT p.position, p.horse_name, p.former_name, p.breed,
 }
 for (const label of new Set(rowsOf(`SELECT DISTINCT b.label FROM placings p JOIN batches b ON b.id = p.batch_id WHERE ${after('p', 'placings')}`).map(b => b.label))) {
   add(`UPDATE batches SET row_count = (SELECT COUNT(*) FROM placings WHERE batch_id = batches.id),
-    unverified_count = (SELECT COUNT(*) FROM placings WHERE batch_id = batches.id AND verified = 0 AND NOT (sire = '' AND dam = ''))
+    unverified_count = (SELECT COUNT(*) FROM placings WHERE batch_id = batches.id AND verified = 0)
     WHERE label = ${q(label)}`);
 }
 

@@ -1,10 +1,11 @@
 // Counts for the owner area tabs.
 import { json } from '../../../lib/http.js';
 import { COUNTRIES } from '../../../lib/parser.js';
+import { TO_CHECK_SQL } from '../../../lib/results.js';
 
 export async function onRequestGet({ env, data }) {
   const r = await env.DB.prepare(`SELECT
-      (SELECT COUNT(*) FROM placings WHERE verified = 0 AND NOT (sire = '' AND dam = '')) AS unverified,
+      (SELECT COUNT(*) FROM placings p WHERE ${TO_CHECK_SQL}) AS unverified,
       (SELECT COUNT(*) FROM comments WHERE status = 'pending') AS comments,
       (SELECT COUNT(*) FROM corrections WHERE status = 'open') AS corrections,
       (SELECT COUNT(*) FROM enquiries WHERE status = 'open') AS enquiries,
