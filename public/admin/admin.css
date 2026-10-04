@@ -146,3 +146,7 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
   .placement-pick { grid-template-columns: minmax(0, 1fr); }
   .mm { max-width: 220px; }
 }
+/* Save results under each listing: green for saved, red for not saved. */
+.st-card .form-done { margin-top: 10px; padding: 8px 10px; font-size: 13.5px; line-height: 1.45; }
+.st-card .form-done.ok { background: #EEF5F1; border-left: 3px solid var(--navy); color: var(--navy); }
+.st-card .form-done.err { background: #FBEDEF; border-left: 3px solid var(--alert); color: var(--alert); }

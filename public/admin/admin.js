@@ -332,7 +332,10 @@
         const c = document.createElement('canvas');
         c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        c.toBlob(b => resolve(b ? new File([b], 'image.jpg', { type: 'image/jpeg' }) : file), 'image/jpeg', 0.85);
+        // WebP stays WebP (smaller, same quality); everything else becomes JPEG. If the browser can't make WebP
+        // it hands back a PNG, which is named for what it is.
+        const want = file.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
+        c.toBlob(b => resolve(b ? new File([b], b.type === 'image/webp' ? 'image.webp' : b.type === 'image/png' ? 'image.png' : 'image.jpg', { type: b.type }) : file), want, 0.85);
         URL.revokeObjectURL(img.src);
       };
       img.onerror = () => resolve(file);
@@ -891,39 +894,65 @@
   fillShapes();
 
   /* ---------- Stallions: the six listings on the Stallions page ---------- */
-  async function loadStallions(savedSlot) {
+  // What a save found, in words that can't be mistaken for an error.
+  function savedText(r) {
+    const time = new Date().toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' });
+    if (!r.matched.length) return { ok: true, text: `✓ Saved at ${time}. It is live on the Stallions page. No results found yet for this sire spelling; check "Sire name in the results" against the list of sires (start typing to see them).` };
+    const names = r.matched.join(', ');
+    return { ok: true, text: r.totals.mentions
+      ? `✓ Saved at ${time}. It is live on the Stallions page. Matched in the results: ${names}. ${r.window.label}: ${r.totals.mentions} mention${r.totals.mentions === 1 ? '' : 's'} by ${r.totals.horses} horse${r.totals.horses === 1 ? '' : 's'}.`
+      : `✓ Saved at ${time}. It is live on the Stallions page. Matched in the results: ${names}, but none of their progeny ran in the ${r.window.label.replace(/^Last/, 'last')}.` };
+  }
+  let stallionNote = null; // { slot, ok, text } shown under that listing after it re-draws
+  const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  async function loadStallions() {
     const d = await api('/api/admin/stallions');
     $('sire-names').innerHTML = d.sires.map(n => `<option value="${esc(n)}">`).join('');
     $('st-list').innerHTML = d.listings.map(s => `<form class="form st-card" data-slot="${s.slot}">
       <h4>Stallions – Listing ${s.slot}${s.name ? '' : ' <small>(available)</small>'}</h4>
       ${s.image_key ? `<img class="adm-thumb" src="/media/${esc(s.image_key)}" alt="">` : ''}
       <label>Stallion name<input type="text" name="name" maxlength="80" value="${esc(s.name || '')}" required></label>
-      <label>Sire name in the results <small>(commas between spellings; blank = the stallion name)</small><input type="text" name="sire_names" maxlength="300" list="sire-names" value="${esc(s.sire_names || '')}"></label>
+      <label>Sire name in the results <small>(commas between spellings; blank = the stallion name; breed codes, capitals and small typos don't matter)</small><input type="text" name="sire_names" maxlength="300" list="sire-names" value="${esc(s.sire_names || '')}"></label>
       <label>Short blurb (optional)<textarea name="blurb" maxlength="400" style="min-height:70px;">${esc(s.blurb || '')}</textarea></label>
       <label>Stud website (optional)<input type="text" name="link" placeholder="https://" inputmode="url" value="${esc(s.link || '')}"></label>
-      <label>Photo${s.image_key ? ' (leave empty to keep the current one)' : ''}<input type="file" name="image" accept="image/*"></label>
-      ${s.name ? `<p class="meta">${esc(d.window.label)}: <b>${s.totals.mentions}</b> mentions by ${s.totals.horses} horses, ${s.totals.wins} wins. <a href="/stallions/${s.slot}" target="_blank" rel="noopener">See the page ↗</a></p>` : ''}
+      <label>Photo${s.image_key ? ' (leave empty to keep the current one)' : ''} <small>JPG, PNG, WebP or GIF</small><input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+      ${s.name ? `<p class="meta">${s.matched.length ? `Matches in the results: <b>${esc(s.matched.join(', '))}</b>. ${esc(d.window.label)}: <b>${s.totals.mentions}</b> mentions by ${s.totals.horses} horses, ${s.totals.wins} wins.` : '<b>No results found yet for this sire spelling.</b>'} <a href="/stallions/${s.slot}" target="_blank" rel="noopener">See the page ↗</a></p>` : ''}
       <div class="adm-actions"><button class="btn sm" type="submit">Save listing ${s.slot}</button>${s.name ? `<button class="btn sm alt" type="button" data-st-clear>Clear</button>` : ''}</div>
-      <div class="form-done" role="status">${s.slot === savedSlot ? 'Saved. It is live on the Stallions page now.' : ''}</div>
+      <div class="form-done${stallionNote && stallionNote.slot === s.slot ? (stallionNote.ok ? ' ok' : ' err') : ''}" role="status">${stallionNote && stallionNote.slot === s.slot ? esc(stallionNote.text) : ''}</div>
     </form>`).join('');
   }
   $('st-list').addEventListener('submit', async e => {
     e.preventDefault();
-    const f = e.target, done = f.querySelector('.form-done'), form = new FormData(f);
-    form.append('slot', f.dataset.slot);
+    const f = e.target, done = f.querySelector('.form-done'), btn = f.querySelector('button[type=submit]'), form = new FormData(f);
+    const slot = Number(f.dataset.slot), fail = text => { done.className = 'form-done err'; done.textContent = text; };
+    form.append('slot', slot);
     const file = f.elements.image.files[0];
     form.delete('image');
-    if (file) form.append('image', await shrinkImage(file, 1400));
-    done.textContent = 'Saving…';
-    try { await api('/api/admin/stallions', { method: 'POST', form }); await loadStallions(Number(f.dataset.slot)); }
-    catch (err) { done.textContent = err.message; }
+    if (file) {
+      // Checked here first, so a wrong file is explained before anything is sent.
+      if (!PHOTO_TYPES.includes(file.type)) return fail(`That file (${file.name}) isn't a picture we can use. Photos must be JPG, PNG, WebP or GIF.`);
+      if (file.size > 25 * 1048576) return fail(`That photo is too big (${(file.size / 1048576).toFixed(1)} MB). Use one under 25 MB; it is made smaller before uploading.`);
+      const small = await shrinkImage(file, 1400);
+      if (small.size > 5 * 1048576) return fail(`That photo is still too big after resizing (${(small.size / 1048576).toFixed(1)} MB). The limit is 5 MB; try a JPG or WebP.`);
+      form.append('image', small);
+    }
+    done.className = 'form-done'; done.textContent = 'Saving…'; btn.disabled = true;
+    try {
+      const r = await api('/api/admin/stallions', { method: 'POST', form });
+      stallionNote = { slot, ...savedText(r) };
+      await loadStallions();
+    } catch (err) { fail(`Not saved: ${err.message}`); }
+    finally { btn.disabled = false; }
   });
   $('st-list').addEventListener('click', async e => {
     if (!e.target.closest('[data-st-clear]')) return;
     const f = e.target.closest('form');
     if (!confirm(`Clear Stallions – Listing ${f.dataset.slot}? It shows as available straight away.`)) return;
-    await api(`/api/admin/stallions?slot=${f.dataset.slot}`, { method: 'DELETE' });
-    loadStallions();
+    try {
+      await api(`/api/admin/stallions?slot=${f.dataset.slot}`, { method: 'DELETE' });
+      stallionNote = { slot: Number(f.dataset.slot), ok: true, text: '✓ Cleared. The listing shows as available on the Stallions page.' };
+      loadStallions();
+    } catch (err) { const d = f.querySelector('.form-done'); d.className = 'form-done err'; d.textContent = `Not cleared: ${err.message}`; }
   });
 
   /* ---------- Comments ---------- */

@@ -38,3 +38,26 @@ test('rolling 12-month window moves with today', async () => {
   assert.deepEqual(rollingWindow(new Date('2026-12-15T00:00:00Z')), { start: '2026-01-01', end: '2026-12-31', label: 'Last 12 months (Jan 2026 – Dec 2026)' });
   assert.equal(rollingWindow(new Date('2028-02-10T00:00:00Z')).end, '2028-02-29');
 });
+
+test('stallion names match however they are typed', async () => {
+  const { sireCore, sireKeys, matchSires } = await import('../lib/stallions.js');
+  assert.equal(sireCore('Imperial Heights (ISH)[TIH]'), 'imperial heights');
+  assert.equal(sireCore('  IMPERIAL   heights  '), 'imperial heights');
+  assert.deepEqual(sireKeys('Imperial Heights (ISH), Cruisings Micky Finn [TIH]'), ['imperial heights', 'cruisings micky finn']);
+  const sires = [
+    { id: 1, name: 'Imperial Heights', name_normalised: 'imperial heights' },
+    { id: 2, name: 'Imperial Hights', name_normalised: 'imperial hights' },
+    { id: 3, name: 'Cruisings Micky Finn', name_normalised: 'cruisings micky finn' },
+    { id: 4, name: 'Cruising Micky Finn', name_normalised: 'cruising micky finn' },
+    { id: 5, name: 'Cruising', name_normalised: 'cruising' },
+    { id: 6, name: 'Tyson', name_normalised: 'tyson' },
+    { id: 7, name: 'Tyron', name_normalised: 'tyron' }
+  ];
+  const db = { prepare: () => ({ all: async () => ({ results: sires }) }) };
+  const ids = async names => (await matchSires(db, names)).map(s => s.id).sort();
+  assert.deepEqual(await ids('Imperial Heights (ISH)[TIH]'), [1, 2]);
+  assert.deepEqual(await ids('imperial hights'), [1, 2]);
+  assert.deepEqual(await ids('Cruisings Micky Finn'), [3, 4]);
+  assert.deepEqual(await ids('Tyson'), [6]); // short names must match exactly
+  assert.deepEqual(await ids('Cruising'), [5]);
+});

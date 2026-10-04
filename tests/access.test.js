@@ -41,3 +41,11 @@ test('not configured means closed; dev mode only opens on localhost', async () =
   assert.equal(await verifyAccess(req(null), { DEV_MODE: 'true' }), null);
   assert.deepEqual(await verifyAccess(req(null, 'localhost:8788'), { DEV_MODE: 'true' }), { email: 'dev@localhost' });
 });
+test('a refused login says why (for the Worker logs)', async () => {
+  const why = async (t, e = env) => { const w = {}; await verifyAccess(req(t), e, w); return w.reason; };
+  assert.equal(await why(null), 'no-token');
+  assert.equal(await why(await token({ ...good, exp: 1 })), 'expired');
+  assert.equal(await why(await token({ ...good, aud: ['other'] })), 'wrong-audience');
+  assert.equal(await why(await token({ ...good, email: 'someone@else.com' })), 'not-allowed');
+  assert.equal(await why(await token(good), {}), 'not-configured');
+});

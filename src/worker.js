@@ -96,8 +96,8 @@ const jsonError = (message, status) => new Response(JSON.stringify({ error: mess
 });
 const notFoundPage = () => new Response('Not found', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8', ...PRIVATE } });
 
-async function ownerLogin(request, env) {
-  try { return await verifyAccess(request, env); } catch (e) { console.error(e); return null; }
+async function ownerLogin(request, env, why) {
+  try { return await verifyAccess(request, env, why); } catch (e) { console.error(e); why.reason = 'check-failed'; return null; }
 }
 
 export default {
@@ -109,8 +109,20 @@ export default {
     const ownerPage = OWNER_PAGES.test(path), ownerApi = OWNER_API.test(path), signIn = SIGN_IN.test(path);
     let user = null;
     if (ownerPage || ownerApi || signIn) {
-      user = await ownerLogin(request, env);
-      if (!user) return ownerApi ? jsonError('Not found', 404) : notFoundPage();
+      const why = {};
+      user = await ownerLogin(request, env, why);
+      if (!user) {
+        console.warn(`Owner login refused (${why.reason || 'unknown'}): ${request.method} ${path}`);
+        // Someone who has signed in before (an owner login is on the request) but whose login has expired or
+        // doesn't fit is told so, instead of a "Not found" that looks like a broken page. Anyone else still
+        // gets the plain 404.
+        if (ownerApi && !['no-token', 'not-configured'].includes(why.reason)) {
+          return jsonError(why.reason === 'check-failed'
+            ? "We couldn't check your owner-area login just now. Nothing was saved. Try again in a moment."
+            : 'Your owner-area login has expired. Nothing was saved. Reload the page and sign in again, then save once more.', 401);
+        }
+        return ownerApi ? jsonError('Not found', 404) : notFoundPage();
+      }
       if (signIn) return new Response(null, { status: 302, headers: { location: '/admin/', ...PRIVATE } });
       if (ownerPage) {
         const res = await env.ASSETS.fetch(request);

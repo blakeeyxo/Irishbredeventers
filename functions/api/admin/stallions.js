@@ -1,7 +1,7 @@
 // Owner area: the six stallion listings (Stallions – Listing 1 to 6). POST saves one; DELETE empties it.
 import { json, bad, str, text } from '../../../lib/http.js';
 import { saveImage } from '../../../lib/images.js';
-import { progeny, summary, rollingWindow } from '../../../lib/stallions.js';
+import { progeny, summary, rollingWindow, matchSires } from '../../../lib/stallions.js';
 
 export async function onRequestGet({ env }) {
   const { results } = await env.DB.prepare('SELECT * FROM stallions ORDER BY slot').all();
@@ -9,7 +9,9 @@ export async function onRequestGet({ env }) {
   const listings = [];
   for (let slot = 1; slot <= 6; slot++) {
     const s = results.find(x => x.slot === slot) || { slot };
-    listings.push({ ...s, totals: s.sire_names ? summary(await progeny(env.DB, s.sire_names, win)) : null });
+    // The sire records the names match (so the owner can see "Imperial Heights, Imperial Hights") and the numbers.
+    const matched = s.sire_names ? await matchSires(env.DB, s.sire_names) : [];
+    listings.push({ ...s, matched: matched.map(m => m.name), totals: s.sire_names ? summary(await progeny(env.DB, s.sire_names, win, matched)) : null });
   }
   const sires = (await env.DB.prepare('SELECT name FROM sires ORDER BY name').all()).results.map(r => r.name);
   return json({ window: win, listings, sires });
@@ -32,7 +34,12 @@ export async function onRequestPost({ env, request }) {
       ON CONFLICT(slot) DO UPDATE SET name = ?2, sire_names = ?3, blurb = ?4, link = ?5, image_key = IFNULL(?6, image_key), updated_at = datetime('now')`)
     .bind(slot, name, str(form.get('sire_names'), 300) || name, text(form.get('blurb'), 400), link, imageKey).run();
   if (imageKey && existing && existing.image_key) await env.MEDIA.delete(existing.image_key);
-  return json({ ok: true });
+  // What was saved, so the owner area can say so plainly: the sires matched and how often they appear.
+  const sireNames = str(form.get('sire_names'), 300) || name;
+  const win = rollingWindow();
+  const matched = await matchSires(env.DB, sireNames);
+  const totals = summary(await progeny(env.DB, sireNames, win, matched));
+  return json({ ok: true, slot, matched: matched.map(m => m.name), totals, window: win, image_key: imageKey || (existing && existing.image_key) || null });
 }
 
 export async function onRequestDelete({ env, request }) {
