@@ -154,3 +154,39 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .gap-tag { display: inline-block; font-size: 11px; font-weight: 600; color: var(--navy); border: 1px solid currentColor; padding: 0 6px; margin-left: 4px; }
 .unv-head { margin: 26px 0 6px; color: var(--navy); }
 .unv-head:first-child { margin-top: 0; }
+
+/* ---------- Upload result: new / duplicates / failed, and each event ---------- */
+.upload-result { font-size: 16px; margin: 6px 0 4px; }
+.upload-result .n-new { color: var(--navy); }
+.upload-result .n-dup { color: var(--ink-soft); }
+.upload-result .n-fail { color: var(--alert); }
+.upload-events, .batch-table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--paper); border: 1px solid var(--rule); margin: 10px 0 14px; }
+.upload-events th, .batch-table th { text-align: left; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); padding: 8px 10px; border-bottom: 1px solid var(--rule-strong); }
+.upload-events td, .batch-table td { padding: 8px 10px; border-top: 1px solid var(--rule); vertical-align: top; }
+.upload-events small, .batch-table small { display: block; color: var(--ink-faint); font-size: 12px; }
+
+/* ---------- Published uploads ---------- */
+.batch-season { margin: 22px 0 0; color: var(--navy); }
+.batch-table .num { text-align: right; white-space: nowrap; }
+.batch-table td:first-child { white-space: nowrap; }
+.batch-month td { background: var(--cream-2); font-weight: 600; color: var(--navy); font-size: 12.5px; letter-spacing: .04em; }
+.batch-table tr.off td { color: var(--ink-faint); }
+.batch-table .acts { white-space: nowrap; text-align: right; }
+.batch-table .acts .btn { margin-left: 4px; }
+.batch-edit-row td { background: var(--cream-2); }
+.st { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border: 1px solid currentColor; white-space: nowrap; }
+.st-live { color: var(--navy); }
+.st-off { color: var(--ink-faint); }
+.st-held { color: var(--alert); }
+.btn.danger { color: var(--alert); }
+@media (max-width: 720px) {
+  .batch-table thead, .upload-events thead { display: none; }
+  .batch-table tr, .batch-table td, .upload-events tr, .upload-events td { display: block; }
+  .batch-table tr[data-batch] { padding: 8px 10px; border-top: 1px solid var(--rule); }
+  .batch-table tr[data-batch] td { border: 0; padding: 2px 0; }
+  .batch-table .num::after { content: ' results'; }
+  .batch-table .num, .batch-table .acts { text-align: left; }
+  .batch-table .acts .btn { margin: 4px 4px 0 0; }
+  .upload-events tr { padding: 8px 10px; border-top: 1px solid var(--rule); }
+  .upload-events td { border: 0; padding: 1px 0; }
+}

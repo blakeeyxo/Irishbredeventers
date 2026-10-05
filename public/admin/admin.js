@@ -143,13 +143,19 @@
     if (!imp) { box.innerHTML = ''; return; }
     if (imp.summary) {
       const s = imp.summary;
+      const evLink = e => `/results?${new URLSearchParams({ season: e.season, month: e.start_date.slice(5, 7), event: e.id })}`;
       box.innerHTML = `<div class="summary-box">
-        <h4>Saved ${esc(imp.weekLabel || 'this week')}</h4>
+        <h4>${s.added || s.failed ? 'Saved' : 'Nothing new in'} ${esc(imp.weekLabel || 'this upload')}</h4>
+        <p class="upload-result"><b>${s.rows}</b> rows read: <b class="n-new">${s.added} new</b> · <b class="n-dup">${s.duplicates} duplicate${s.duplicates === 1 ? '' : 's'} skipped</b> · <b class="n-fail">${s.failed} failed</b></p>
+        <p class="meta">New: added and on the site now. Duplicates: the same horse in the same class of the same event is already on the site, so it was left as it was. Failed: saved, but a line couldn't be read properly or looks wrong, so it is hidden from the site until you fix it in the Unverified tab.</p>
+        ${s.events && s.events.length ? `<table class="upload-events"><thead><tr><th>Event</th><th>Date</th><th>In this upload</th><th>New</th><th>Duplicates</th><th>Failed</th><th>On the site now</th></tr></thead><tbody>
+          ${s.events.map(e => `<tr><td>${esc(e.name)} <small>${esc(e.country)}</small></td><td>${esc(niceDate(e.start_date))}</td><td>${e.rows}</td><td>${e.new}</td><td>${e.duplicates}</td><td>${e.failed}</td>
+            <td><a href="${evLink(e)}" target="_blank" rel="noopener">${e.onSite} results ↗</a></td></tr>`).join('')}</tbody></table>` : ''}
         <div class="summary-grid">
-          <div><b>${s.results}</b><span>results</span></div><div><b>${s.horses}</b><span>new horses</span></div>
+          <div><b>${s.horses}</b><span>new horses</span></div>
           <div><b>${s.sires}</b><span>new sires</span></div><div><b>${s.dams}</b><span>new dams</span></div><div><b>${s.breeders}</b><span>new breeders</span></div>
         </div>
-        <p class="intro">${s.alreadySaved ? `${s.alreadySaved} of these results were already saved, so they were left as they were. ` : ''}${s.emailed ? `Emailing ${s.emailed} subscribers now.` : ''}</p>
+        ${s.emailed ? `<p class="intro">Emailing ${s.emailed} subscribers now.</p>` : ''}
         <button class="btn alt" type="button" id="imp-new">Paste another week</button></div>`;
       $('imp-new').addEventListener('click', () => { imp = null; $('parse-form').reset(); $('adm-year').value = new Date().getFullYear(); renderImport(); window.scrollTo({ top: 0 }); });
       return;
@@ -245,21 +251,40 @@
     }
   }
 
+  // Published uploads: a table grouped by season and month of the events in each upload, newest first.
+  const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const shortDate = iso => { const d = new Date(`${iso}T00:00:00Z`); return `${d.getUTCDate()} ${MONTHS_LONG[d.getUTCMonth()].slice(0, 3)} ${d.getUTCFullYear()}`; };
+  const dateRange = (a, z) => !a ? '–' : a === z || !z ? shortDate(a) : a.slice(0, 7) === z.slice(0, 7)
+    ? `${Number(a.slice(8))}–${shortDate(z)}` : `${shortDate(a).replace(/ \d{4}$/, a.slice(0, 4) === z.slice(0, 4) ? '' : ` ${a.slice(0, 4)}`)} – ${shortDate(z)}`;
   async function loadBatches() {
     const d = await api('/api/admin/batches');
-    $('adm-batches').innerHTML = d.batches.length ? d.batches.map(b => `<div class="adm-card" data-batch="${b.id}"><b>${esc(b.label || 'Upload')}</b>
-      <div class="meta">${esc(niceDate(b.created_at))} · ${b.row_count} results · ${b.unverified_count} unverified</div>
-      <div class="adm-actions"><button class="btn sm" data-edit-batch="${b.id}">Edit</button>
-        <button class="btn sm alt" data-del-batch="${b.id}" data-name="${esc(b.label)}">Remove</button></div>
-      <div class="batch-edit" hidden></div></div>`).join('')
-      : '<div class="empty-state">Nothing uploaded yet.</div>';
+    if (!d.batches.length) { $('adm-batches').innerHTML = '<div class="empty-state">Nothing uploaded yet.</div>'; return; }
+    let html = '', season = null, month = null;
+    for (const b of d.batches) {
+      const s = b.season || 'No events', m = b.week_date ? b.week_date.slice(0, 7) : '';
+      if (s !== season) { if (season !== null) html += '</tbody></table>'; html += `<h4 class="batch-season">${esc(s)} season</h4><table class="batch-table"><thead><tr><th>Event dates</th><th>Upload (week)</th><th class="num">Results</th><th>Status</th><th></th></tr></thead><tbody>`; season = s; month = null; }
+      if (m !== month) { html += `<tr class="batch-month"><td colspan="5">${m ? `${MONTHS_LONG[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}` : 'Empty uploads'}</td></tr>`; month = m; }
+      const names = (b.event_names || '').split(',').filter(Boolean);
+      const status = !b.published ? '<span class="st st-off">Unpublished</span>'
+        : b.held ? `<span class="st st-live">Live</span> <span class="st st-held">${b.held} hidden until verified</span>` : '<span class="st st-live">Live</span>';
+      html += `<tr data-batch="${b.id}" class="${b.published ? '' : 'off'}">
+        <td>${esc(dateRange(b.first_date, b.last_date))}</td>
+        <td><b>${esc(b.label || 'Upload')}</b><small>${b.events} event${b.events === 1 ? '' : 's'}${names.length ? `: ${esc(names.slice(0, 3).join(', '))}${names.length > 3 ? ` and ${names.length - 3} more` : ''}` : ''} · uploaded ${esc(niceDate(b.created_at))}</small></td>
+        <td class="num">${b.results}</td>
+        <td>${status}</td>
+        <td class="acts"><button class="btn sm" data-edit-batch="${b.id}">Edit</button>
+          <button class="btn sm alt" data-pub-batch="${b.id}" data-pub="${b.published ? 0 : 1}">${b.published ? 'Unpublish' : 'Re-publish'}</button>
+          <button class="btn sm alt danger" data-del-batch="${b.id}" data-name="${esc(b.label)}">Delete</button></td></tr>
+        <tr class="batch-edit-row" hidden><td colspan="5"><div class="batch-edit"></div></td></tr>`;
+    }
+    $('adm-batches').innerHTML = html + '</tbody></table>';
   }
-  async function openBatch(card) {
-    const box = card.querySelector('.batch-edit');
-    if (!box.hidden) { box.hidden = true; box.innerHTML = ''; return; }
-    box.hidden = false;
+  async function openBatch(row) {
+    const editRow = row.nextElementSibling, box = editRow.querySelector('.batch-edit');
+    if (!editRow.hidden) { editRow.hidden = true; box.innerHTML = ''; return; }
+    editRow.hidden = false;
     box.innerHTML = '<div class="empty-state">Loading…</div>';
-    const id = Number(card.dataset.batch), label = card.querySelector('b').textContent;
+    const id = Number(row.dataset.batch), label = row.querySelector('b').textContent;
     const d = await api(`/api/admin/batches?id=${id}`);
     box.innerHTML = `<form class="form batch-label" data-id="${id}"><label>Upload name<input name="label" value="${esc(label)}" maxlength="120"></label>
         <div class="adm-actions"><button class="btn sm" type="submit">Save name</button></div></form>
@@ -267,9 +292,15 @@
       <div class="unv-list">${d.rows.map(rowEditCard).join('')}</div>`;
   }
   $('adm-batches').addEventListener('click', async e => {
-    const del = e.target.closest('[data-del-batch]'), edit = e.target.closest('[data-edit-batch]');
+    const del = e.target.closest('[data-del-batch]'), edit = e.target.closest('[data-edit-batch]'), pub = e.target.closest('[data-pub-batch]');
     if (edit) return openBatch(edit.closest('[data-batch]'));
-    if (!del || !confirm(`Remove "${del.dataset.name}" and all its results from the site?`)) return;
+    if (pub) {
+      const on = pub.dataset.pub === '1';
+      if (!on && !confirm('Take this upload off the public site? Its results are kept and you can re-publish it any time.')) return;
+      await api('/api/admin/batches', { method: 'POST', body: { id: Number(pub.dataset.pubBatch), published: on } });
+      return loadBatches();
+    }
+    if (!del || !confirm(`Delete "${del.dataset.name}" and all its results? This can't be undone (Unpublish hides it instead).`)) return;
     await api(`/api/admin/batches?id=${del.dataset.delBatch}`, { method: 'DELETE' });
     loadBatches(); refreshSummary();
   });
@@ -277,7 +308,7 @@
     const f = e.target.closest('form.batch-label');
     if (!f) return;
     e.preventDefault();
-    try { await api('/api/admin/batches', { method: 'POST', body: { id: Number(f.dataset.id), label: f.elements.label.value } }); f.closest('[data-batch]').querySelector('b').textContent = f.elements.label.value; }
+    try { await api('/api/admin/batches', { method: 'POST', body: { id: Number(f.dataset.id), label: f.elements.label.value } }); f.closest('.batch-edit-row').previousElementSibling.querySelector('b').textContent = f.elements.label.value; }
     catch (err) { alert(err.message); }
   });
 

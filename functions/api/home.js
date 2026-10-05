@@ -11,7 +11,8 @@ export async function onRequestGet({ env }) {
       WHERE ${PUBLIC_SQL} AND p.position = 1 AND p.batch_id = (
         -- the upload holding the most recent event, so loading older results never replaces this week
         SELECT p2.batch_id FROM placings p2 JOIN classes c2 ON c2.id = p2.class_id JOIN events e2 ON e2.id = c2.event_id
-        WHERE p2.verified = 1 ORDER BY e2.start_date DESC, p2.batch_id DESC LIMIT 1)
+        WHERE p2.verified = 1 AND COALESCE((SELECT published FROM batches WHERE id = p2.batch_id), 1) = 1
+        ORDER BY e2.start_date DESC, p2.batch_id DESC LIMIT 1)
       ${PLACING_ORDER} LIMIT 1000`).all()
   ]);
   return json({ headline, week: week.results }, { headers: { 'cache-control': 'public, max-age=60' } });
