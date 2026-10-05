@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/site.css?v=3">
-<link rel="stylesheet" href="/admin/admin.css?v=6">
+<link rel="stylesheet" href="/admin/admin.css?v=7">
 </head>
 <body>
 
@@ -36,6 +36,7 @@
     <button class="chip" data-a="links">Link cards</button>
     <button class="chip" data-a="ads">Ads</button>
     <button class="chip" data-a="stallions">Stallions</button>
+    <button class="chip" data-a="breeding">Breeding records</button>
     <button class="chip" data-a="comments">Comments <span class="count" id="n-comments" hidden></span></button>
     <button class="chip" data-a="corrections">Corrections <span class="count" id="n-corrections" hidden></span></button>
     <button class="chip" data-a="enquiries">Ad enquiries <span class="count" id="n-enquiries" hidden></span></button>
@@ -183,6 +184,23 @@
     <div id="ad-list"></div>
   </div>
 
+  <!-- BREEDING RECORDS -->
+  <div class="adm-pane" id="adm-breeding">
+    <h3>Breeding records</h3>
+    <p class="intro">Find a horse and fill in or correct its breeding: sire, dam, dam sire, breeder, year of birth, sex and breed. Every result of that horse on the site shows the new details straight away, and the stallion numbers follow. Use <b>Find on sporthorse-data.com</b> to look the horse up, then copy across what you find and paste the page's address into "Where this came from". Type names with their codes if you have them, e.g. <i>Womanizer (KWPN)</i> or <i>Cruising (ISH)[TIH]</i>; leave a box empty (or type UNK) if it isn't known.</p>
+    <form class="form breed-search" id="breed-search">
+      <div class="form-row">
+        <label>Horse name or former name<input type="search" name="q" maxlength="100" placeholder="e.g. MM Irish Clover"></label>
+        <label>Sire (all the progeny of a stallion)<input type="search" name="sire" maxlength="300" list="breed-sires" placeholder="e.g. Sligo Candy Boy"></label>
+      </div>
+      <label class="chk"><input type="checkbox" name="gaps" value="1"> Only horses with part of their breeding missing <span id="breed-gaps"></span></label>
+      <div class="adm-actions"><button class="btn" type="submit">Find horses</button></div>
+    </form>
+    <datalist id="breed-sires"></datalist>
+    <p class="meta" id="breed-count"></p>
+    <div id="breed-list"></div>
+  </div>
+
   <!-- STALLIONS -->
   <div class="adm-pane" id="adm-stallions">
     <h3>Stallions</h3>
@@ -221,6 +239,6 @@
 </footer>
 
 <script src="/js/common.js?v=3"></script>
-<script src="/admin/admin.js?v=7"></script>
+<script src="/admin/admin.js?v=8"></script>
 </body>
 </html>

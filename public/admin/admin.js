@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
 
   /* ---------- Tabs ---------- */
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), links: () => loadLinks(), ads: loadAds, stallions: loadStallions, comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), links: () => loadLinks(), ads: loadAds, stallions: loadStallions, breeding: () => loadBreeding(), comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -947,7 +947,7 @@
       <label>Short blurb (optional)<textarea name="blurb" maxlength="400" style="min-height:70px;">${esc(s.blurb || '')}</textarea></label>
       <label>Stud website (optional)<input type="text" name="link" placeholder="https://" inputmode="url" value="${esc(s.link || '')}"></label>
       <label>Photo${s.image_key ? ' (leave empty to keep the current one)' : ''} <small>JPG, PNG, WebP or GIF</small><input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"></label>
-      ${s.name ? `<p class="meta">${s.matched.length ? `Matches in the results: <b>${esc(s.matched.join(', '))}</b>. ${esc(d.window.label)}: <b>${s.totals.mentions}</b> mentions by ${s.totals.horses} horses, ${s.totals.wins} wins.` : '<b>No results found yet for this sire spelling.</b>'} <a href="/stallions/${s.slot}" target="_blank" rel="noopener">See the page ↗</a></p>` : ''}
+      ${s.name ? `<p class="meta">${s.matched.length ? `Matches in the results: <b>${esc(s.matched.join(', '))}</b>. ${esc(d.window.label)}: <b>${s.totals.mentions}</b> mentions by ${s.totals.horses} horses, ${s.totals.wins} wins.` : '<b>No results found yet for this sire spelling.</b>'} <a href="/stallions/${s.slot}" target="_blank" rel="noopener">See the page ↗</a> · <a href="#" data-st-breeding="${esc(s.sire_names || s.name)}">Edit the progeny's breeding records →</a></p>` : ''}
       <div class="adm-actions"><button class="btn sm" type="submit">Save listing ${s.slot}</button>${s.name ? `<button class="btn sm alt" type="button" data-st-clear>Clear</button>` : ''}</div>
       <div class="form-done${stallionNote && stallionNote.slot === s.slot ? (stallionNote.ok ? ' ok' : ' err') : ''}" role="status">${stallionNote && stallionNote.slot === s.slot ? esc(stallionNote.text) : ''}</div>
     </form>`).join('');
@@ -976,6 +976,8 @@
     finally { btn.disabled = false; }
   });
   $('st-list').addEventListener('click', async e => {
+    const br = e.target.closest('[data-st-breeding]');
+    if (br) { e.preventDefault(); return openBreedingFor(br.dataset.stBreeding); }
     if (!e.target.closest('[data-st-clear]')) return;
     const f = e.target.closest('form');
     if (!confirm(`Clear Stallions – Listing ${f.dataset.slot}? It shows as available straight away.`)) return;
@@ -985,6 +987,68 @@
       loadStallions();
     } catch (err) { const d = f.querySelector('.form-done'); d.className = 'form-done err'; d.textContent = `Not cleared: ${err.message}`; }
   });
+
+  /* ---------- Breeding records: find a horse, correct its breeding ---------- */
+  const taggedName = (name, breed, tih) => name ? `${name}${breed ? ` (${breed})` : ''}${tih ? '[TIH]' : ''}` : '';
+  const shdLink = name => `https://www.google.com/search?q=${encodeURIComponent(`site:sporthorse-data.com "${name}"`)}`;
+  function breedCard(h) {
+    const v = {
+      sire: taggedName(h.sire, h.sire_breed, h.sire_tih), dam: taggedName(h.dam, h.dam_breed, h.dam_tih),
+      dam_sire: taggedName(h.dam_sire, h.dam_sire_breed, h.dam_sire_tih), breeder: h.breeder ? `${h.breeder}${h.breeder_county ? ` (${h.breeder_county})` : ''}` : ''
+    };
+    const missing = ['sire', 'dam', 'dam_sire', 'breeder'].filter(k => !v[k]).map(k => ({ sire: 'sire', dam: 'dam', dam_sire: 'dam sire', breeder: 'breeder' }[k]));
+    const field = (k, label, extra = '') => `<label>${label}<input name="${k}" value="${esc(v[k])}" placeholder="UNK"${extra}></label>`;
+    return `<form class="form breed-card" data-id="${h.id}">
+      <div class="breed-head"><b>${esc(h.name)}</b> <span class="meta">${[h.birth_year, h.sex, h.breed_code].filter(Boolean).map(esc).join(' · ')}${h.former ? ` · was ${esc(h.former)}` : ''} · ${h.runs} result${h.runs === 1 ? '' : 's'}${h.last_run ? `, latest ${esc(niceDate(h.last_run))}` : ''}</span>
+        ${missing.length ? `<span class="gap-tag">Missing: ${missing.join(', ')}</span>` : '<span class="st st-live">Complete</span>'}
+        <a class="breed-look" href="${shdLink(h.name)}" target="_blank" rel="noopener">Find on sporthorse-data.com ↗</a></div>
+      <div class="breed-grid">
+        ${field('sire', 'Sire', ' list="breed-sires"')}${field('dam', 'Dam')}${field('dam_sire', 'Dam sire', ' list="breed-sires"')}${field('breeder', 'Breeder (county)')}
+        <label>Year of birth<input name="birth_year" type="number" min="1950" max="2100" value="${esc(h.birth_year ?? '')}"></label>
+        <label>Sex<select name="sex">${['', 'Gelding', 'Mare', 'Stallion'].map(x => `<option${x === h.sex ? ' selected' : ''}>${x}</option>`).join('')}${['', 'Gelding', 'Mare', 'Stallion'].includes(h.sex) ? '' : `<option selected>${esc(h.sex)}</option>`}</select></label>
+        <label>Breed<input name="breed" value="${esc(h.breed_code || '')}" placeholder="e.g. ISH" maxlength="8"></label>
+        <label class="chk"><input type="checkbox" name="tih" value="1"${h.tih_flag ? ' checked' : ''}> Traditional Irish Horse [TIH]</label>
+      </div>
+      <label>Where this came from (optional)<input name="source" value="${esc(h.breeding_source || '')}" maxlength="300" placeholder="e.g. the sporthorse-data.com page address"></label>
+      <div class="adm-actions"><button class="btn sm" type="submit">Save breeding</button>${h.breeding_updated_at ? `<span class="meta">Last updated ${esc(niceDate(h.breeding_updated_at))}</span>` : ''}</div>
+      <div class="form-done" role="status"></div>
+    </form>`;
+  }
+  let breedQuery = { q: '', sire: '', gaps: true };
+  async function loadBreeding(query) {
+    if (query) breedQuery = { ...breedQuery, ...query };
+    const f = $('breed-search').elements;
+    f.q.value = breedQuery.q; f.sire.value = breedQuery.sire; f.gaps.checked = breedQuery.gaps;
+    $('breed-list').innerHTML = '<div class="empty-state">Loading…</div>';
+    const p = new URLSearchParams({ q: breedQuery.q, sire: breedQuery.sire, gaps: breedQuery.gaps ? '1' : '' });
+    const d = await api(`/api/admin/breeding?${p}`);
+    $('breed-sires').innerHTML = d.sires.map(n => `<option value="${esc(n)}">`).join('');
+    $('breed-gaps').textContent = `(${d.gaps} horses in the results)`;
+    $('breed-count').textContent = d.total > d.horses.length ? `Showing ${d.horses.length} of ${d.total} horses, most recent first. Narrow the search to see the rest.` : `${d.total} horse${d.total === 1 ? '' : 's'}.`;
+    $('breed-list').innerHTML = d.horses.map(breedCard).join('') || '<div class="empty-state">No horses match.</div>';
+  }
+  $('breed-search').addEventListener('submit', e => {
+    e.preventDefault();
+    const f = e.target.elements;
+    loadBreeding({ q: f.q.value.trim(), sire: f.sire.value.trim(), gaps: f.gaps.checked });
+  });
+  $('breed-list').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, done = f.querySelector('.form-done'), btn = f.querySelector('button[type=submit]');
+    const body = { id: Number(f.dataset.id), ...Object.fromEntries(new FormData(f)), tih: f.elements.tih.checked };
+    btn.disabled = true; done.className = 'form-done'; done.textContent = 'Saving…';
+    try {
+      const r = await api('/api/admin/breeding', { method: 'POST', body });
+      done.className = 'form-done ok';
+      done.textContent = `✓ Saved. ${r.results} result${r.results === 1 ? '' : 's'} on the site now show these details.${r.merged ? ' This turned out to be the same horse as another record, so the two were joined.' : ''}`;
+    } catch (err) { done.className = 'form-done err'; done.textContent = `Not saved: ${err.message}`; }
+    finally { btn.disabled = false; }
+  });
+  // From a stallion listing: straight to that stallion's progeny.
+  function openBreedingFor(sire) {
+    breedQuery = { q: '', sire, gaps: false };
+    document.querySelector('#adm-tabs button[data-a="breeding"]').click();
+  }
 
   /* ---------- Comments ---------- */
   async function loadComments() {

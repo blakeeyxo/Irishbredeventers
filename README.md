@@ -93,7 +93,8 @@ Do these once, in order. Everything is on the free plans to start.
 - [ ] Nothing to run by hand: each deploy applies new files in `migrations/` once. (`0006_results_source.sql`,
   `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` / `0009_ad_crop.sql` / `0010_ad_phone_crop.sql`
   (advert crop settings) and `0011_page_ad_slots_stallions.sql` (per-page ad slots, stallion listings,
-  comment spam flag) and `0012_hsi_2025_nov_dec_results.sql` (November–December 2025 results) apply on deploy.) `0005_launch_content.sql`
+  comment spam flag), `0012_hsi_2025_nov_dec_results.sql` (November–December 2025 results), `0013_batch_published.sql`
+  and `0014_horse_breeding_source.sql` apply on deploy.) `0005_launch_content.sql`
   loads Charlie's real results (14–16 February 2025 and the week of 6 April 2026), his four articles and
   the three link cards. It never adds example ads or the fictional sample weeks.
 - [ ] Open `https://irishbredeventers.<your-subdomain>.workers.dev` and check results show
@@ -232,6 +233,22 @@ today's date (`rollingWindow` in `lib/stallions.js`), labelled on the page, e.g.
 2026)". A **mention** is any placing, not only a win. Below the six listings, **Sires mentioned most** ranks the
 top ten sires in the same window; each links to a search for that sire. List
 every spelling used in the results, separated by commas. **Clear** shows the listing as available.
+
+**Breeding records tab.** Find a horse (by name or former name, by a stallion's progeny, or only those with part of
+their breeding missing) and fill in or correct its sire, dam, dam sire, breeder, year of birth, sex and breed. Every
+result of that horse on the site shows the new details straight away (and the stallion numbers follow). Each horse
+has a **Find on sporthorse-data.com** link (a search of that site for the horse's name) and a "Where this came from"
+box for the page address. Nothing is copied from other sites automatically. If the corrected details make it the
+same horse as another record (same name, year, sire and dam; usually a typo in an article), the two are joined.
+Each stallion listing in the Stallions tab links straight to its progeny here.
+
+**Weekly upload result.** After saving, the owner area shows "X new · Y duplicates skipped · Z failed" and one row per
+event with how many results it now has on the site. A duplicate is the same horse in the same class of the same event
+(name, start date and country), so a row from another event or date is never skipped. Failed rows are saved but hidden
+until fixed in the Unverified tab.
+
+**Published uploads** are listed newest week first, grouped by season and month, with Edit, Unpublish / Re-publish
+(takes an upload off the site without deleting it; 0013_batch_published.sql) and Delete.
 
 **Link cards** show on the News page under "Elsewhere".
 

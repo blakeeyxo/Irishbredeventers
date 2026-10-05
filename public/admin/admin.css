@@ -190,3 +190,15 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
   .upload-events tr { padding: 8px 10px; border-top: 1px solid var(--rule); }
   .upload-events td { border: 0; padding: 1px 0; }
 }
+
+/* ---------- Breeding records ---------- */
+.breed-card { border: 1px solid var(--rule); background: var(--paper); padding: 14px; margin-top: 14px; max-width: none; }
+.breed-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.breed-head b { font-family: var(--serif); font-size: 18px; color: var(--navy); }
+.breed-look { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--navy); }
+.breed-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; margin: 10px 0 4px; }
+.breed-card .form-done { margin-top: 8px; padding: 6px 10px; font-size: 13.5px; }
+.breed-card .form-done.ok { background: #EEF5F1; border-left: 3px solid var(--navy); color: var(--navy); }
+.breed-card .form-done.err { background: #FBEDEF; border-left: 3px solid var(--alert); color: var(--alert); }
+@media (max-width: 980px) { .breed-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .breed-grid { grid-template-columns: minmax(0, 1fr); } .breed-look { margin-left: 0; } }
