@@ -250,7 +250,18 @@ until fixed in the Unverified tab.
 **Published uploads** are listed newest week first, grouped by season and month, with Edit, Unpublish / Re-publish
 (takes an upload off the site without deleting it; 0013_batch_published.sql) and Delete.
 
-**Link cards** show on the News page under "Elsewhere".
+**Link cards** live in the Ads tab and only fill side ad spaces that have no advert: on every page the empty spaces
+take the link cards in order (top row first), labelled "Read more"; any space still empty shows "Advertise here".
+
+**Every-page adverts.** Tick "Keep this ad in this space across all pages" in the advert form and it is saved
+against the space itself (placement `all:left1` etc.). A page's own advert for that space comes first.
+
+**Stallions tab: Sires mentioned most.** The top 20 sires of the last 12 months, plus any other sire by name, each
+with a Feature button that puts him into a free listing (or, when all six are taken, the listing you choose).
+
+**Breeding records: Stallions & sires.** Rename a stallion, set his breed code or [TIH], or join two spellings of the
+same stallion (e.g. "Imperial Hights" into "Imperial Heights"): his progeny, mares and results all move across, and
+horses that turn out to be the same are joined too.
 
 **Comments.** Every comment goes to the approval queue. If the Turnstile spam check did not pass, the comment is
 still queued but marked "Spam check did not pass" so it can be read carefully before approving.

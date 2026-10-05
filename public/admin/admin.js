@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
 
   /* ---------- Tabs ---------- */
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), links: () => loadLinks(), ads: loadAds, stallions: loadStallions, breeding: () => loadBreeding(), comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -762,6 +762,7 @@
     await loadPicture(crop.objectUrl);
   });
   // Choosing a slot: a top banner and a side box are different shapes, so changing between them starts the crop again.
+  adForm.elements.every_page.addEventListener('change', () => setPlacement(adForm.elements.every_page.checked ? `all:${String(adForm.elements.placement.value).split(':')[1] || 'top'}` : adForm.elements.placement.value));
   adForm.elements.placement.addEventListener('change', () => {
     const before = adForm.elements.tier.value;
     setPlacement(adForm.elements.placement.value);
@@ -815,6 +816,9 @@
     e.preventDefault();
     const done = adForm.querySelector('.form-done'), btn = adForm.querySelector('button[type=submit]');
     const form = new FormData(adForm);
+    // "Keep this ad in this space across all pages": saved against the space itself (all:left1).
+    if (form.get('every_page')) form.set('placement', `all:${String(form.get('placement')).split(':')[1]}`);
+    form.delete('every_page');
     form.delete('image');
     if (crop.img) {
       const contain = adForm.elements.fit.value === 'contain';
@@ -851,7 +855,7 @@
   let slotPages = [], slotPositions = [];
   const slotName = v => {
     const [page, pos] = String(v || '').split(':');
-    const p = slotPages.find(x => x[0] === page), q = slotPositions.find(x => x[0] === pos);
+    const p = [...slotPages, ['all', 'Every page']].find(x => x[0] === page), q = slotPositions.find(x => x[0] === pos);
     return p && q ? `${p[1]} – ${q[1]}` : 'No slot chosen';
   };
   const today = () => new Date().toISOString().slice(0, 10);
@@ -859,25 +863,31 @@
   let nextPlacement = '';
   function setPlacement(v) {
     const sel = adForm.elements.placement;
+    // An advert kept on every page is shown in the form as the Home space with the box ticked.
+    const every = String(v).startsWith('all:');
+    adForm.elements.every_page.checked = every;
+    if (every) v = `home:${v.slice(4)}`;
     sel.value = v;
     if (sel.value !== v) sel.value = '';
     adForm.elements.tier.value = String(sel.value).endsWith(':top') ? 'large' : 'small';
-    $('slot-mini').innerHTML = sel.value ? miniMap(sel.value) : '<p class="meta">Choose a slot to see where it sits on the page.</p>';
+    $('slot-mini').innerHTML = sel.value ? miniMap(sel.value, adForm.elements.every_page.checked) : '<p class="meta">Choose a slot to see where it sits on the page.</p>';
   }
   // A small drawing of a page with the chosen slot picked out.
-  function miniMap(selected) {
+  function miniMap(selected, every) {
     const page = selected.split(':')[0];
     const cell = pos => `<span class="mm-${pos.startsWith('left') ? 'l' : pos.startsWith('right') ? 'r' : 't'}${`${page}:${pos}` === selected ? ' on' : ''}">${pos === 'top' ? 'Top' : pos.replace(/^left/, 'L').replace(/^right/, 'R')}</span>`;
-    return `<div class="mm"><div class="mm-head">${esc(slotName(`${page}:top`).split(' – ')[0])} page</div>${cell('top')}
+    return `<div class="mm"><div class="mm-head">${every ? 'Every page' : `${esc(slotName(`${page}:top`).split(' – ')[0])} page`}</div>${cell('top')}
       <div class="mm-body"><div class="mm-col">${cell('left1')}${cell('left2')}${cell('left3')}</div><div class="mm-main">Page content</div><div class="mm-col">${cell('right1')}${cell('right2')}${cell('right3')}</div></div></div>`;
   }
   function slotIndex() {
     const box = (page, pos) => {
-      const v = `${page}:${pos}`, here = ads.filter(a => a.placement === v);
+      const v = `${page}:${pos}`, own = ads.filter(a => a.placement === v);
+      // The page's own advert first, otherwise one kept in this space on every page.
+      const here = own.some(isLive) ? own : [...own, ...ads.filter(a => a.placement === `all:${pos}`)];
       const now = here.find(isLive), next = here.filter(a => !isLive(a) && a.starts_on && a.starts_on > today()).sort((x, y) => x.starts_on.localeCompare(y.starts_on))[0];
       return `<button type="button" class="si-slot si-${pos === 'top' ? 'top' : 'side'}${now ? ' booked' : ''}" data-slot="${v}" title="${esc(slotName(v))}">
         <span class="si-name">${esc(slotName(v))}</span>
-        <span class="si-who">${now ? esc(now.name) : 'Available'}${now && now.ends_on ? ` <small>until ${esc(niceDate(now.ends_on))}</small>` : ''}${next ? ` <small>next: ${esc(next.name)} from ${esc(niceDate(next.starts_on))}</small>` : ''}</span></button>`;
+        <span class="si-who">${now ? `${esc(now.name)}${now.placement.startsWith('all:') ? ' <small>every page</small>' : ''}` : 'Available'}${now && now.ends_on ? ` <small>until ${esc(niceDate(now.ends_on))}</small>` : ''}${next ? ` <small>next: ${esc(next.name)} from ${esc(niceDate(next.starts_on))}</small>` : ''}</span></button>`;
     };
     $('ad-index').innerHTML = slotPages.map(([page, label]) => `<section class="si-page"><h4>${esc(label)}</h4>${box(page, 'top')}
       <div class="si-body"><div class="si-col">${['left1', 'left2', 'left3'].map(p => box(page, p)).join('')}</div><div class="si-main">${esc(label)} page content</div><div class="si-col">${['right1', 'right2', 'right3'].map(p => box(page, p)).join('')}</div></div></section>`).join('');
@@ -885,7 +895,8 @@
   $('ad-index').addEventListener('click', e => {
     const b = e.target.closest('[data-slot]');
     if (!b) return;
-    const v = b.dataset.slot, live = ads.find(a => a.placement === v && isLive(a));
+    const v = b.dataset.slot, pos = v.split(':')[1];
+    const live = ads.find(a => a.placement === v && isLive(a)) || ads.find(a => a.placement === `all:${pos}` && isLive(a));
     if (live) return setEditingAd(live);
     nextPlacement = v;
     setEditingAd(null);
@@ -902,7 +913,7 @@
       const v = `${page}:${pos}`; return `<option value="${v}">${esc(slotName(v))} (${pos === 'top' ? 'banner' : 'side box'})</option>`; }).join('')}</optgroup>`).join('');
     setPlacement(editingAd ? editingAd.placement || '' : keep);
     slotIndex();
-    const order = v => { const i = slotPages.findIndex(p => v && v.startsWith(p[0] + ':')), j = slotPositions.findIndex(p => v && v.endsWith(':' + p[0])); return i < 0 ? 999 : i * 10 + j; };
+    const order = v => { if (v && v.startsWith('all:')) return -10 + slotPositions.findIndex(p => v.endsWith(':' + p[0])); const i = slotPages.findIndex(p => v && v.startsWith(p[0] + ':')), j = slotPositions.findIndex(p => v && v.endsWith(':' + p[0])); return i < 0 ? 999 : i * 10 + j; };
     const sorted = [...ads].sort((a, b) => order(a.placement) - order(b.placement));
     const t = today();
     $('ad-list').innerHTML = sorted.length ? sorted.map(a => `<div class="adm-card">
@@ -939,6 +950,7 @@
   async function loadStallions() {
     const d = await api('/api/admin/stallions');
     $('sire-names').innerHTML = d.sires.map(n => `<option value="${esc(n)}">`).join('');
+    renderFeature(d);
     $('st-list').innerHTML = d.listings.map(s => `<form class="form st-card" data-slot="${s.slot}">
       <h4>Stallions – Listing ${s.slot}${s.name ? '' : ' <small>(available)</small>'}</h4>
       ${s.image_key ? `<img class="adm-thumb" src="/media/${esc(s.image_key)}" alt="">` : ''}
@@ -952,6 +964,39 @@
       <div class="form-done${stallionNote && stallionNote.slot === s.slot ? (stallionNote.ok ? ' ok' : ' err') : ''}" role="status">${stallionNote && stallionNote.slot === s.slot ? esc(stallionNote.text) : ''}</div>
     </form>`).join('');
   }
+  // Sires mentioned most (and any other sire): one click puts him into a listing.
+  function renderFeature(d) {
+    const featured = new Map(d.listings.filter(l => l.name).flatMap(l => (l.matched || []).map(m => [m, l.slot])));
+    const free = d.listings.filter(l => !l.name).map(l => l.slot);
+    const slotSel = () => `<select class="feat-slot">${d.listings.map(l => `<option value="${l.slot}"${l.slot === free[0] ? ' selected' : ''}>Listing ${l.slot}${l.name ? ` (replaces ${esc(l.name)})` : ' (free)'}</option>`).join('')}</select>`;
+    $('st-feature').innerHTML = `<h4>Sires mentioned most <small>${esc(d.window.label)}</small></h4>
+      <p class="meta">Put any sire into one of the six listings with one click (you can add a photo and blurb afterwards). ${free.length ? `${free.length} listing${free.length === 1 ? ' is' : 's are'} free.` : 'All six are taken: choose which listing to replace.'}</p>
+      <table class="feat-table"><thead><tr><th>#</th><th>Sire</th><th class="num">Mentions</th><th class="num">Horses</th><th class="num">Wins</th><th></th></tr></thead><tbody>
+      ${d.top.map((t, i) => `<tr data-sire="${esc(t.name)}"><td>${i + 1}</td><td><b>${esc(t.name)}</b></td><td class="num">${t.mentions}</td><td class="num">${t.horses}</td><td class="num">${t.wins}</td>
+        <td class="acts">${featured.has(t.name) ? `<span class="st st-live">In listing ${featured.get(t.name)}</span>` : `${slotSel()} <button class="btn sm" type="button" data-feature>Feature</button>`}</td></tr>`).join('')}
+      </tbody></table>
+      <div class="feat-any" data-any><label>Any other sire<input class="feat-name" list="sire-names" placeholder="Start typing a sire's name"></label> ${slotSel()} <button class="btn sm" type="button" data-feature>Feature</button></div>
+      <div class="form-done" role="status" id="feat-done"></div>`;
+  }
+  $('st-feature').addEventListener('click', async e => {
+    const b = e.target.closest('[data-feature]');
+    if (!b) return;
+    const row = b.closest('[data-sire], [data-any]');
+    const name = row.dataset.sire || row.querySelector('.feat-name').value.trim();
+    const slot = Number(row.querySelector('.feat-slot').value);
+    if (!name) return;
+    const sel = row.querySelector('.feat-slot'), replacing = /replaces/.test(sel.options[sel.selectedIndex].text);
+    if (replacing && !confirm(`Put ${name} into Listing ${slot}? It replaces the stallion there now.`)) return;
+    const form = new FormData(); form.append('slot', slot); form.append('name', name); form.append('sire_names', name);
+    b.disabled = true;
+    try {
+      const r = await api('/api/admin/stallions', { method: 'POST', form });
+      stallionNote = { slot, ...savedText(r) };
+      await loadStallions();
+      $('feat-done').className = 'form-done ok';
+      $('feat-done').textContent = `✓ ${name} is now Stallions – Listing ${slot}. Add a photo and blurb below.`;
+    } catch (err) { $('feat-done').className = 'form-done err'; $('feat-done').textContent = `Not saved: ${err.message}`; b.disabled = false; }
+  });
   $('st-list').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target, done = f.querySelector('.form-done'), btn = f.querySelector('button[type=submit]'), form = new FormData(f);
@@ -1044,9 +1089,60 @@
     } catch (err) { done.className = 'form-done err'; done.textContent = `Not saved: ${err.message}`; }
     finally { btn.disabled = false; }
   });
+  // Stallions & sires: rename, codes, and joining two spellings of the same stallion.
+  document.querySelectorAll('[data-breed-mode]').forEach(b => b.addEventListener('click', () => {
+    const sires = b.dataset.breedMode === 'sires';
+    document.querySelectorAll('[data-breed-mode]').forEach(x => x.classList.toggle('active', x === b));
+    $('sire-pane').hidden = !sires; $('horse-pane').hidden = sires; $('horse-intro').hidden = sires;
+    if (sires && !$('sire-list').innerHTML) loadSires();
+  }));
+  function sireCard(x) {
+    return `<form class="form breed-card sire-card" data-id="${x.id}">
+      <div class="breed-head"><b>${esc(x.name)}</b> <span class="meta">${x.progeny} horse${x.progeny === 1 ? '' : 's'} by him · ${x.results} result${x.results === 1 ? '' : 's'} · dam sire of ${x.as_dam_sire}</span>
+        ${x.similar.length ? `<span class="gap-tag">Also spelt: ${esc(x.similar.join(', '))}?</span>` : ''}
+        <a class="breed-look" href="${shdLink(x.name)}" target="_blank" rel="noopener">Find on sporthorse-data.com ↗</a></div>
+      <div class="breed-grid">
+        <label>Name<input name="name" value="${esc(x.name)}" maxlength="120" required></label>
+        <label>Breed code<input name="breed" value="${esc(x.breed_code || '')}" maxlength="8" placeholder="e.g. ISH"></label>
+        <label class="chk"><input type="checkbox" name="tih" value="1"${x.tih_flag ? ' checked' : ''}> Traditional Irish Horse [TIH]</label>
+        <label>Join into another stallion (same horse, other spelling)<input name="merge_into" list="breed-sires" placeholder="${x.similar[0] ? esc(x.similar[0]) : 'Leave empty'}"></label>
+      </div>
+      <div class="adm-actions"><button class="btn sm" type="submit">Save stallion</button>
+        <a href="#" data-sire-progeny="${esc(x.name)}">Edit his progeny's breeding records →</a></div>
+      <div class="form-done" role="status"></div>
+    </form>`;
+  }
+  async function loadSires(q = '') {
+    $('sire-list').innerHTML = '<div class="empty-state">Loading…</div>';
+    const d = await api(`/api/admin/breeding?${new URLSearchParams({ kind: 'sires', q })}`);
+    $('sire-list').innerHTML = d.sires.map(sireCard).join('') || '<div class="empty-state">No stallions match.</div>';
+  }
+  $('sire-search').addEventListener('submit', e => { e.preventDefault(); loadSires(e.target.elements.q.value.trim()); });
+  $('sire-list').addEventListener('click', e => {
+    const a = e.target.closest('[data-sire-progeny]');
+    if (!a) return;
+    e.preventDefault();
+    document.querySelector('[data-breed-mode="horses"]').click();
+    loadBreeding({ q: '', sire: a.dataset.sireProgeny, gaps: false });
+  });
+  $('sire-list').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, done = f.querySelector('.form-done'), btn = f.querySelector('button[type=submit]');
+    const into = f.elements.merge_into.value.trim();
+    if (into && !confirm(`Join "${f.elements.name.value}" into "${into}"? All its progeny, mares and results move across and this spelling disappears.`)) return;
+    btn.disabled = true; done.className = 'form-done'; done.textContent = 'Saving…';
+    try {
+      const r = await api('/api/admin/breeding', { method: 'POST', body: { kind: 'sire', id: Number(f.dataset.id), name: f.elements.name.value, breed: f.elements.breed.value, tih: f.elements.tih.checked, merge_into: into } });
+      done.className = 'form-done ok';
+      done.textContent = r.merged ? '✓ Joined. Everything for this spelling now sits under the other stallion; the site is updated.' : '✓ Saved. Every result shows the new details.';
+    } catch (err) { done.className = 'form-done err'; done.textContent = `Not saved: ${err.message}`; }
+    finally { btn.disabled = false; }
+  });
+
   // From a stallion listing: straight to that stallion's progeny.
   function openBreedingFor(sire) {
     breedQuery = { q: '', sire, gaps: false };
+    document.querySelector('[data-breed-mode="horses"]').click();
     document.querySelector('#adm-tabs button[data-a="breeding"]').click();
   }
 

@@ -451,18 +451,6 @@
           <div class="article-snippet">${esc(a.snippet)}</div>
         </div>
       </a>`).join('') : '<div class="empty-state">No news yet.</div>';
-    api('/api/links').then(d => {
-      const links = d.links || [];
-      $('news-links').innerHTML = links.length ? `<h3 class="section-title">Elsewhere</h3>${links.map(l => `
-        <a class="article" href="${esc(l.url)}" target="_blank" rel="noopener">
-          ${l.image_key ? `<div class="article-thumb"><img src="${imgUrl(l.image_key)}" alt="" loading="lazy"></div>` : ''}
-          <div>
-            <div class="article-date">${l.card_date ? `${esc(niceDate(l.card_date))} · ` : ''}${esc(l.source_name || hostOf(l.url))} ↗</div>
-            <div class="article-title">${esc(l.title)}</div>
-            ${l.teaser ? `<div class="article-snippet">${esc(l.teaser)}</div>` : ''}
-          </div>
-        </a>`).join('')}` : '';
-    }).catch(() => {});
   }
 
   let lastFocus = null;
@@ -595,15 +583,28 @@
     const body = banner ? `${AD_LABEL}${inner}` : `${AD_LABEL}<span class="ad-body">${inner}</span>`;
     return ad.link ? `<a class="${cls}" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${body}</a>` : `<div class="${cls}">${body}</div>`;
   }
+  // A link card (an article on another website) fills a side space that has no advert, in the owner's order;
+  // any space still empty shows "Advertise here".
+  function linkCardHTML(l) {
+    return `<a class="slot ad-box link-card" href="${esc(l.url)}" target="_blank" rel="noopener">
+      <span class="ad-label">Read more</span>
+      ${l.image_key ? `<span class="card-img"><img src="${imgUrl(l.image_key)}" alt="" loading="lazy"></span>` : ''}
+      <span class="card-body"><span class="card-kicker">${esc(l.source_name || hostOf(l.url))} ↗</span><b>${esc(l.title)}</b></span></a>`;
+  }
   let adsShown = null;
   function renderAds(view) {
     const page = AD_PAGE[view] || 'home';
     if (!state.adsLoaded || page === adsShown) return;
     adsShown = page;
-    const slot = pos => state.ads.slots[`${page}:${pos}`];
+    // The page's own advert for a space comes first, then one kept in that space on every page.
+    const slot = pos => state.ads.slots[`${page}:${pos}`] || state.ads.slots[`all:${pos}`];
+    const cards = [...(state.links || [])];
+    const side = pos => { const ad = slot(pos); return ad ? adHTML(ad, false) : cards.length ? linkCardHTML(cards.shift()) : adHTML(null, false); };
     $('banner-top').innerHTML = adHTML(slot('top'), true);
-    $('side-left').innerHTML = ['left1', 'left2', 'left3'].map(p => adHTML(slot(p), false)).join('');
-    $('side-right').innerHTML = ['right1', 'right2', 'right3'].map(p => adHTML(slot(p), false)).join('');
+    const order = ['left1', 'right1', 'left2', 'right2', 'left3', 'right3'].map(p => [p, side(p)]);
+    const html = Object.fromEntries(order);
+    $('side-left').innerHTML = ['left1', 'left2', 'left3'].map(p => html[p]).join('');
+    $('side-right').innerHTML = ['right1', 'right2', 'right3'].map(p => html[p]).join('');
   }
 
   /* ---------- Stallions: six paid listings, each with its progeny breakdown from the results ----------
@@ -754,7 +755,7 @@
     turnstileReady(state.config.turnstileSiteKey);
     document.querySelectorAll('form .ts-slot').forEach(s => mountTurnstile(s.closest('form')));
     render();
-    try { state.ads = await api('/api/ads'); } catch { /* the slots show as available */ }
+    try { [state.ads, state.links] = await Promise.all([api('/api/ads'), api('/api/links').then(d => d.links || []).catch(() => [])]); } catch { /* the slots show as available */ }
     state.adsLoaded = true;
     renderAds(routeFromUrl().view);
   }

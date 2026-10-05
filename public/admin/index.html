@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/site.css?v=3">
-<link rel="stylesheet" href="/admin/admin.css?v=7">
+<link rel="stylesheet" href="/admin/admin.css?v=8">
 </head>
 <body>
 
@@ -33,7 +33,6 @@
     <button class="chip active" data-a="results">Results</button>
     <button class="chip" data-a="unverified">Unverified <span class="count" id="n-unverified" hidden></span></button>
     <button class="chip" data-a="news">News</button>
-    <button class="chip" data-a="links">Link cards</button>
     <button class="chip" data-a="ads">Ads</button>
     <button class="chip" data-a="stallions">Stallions</button>
     <button class="chip" data-a="breeding">Breeding records</button>
@@ -98,31 +97,6 @@
     <div id="news-list"></div>
   </div>
 
-  <!-- LINK CARDS -->
-  <div class="adm-pane" id="adm-links">
-    <h3 id="links-form-title">Add a link card</h3>
-    <p class="intro">Link cards point to articles on other websites and open in a new tab. They show on the News page under "Elsewhere", in the order below.</p>
-    <form class="form" id="links-form">
-      <input type="hidden" name="id">
-      <label>Headline<input type="text" name="title" maxlength="200" required></label>
-      <label>Web address<input type="text" name="url" placeholder="https://" inputmode="url" required></label>
-      <label>Short teaser (optional)<textarea name="teaser" maxlength="400" style="min-height:70px;"></textarea></label>
-      <div class="form-row">
-        <label>Website name (optional)<input type="text" name="source_name" maxlength="120" placeholder="e.g. The Irish Field"></label>
-        <label>Date (optional)<input type="date" name="date"></label>
-      </div>
-      <label>Image<input type="file" name="image" accept="image/*"></label>
-      <label class="chk edit-only" hidden><input type="checkbox" name="remove_image" value="1"> Remove the current image</label>
-      <div class="adm-actions">
-        <button class="btn" type="submit">Save link card</button>
-        <button class="btn alt edit-only" type="button" data-cancel hidden>Cancel editing</button>
-      </div>
-      <div class="form-done" role="status"></div>
-    </form>
-    <h3 style="margin-top:40px;">Link cards, in order</h3>
-    <div id="links-list"></div>
-  </div>
-
   <!-- ADS -->
   <div class="adm-pane" id="adm-ads">
     <h3>Ads</h3>
@@ -133,7 +107,8 @@
       <input type="hidden" name="id">
       <input type="hidden" name="tier" value="small">
       <div class="placement-pick">
-        <label>Slot<select name="placement" required></select></label>
+        <div><label>Slot<select name="placement" required></select></label>
+        <label class="chk every-page"><input type="checkbox" name="every_page" value="1"> Keep this ad in this space across all pages</label></div>
         <div class="slot-mini" id="slot-mini" aria-hidden="true"></div>
       </div>
       <label>Advertiser name<input type="text" name="name" maxlength="80" required></label>
@@ -182,12 +157,49 @@
     </form>
     <h3 style="margin-top:40px;">Every advert, by slot</h3>
     <div id="ad-list"></div>
+    <section class="links-section" id="links-section">
+      <h3 class="section-split">Link cards (fill empty ad spaces)</h3>
+    <h3 id="links-form-title" style="margin-top:0;">Add a link card</h3>
+    <p class="intro">Link cards point to articles on other websites (e.g. Horse Sport Ireland or The Irish Field) and open in a new tab. They are only used to fill side ad spaces that have no advert: on every page, the empty spaces take the link cards in the order below (top row first), and any space still empty shows "Advertise here". A booked advert always takes its space back.</p>
+    <form class="form" id="links-form">
+      <input type="hidden" name="id">
+      <label>Headline<input type="text" name="title" maxlength="200" required></label>
+      <label>Web address<input type="text" name="url" placeholder="https://" inputmode="url" required></label>
+      <label>Short teaser (optional)<textarea name="teaser" maxlength="400" style="min-height:70px;"></textarea></label>
+      <div class="form-row">
+        <label>Website name (optional)<input type="text" name="source_name" maxlength="120" placeholder="e.g. The Irish Field"></label>
+        <label>Date (optional)<input type="date" name="date"></label>
+      </div>
+      <label>Image<input type="file" name="image" accept="image/*"></label>
+      <label class="chk edit-only" hidden><input type="checkbox" name="remove_image" value="1"> Remove the current image</label>
+      <div class="adm-actions">
+        <button class="btn" type="submit">Save link card</button>
+        <button class="btn alt edit-only" type="button" data-cancel hidden>Cancel editing</button>
+      </div>
+      <div class="form-done" role="status"></div>
+    </form>
+    <h3 style="margin-top:40px;">Link cards, in order</h3>
+    <div id="links-list"></div>
+    </section>
   </div>
 
   <!-- BREEDING RECORDS -->
   <div class="adm-pane" id="adm-breeding">
     <h3>Breeding records</h3>
-    <p class="intro">Find a horse and fill in or correct its breeding: sire, dam, dam sire, breeder, year of birth, sex and breed. Every result of that horse on the site shows the new details straight away, and the stallion numbers follow. Use <b>Find on sporthorse-data.com</b> to look the horse up, then copy across what you find and paste the page's address into "Where this came from". Type names with their codes if you have them, e.g. <i>Womanizer (KWPN)</i> or <i>Cruising (ISH)[TIH]</i>; leave a box empty (or type UNK) if it isn't known.</p>
+    <p class="intro" id="horse-intro">Find a horse and fill in or correct its breeding: sire, dam, dam sire, breeder, year of birth, sex and breed. Every result of that horse on the site shows the new details straight away, and the stallion numbers follow. Use <b>Find on sporthorse-data.com</b> to look the horse up, then copy across what you find and paste the page's address into "Where this came from". Type names with their codes if you have them, e.g. <i>Womanizer (KWPN)</i> or <i>Cruising (ISH)[TIH]</i>; leave a box empty (or type UNK) if it isn't known.</p>
+    <div class="chips breed-mode" role="tablist">
+      <button class="chip active" type="button" data-breed-mode="horses">Horses</button>
+      <button class="chip" type="button" data-breed-mode="sires">Stallions &amp; sires</button>
+    </div>
+    <div id="sire-pane" hidden>
+      <p class="intro">Correct a stallion's name, breed code or [TIH]. If the same stallion is in the records under two spellings (a typo in an article, e.g. <i>Imperial Hights</i>), type the right name, or pick it under "Join into", and the two become one: all their progeny, mares and results move across, and the stallion numbers follow.</p>
+      <form class="form breed-search" id="sire-search">
+        <label>Stallion name<input type="search" name="q" maxlength="100" placeholder="e.g. Imperial Heights (leave empty for the busiest sires)"></label>
+        <div class="adm-actions"><button class="btn" type="submit">Find stallions</button></div>
+      </form>
+      <div id="sire-list"></div>
+    </div>
+    <div id="horse-pane">
     <form class="form breed-search" id="breed-search">
       <div class="form-row">
         <label>Horse name or former name<input type="search" name="q" maxlength="100" placeholder="e.g. MM Irish Clover"></label>
@@ -199,12 +211,14 @@
     <datalist id="breed-sires"></datalist>
     <p class="meta" id="breed-count"></p>
     <div id="breed-list"></div>
+    </div>
   </div>
 
   <!-- STALLIONS -->
   <div class="adm-pane" id="adm-stallions">
     <h3>Stallions</h3>
     <p class="intro">The Stallions page has six paid listings, <b>Stallions – Listing 1</b> to <b>6</b>, shown in that order (1 is top left). Each listing opens its own page with the progeny breakdown, counted from every result for horses whose sire matches the names in "Sire name in the results". If the sire is spelt more than one way in the results, list every spelling, separated by commas. Clear a listing to show it as available.</p>
+    <section class="st-feature" id="st-feature"></section>
     <div class="stallion-admin" id="st-list"><p class="meta">Loading…</p></div>
     <datalist id="sire-names"></datalist>
   </div>
@@ -239,6 +253,6 @@
 </footer>
 
 <script src="/js/common.js?v=3"></script>
-<script src="/admin/admin.js?v=8"></script>
+<script src="/admin/admin.js?v=9"></script>
 </body>
 </html>

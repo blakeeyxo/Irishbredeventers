@@ -1,7 +1,7 @@
 // Owner area: the six stallion listings (Stallions – Listing 1 to 6). POST saves one; DELETE empties it.
 import { json, bad, str, text } from '../../../lib/http.js';
 import { saveImage } from '../../../lib/images.js';
-import { progeny, summary, rollingWindow, matchSires } from '../../../lib/stallions.js';
+import { progeny, summary, rollingWindow, matchSires, topSires } from '../../../lib/stallions.js';
 
 export async function onRequestGet({ env }) {
   const { results } = await env.DB.prepare('SELECT * FROM stallions ORDER BY slot').all();
@@ -14,7 +14,8 @@ export async function onRequestGet({ env }) {
     listings.push({ ...s, matched: matched.map(m => m.name), totals: s.sire_names ? summary(await progeny(env.DB, s.sire_names, win, matched)) : null });
   }
   const sires = (await env.DB.prepare('SELECT name FROM sires ORDER BY name').all()).results.map(r => r.name);
-  return json({ window: win, listings, sires });
+  // The sires mentioned most, so any of them can be put into a listing with one click.
+  return json({ window: win, listings, sires, top: await topSires(env.DB, win, 20) });
 }
 
 export async function onRequestPost({ env, request }) {
