@@ -279,3 +279,11 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .event-edit summary { cursor: pointer; font-weight: 600; }
 .event-edit .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .dup-row { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; border-top: 1px solid #ddd; }
+
+/* Photo framing window */
+.frame-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 1000; display: grid; place-items: center; padding: 16px; overflow: auto; }
+.frame-box { background: #fff; border-radius: 8px; padding: 16px; width: min(520px, 100%); max-height: 100%; overflow: auto; }
+.frame-stage { position: relative; width: 100%; overflow: hidden; margin: 8px 0; border: 2px solid #1f3d2b; touch-action: none; cursor: grab; }
+.frame-stage img { position: absolute; left: 0; top: 0; max-width: none; user-select: none; -webkit-user-drag: none; }
+.frame-zoom, .frame-whole { display: flex; gap: 10px; align-items: center; margin: 6px 0; }
+.frame-zoom input { flex: 1; }

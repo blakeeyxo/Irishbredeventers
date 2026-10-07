@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/site.css?v=3">
-<link rel="stylesheet" href="/admin/admin.css?v=16">
+<link rel="stylesheet" href="/admin/admin.css?v=17">
 </head>
 <body>
 
@@ -81,7 +81,8 @@
       <label>Article text<textarea name="body" style="min-height:220px;" required></textarea></label>
       <div class="form-row">
         <label>Date<input type="date" name="date"></label>
-        <label>Photo<input type="file" name="image" accept="image/*"></label>
+        <label>Photo<input type="file" name="image" data-frame="3/2" accept="image/*"></label>
+        <button class="btn sm alt" type="button" data-reframe="" hidden>Re-frame the current photo</button>
       </div>
       <div class="form-row">
         <label>Original web address (optional)<input type="text" name="source_url" placeholder="https://" inputmode="url"></label>
@@ -171,7 +172,8 @@
         <label>Website name (optional)<input type="text" name="source_name" maxlength="120" placeholder="e.g. The Irish Field"></label>
         <label>Date (optional)<input type="date" name="date"></label>
       </div>
-      <label>Image<input type="file" name="image" accept="image/*"></label>
+      <label>Image<input type="file" name="image" data-frame="4/3" accept="image/*"></label>
+      <button class="btn sm alt" type="button" data-reframe="" hidden>Re-frame the current image</button>
       <label class="chk edit-only" hidden><input type="checkbox" name="remove_image" value="1"> Remove the current image</label>
       <div class="adm-actions">
         <button class="btn" type="submit">Save link card</button>
@@ -252,6 +254,6 @@
 </footer>
 
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=17"></script>
+<script src="/admin/admin.js?v=18"></script>
 </body>
 </html>

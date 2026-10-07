@@ -478,6 +478,100 @@
   });
   $('adm-batches').addEventListener('click', rowAction);
 
+  /* ---------- Photo framing: fit a photo to the box the site shows it in ---------- */
+  // Opens a small window over the page: the photo moves and zooms under a box of the right shape (or is shown whole on
+  // a plain background). Gives back the framed picture as a file, or null if cancelled.
+  function framePhoto(src, ratio, title) {
+    return new Promise(resolve => {
+      const url = typeof src === 'string' ? src : URL.createObjectURL(src);
+      const ov = document.createElement('div');
+      ov.className = 'frame-overlay';
+      ov.innerHTML = `<div class="frame-box" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+        <h4>${esc(title)}</h4>
+        <p class="meta">Drag the photo to move it and use the slider to zoom. What is inside the box is exactly what the site shows.</p>
+        <div class="frame-stage" style="aspect-ratio:${ratio}"><img alt="" draggable="false"></div>
+        <label class="frame-zoom">Zoom <input type="range" min="1" max="4" step="0.01" value="1"></label>
+        <div class="frame-whole"><label class="chk"><input type="checkbox"> Show the whole photo (no cropping)</label>
+          <label class="frame-bg" hidden>Background <input type="color" value="#ffffff"></label></div>
+        <div class="adm-actions"><button class="btn" type="button" data-fr="ok">Use this framing</button>
+          <button class="btn alt" type="button" data-fr="cancel">Cancel</button></div></div>`;
+      document.body.appendChild(ov);
+      const stage = ov.querySelector('.frame-stage'), img = stage.querySelector('img');
+      const zoom = ov.querySelector('input[type=range]'), whole = ov.querySelector('.frame-whole input'), bgBox = ov.querySelector('.frame-bg'), bg = bgBox.querySelector('input');
+      let nw = 0, nh = 0, sw = 0, sh = 0, z = 1, tx = 0, ty = 0;
+      const cover = () => Math.max(sw / nw, sh / nh), contain = () => Math.min(sw / nw, sh / nh);
+      const scale = () => (whole.checked ? contain() : cover() * z);
+      function clamp() {
+        const k = scale(), W = nw * k, H = nh * k;
+        if (whole.checked) { tx = (sw - W) / 2; ty = (sh - H) / 2; return; }
+        tx = Math.min(0, Math.max(sw - W, tx)); ty = Math.min(0, Math.max(sh - H, ty));
+      }
+      function draw() {
+        clamp();
+        const k = scale();
+        Object.assign(img.style, { width: `${nw * k}px`, height: `${nh * k}px`, transform: `translate(${tx}px, ${ty}px)` });
+        stage.style.background = whole.checked ? bg.value : '#ddd';
+        zoom.disabled = whole.checked; bgBox.hidden = !whole.checked;
+      }
+      const close = r => { document.removeEventListener('keydown', onKey); ov.remove(); if (typeof src !== 'string') URL.revokeObjectURL(url); resolve(r); };
+      const onKey = e => { if (e.key === 'Escape') close(null); };
+      document.addEventListener('keydown', onKey);
+      img.onload = () => {
+        nw = img.naturalWidth; nh = img.naturalHeight; sw = stage.clientWidth; sh = stage.clientHeight;
+        tx = (sw - nw * cover()) / 2; ty = (sh - nh * cover()) / 2; draw();
+      };
+      img.onerror = () => close(null);
+      img.src = url;
+      let drag = null;
+      stage.addEventListener('pointerdown', e => { if (whole.checked) return; drag = { x: e.clientX, y: e.clientY, tx, ty }; stage.setPointerCapture(e.pointerId); });
+      stage.addEventListener('pointermove', e => { if (!drag) return; tx = drag.tx + e.clientX - drag.x; ty = drag.ty + e.clientY - drag.y; draw(); });
+      ['pointerup', 'pointercancel'].forEach(t => stage.addEventListener(t, () => { drag = null; }));
+      zoom.addEventListener('input', () => {
+        const old = scale(); z = Number(zoom.value); const k = scale() / old;
+        tx = sw / 2 - (sw / 2 - tx) * k; ty = sh / 2 - (sh / 2 - ty) * k; draw();
+      });
+      whole.addEventListener('change', () => { if (!whole.checked) { z = Number(zoom.value); tx = (sw - nw * scale()) / 2; ty = (sh - nh * scale()) / 2; } draw(); });
+      bg.addEventListener('input', draw);
+      ov.addEventListener('click', async e => {
+        if (e.target === ov) return close(null);
+        const b = e.target.closest('button[data-fr]');
+        if (!b) return;
+        if (b.dataset.fr === 'cancel') return close(null);
+        const outW = 1200, outH = Math.round(outW * sh / sw), k = outW / sw, c = document.createElement('canvas');
+        c.width = outW; c.height = outH;
+        const g = c.getContext('2d');
+        g.fillStyle = bg.value; g.fillRect(0, 0, outW, outH);
+        g.imageSmoothingQuality = 'high';
+        g.drawImage(img, tx * k, ty * k, nw * scale() * k, nh * scale() * k);
+        c.toBlob(blob => close(blob ? new File([blob], 'photo.jpg', { type: 'image/jpeg' }) : null), 'image/jpeg', 0.88);
+      });
+    });
+  }
+  const ratioOf = t => { const [a, b] = String(t || '4/3').split('/').map(Number); return b ? a / b : a; };
+  function setFile(input, file) { const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files; }
+  // Any photo box marked data-frame="4/3" opens the framing window as soon as a photo is chosen.
+  document.addEventListener('change', async e => {
+    const inp = e.target;
+    if (!(inp instanceof HTMLInputElement) || inp.type !== 'file' || !inp.dataset.frame || !inp.files[0]) return;
+    const file = inp.files[0];
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) return;
+    const r = await framePhoto(file, inp.dataset.frame, 'Fit the photo to its box');
+    if (r) setFile(inp, r); else inp.value = '';
+  });
+  // Re-frame a photo that is already on the site: opens it in the same window; the framed copy replaces it on Save.
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('button[data-reframe]');
+    if (!b) return;
+    const form = b.closest('form'), inp = form && form.querySelector('input[type=file][data-frame]');
+    if (!inp || !b.dataset.reframe) return;
+    b.disabled = true;
+    const r = await framePhoto(b.dataset.reframe, inp.dataset.frame, 'Re-frame this photo');
+    b.disabled = false;
+    if (!r) return;
+    setFile(inp, r);
+    if (b.hasAttribute('data-submit')) form.requestSubmit(); else { const d = form.querySelector('.form-done'); if (d) d.textContent = 'Photo re-framed. Press Save to put it on the site.'; }
+  });
+
   /* ---------- Images: shrink before upload ---------- */
   function shrinkImage(file, maxW) {
     return new Promise(resolve => {
@@ -521,6 +615,8 @@
       f.reset();
       f.elements.id.value = item ? item.id : '';
       f.querySelectorAll('.edit-only').forEach(el => { el.hidden = !item; });
+      const rf = f.querySelector('[data-reframe]');
+      if (rf) { rf.dataset.reframe = item && item.image_key ? `/media/${item.image_key}` : ''; rf.hidden = !(item && item.image_key); }
       $(titleEl).textContent = item ? `Edit ${noun}: ${item.title}` : addTitle;
       f.querySelector('button[type=submit]').textContent = item ? 'Save changes' : (key === 'news' ? 'Publish article' : 'Save link card');
       if (!item) return;
@@ -642,8 +738,7 @@
       </tbody></table>
       <p class="meta">${layout.measured ? 'Measured from the site as it is now.' : 'Could not measure the site just now, so these are the sizes from the stylesheet.'}
       The recommended size is twice the box so it stays sharp on high-resolution screens. A smaller image still works,
-      but you'll see a warning: it will be stretched to fit and may look soft or blurry. A small "Advertisement" label sits in the
-      top-left corner of every advert, so keep important words away from that corner.</p>`;
+      but you'll see a warning: it will be stretched to fit and may look soft or blurry..</p>`;
   }
 
   // 2. Crop tool: the picture moves and zooms under a fixed crop box (or a free-shape box with corner handles).
@@ -855,7 +950,7 @@
     const style = `width:100%;height:100%;display:block;object-fit:${contain ? `contain;background:${f.bg.value}` : 'cover'}`;
     const inner = (cls, view) => src[view] ? `<img src="${src[view]}" alt="" style="${style}">` : `<span class="${cls}">${esc(name)}</span>`;
     const L = layout.laptop, P = layout.phone;
-    const label = '<span class="ad-label">Advertisement</span>';
+    const label = '';
     const box = (size, text, view) => `<figure><div class="ad-box" style="aspect-ratio:auto;max-height:none;width:${size[0]}px;height:${size[1]}px;">${label}<span class="ad-body">${inner('ad-name', view)}</span></div><figcaption>${text}</figcaption></figure>`;
     const where = esc(slotName(f.placement.value));
     $('ad-preview-boxes').innerHTML = f.tier.value === 'large'
@@ -1079,12 +1174,12 @@
     renderFeature(d);
     $('st-list').innerHTML = d.listings.map(s => `<form class="form st-card" data-slot="${s.slot}">
       <h4>Stallions – Listing ${s.slot}${s.name ? '' : ' <small>(available)</small>'}</h4>
-      ${s.image_key ? `<img class="adm-thumb" src="/media/${esc(s.image_key)}" alt="">` : ''}
+      ${s.image_key ? `<img class="adm-thumb" src="/media/${esc(s.image_key)}" alt=""> <button class="btn sm alt" type="button" data-reframe="/media/${esc(s.image_key)}" data-submit>Re-frame this photo</button>` : ''}
       <label>Stallion name<input type="text" name="name" maxlength="80" value="${esc(s.name || '')}" required></label>
       <label>Sire name in the results <small>(commas between spellings; blank = the stallion name; breed codes, capitals and small typos don't matter)</small><input type="text" name="sire_names" maxlength="300" list="sire-names" value="${esc(s.sire_names || '')}"></label>
       <label>Short blurb (optional)<textarea name="blurb" maxlength="400" style="min-height:70px;">${esc(s.blurb || '')}</textarea></label>
       <label>Stud website (optional)<input type="text" name="link" placeholder="https://" inputmode="url" value="${esc(s.link || '')}"></label>
-      <label>Photo${s.image_key ? ' (leave empty to keep the current one)' : ''} <small>JPG, PNG, WebP or GIF</small><input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+      <label>Photo${s.image_key ? ' (leave empty to keep the current one)' : ''} <small>JPG, PNG, WebP or GIF</small><input type="file" name="image" data-frame="4/3" accept="image/jpeg,image/png,image/webp,image/gif"></label>
       ${s.name ? `<p class="meta">${s.matched.length ? `Matches in the results: <b>${esc(s.matched.join(', '))}</b>. ${esc(d.window.label)}: <b>${s.totals.mentions}</b> mentions by ${s.totals.horses} horses, ${s.totals.wins} wins.` : '<b>No results found yet for this sire spelling.</b>'} <a href="/stallions/${s.slot}" target="_blank" rel="noopener">See the page ↗</a> · <a href="#" data-st-breeding="${esc(s.sire_names || s.name)}">Edit this stallion and his progeny →</a></p>` : ''}
       <div class="adm-actions"><button class="btn sm" type="submit">Save listing ${s.slot}</button>${s.name ? `<button class="btn sm alt" type="button" data-st-clear>Clear</button>` : ''}</div>
       <div class="form-done${stallionNote && stallionNote.slot === s.slot ? (stallionNote.ok ? ' ok' : ' err') : ''}" role="status">${stallionNote && stallionNote.slot === s.slot ? esc(stallionNote.text) : ''}</div>

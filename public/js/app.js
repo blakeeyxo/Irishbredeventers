@@ -590,7 +590,7 @@
   };
   const hostOf = url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
   const AD_PAGE = { home: 'home', results: 'results', horse: 'results', search: 'results', news: 'news', stallions: 'stallions', about: 'about' };
-  const AD_LABEL = '<span class="ad-label">Advertisement</span>';
+  const AD_LABEL = ''; // adverts carry no label
   function adHTML(ad, banner, space = '') {
     const cls = banner ? 'banner' : 'slot ad-box';
     if (!ad) {
