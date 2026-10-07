@@ -271,3 +271,10 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .kind-tag.horse { background: var(--ink-faint); }
 .join-into { grid-column: span 2; }
 @media (max-width: 560px) { .join-into { grid-column: auto; } }
+
+/* Event heading on every result card: country + event name, clearly visible */
+.event-head { margin: 4px 0 8px; font-size: 14px; }
+.event-head .ev-country { display: inline-block; background: #1f3d2b; color: #fff; padding: 1px 8px; border-radius: 10px; font-size: 12px; margin-right: 6px; }
+.event-edit { margin: 8px 0; border: 1px dashed #b9b9a8; border-radius: 6px; padding: 6px 10px; }
+.event-edit summary { cursor: pointer; font-weight: 600; }
+.event-edit .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }

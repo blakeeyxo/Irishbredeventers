@@ -303,7 +303,7 @@
     box.innerHTML = `<form class="form batch-label" data-id="${id}"><label>Upload name<input name="label" value="${esc(label)}" maxlength="120"></label>
         <div class="adm-actions"><button class="btn sm" type="submit">Save name</button></div></form>
       <p class="meta">${d.rows.length} results. Correct any field and press Save; Delete takes one result off the site.</p>
-      <div class="unv-list">${d.rows.map(rowEditCard).join('')}</div>`;
+      <div class="unv-list">${d.rows.map(r => rowEditCard(r)).join('')}</div>`;
   }
   $('adm-batches').addEventListener('click', async e => {
     const del = e.target.closest('[data-del-batch]'), edit = e.target.closest('[data-edit-batch]'), pub = e.target.closest('[data-pub-batch]');
@@ -330,23 +330,42 @@
   const FIELDS = [['position', 'Pos'], ['horse_name', 'Horse'], ['former_name', 'Former name(s)'], ['breed', 'Breed'], ['foaled', 'Foaled'], ['sex', 'Sex'],
     ['sire', 'Sire'], ['dam', 'Dam'], ['dam_sire', 'Dam sire'], ['breeder', 'Breeder'], ['dressage', 'Dressage'], ['show_jumping', 'Show jumping'], ['cross_country', 'Cross country'], ['score', 'Final score']];
 
-  // One result as an editable card: in the Unverified tab, and under an upload opened with Edit.
-  // In the Unverified tab (check = true) each row has a Verified tick box instead of buttons: nothing is saved
-  // until Done, and only ticked rows go live. Editing a row ticks it.
+  // One result as an editable card: in the Unverified tab (check = true: a Verified tick box and no buttons, nothing
+  // saved until Done), and under an upload opened with Edit (check = false: Save buttons). Always called with
+  // explicit arguments, never passed straight to .map(), which would hand it the list position and the whole list.
+  const resultLabel = r => `${ordinal(r.position)} · ${r.horse_name || '?'}`;
+  // The event the result sits in, as a clear heading: country first, then the event, then the class.
+  const eventHeading = r => `<div class="event-head"><span class="ev-country">${esc(r.country || '?')}</span> <b>${esc(r.event_name || '?')}</b>
+      <span class="meta">${esc(r.date_text || niceDate(r.start_date))} · ${esc(r.class_name || '')}</span></div>`;
+  // Wrong event or country? Correct it here, without a re-import.
+  function eventFixHTML(r) {
+    const n = r.event_results || 1;
+    return `<details class="event-edit" data-event="${r.event_id}" data-placing="${r.id}"><summary>Wrong event or country? Fix it</summary>
+      <div class="form-row"><label>Event name<input name="ev_name" value="${esc(r.event_name || '')}" maxlength="200"></label>
+        <label>Country<select name="ev_country">${(countryList.includes(r.country) ? countryList : [...countryList, r.country]).map(c => `<option${c === r.country ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label></div>
+      <div class="form-row"><label>Starts<input type="date" name="ev_start" value="${esc(r.start_date || '')}"></label><label>Ends (optional)<input type="date" name="ev_end" value="${esc(r.end_date || '')}"></label></div>
+      <div class="adm-actions"><button class="btn sm" type="button" data-ev-save>Correct this event (all ${n} result${n === 1 ? '' : 's'} in it)</button>
+        <button class="btn sm alt" type="button" data-ev-move>Move only this result to this event</button><span class="form-done" role="status"></span></div>
+      <p class="meta"><b>Correct this event</b> changes the name, dates and country for everyone filed under it (for example UK that should be US). <b>Move only this result</b> puts just this one result under the event typed above, made new if it doesn't exist yet.</p></details>`;
+  }
   function rowEditCard(r, check = false, n = 0) {
     if (check) {
       return `<form class="adm-card check-card" data-id="${r.id}">
         <div class="check-head"><label class="chk verify-tick"><input type="checkbox" name="__verify"> Verified: put it on the site</label>
-          <b>Row ${n}: ${esc(r.horse_name || '?')}</b> <span class="meta">${esc(ordinal(r.position))} · ${esc(r.country)} · ${esc(r.event_name)} · ${esc(r.class_name)}</span></div>
+          <b>${esc(resultLabel(r))}</b></div>
+        ${eventHeading(r)}
         <ul class="problems">${(r.problems || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>
         ${r.raw_line ? `<p class="meta">As written in the article: ${esc(r.raw_line)}</p>` : ''}
         <div class="adm-row-edit">${FIELDS.map(([k, l]) => `<label>${l}<input name="${k}" value="${esc(r[k] ?? '')}"></label>`).join('')}</div>
+        ${eventFixHTML(r)}
         <div class="adm-actions"><button class="btn sm alt" data-act="remove">Delete this result</button><span class="form-done" role="status"></span></div></form>`;
     }
     return `<form class="adm-card" data-id="${r.id}" data-verified="${r.verified ? 1 : 0}">
-      <b>${esc(r.horse_name || '?')}</b>${r.doubtful ? ' <span class="iss">Unverified: hidden from the site until verified</span>' : r.oio ? ' <span class="gap-tag">OIO on the site</span>' : ''} <span class="meta">${esc(r.country)} · ${esc(r.event_name)} · ${esc(r.class_name)}</span>
+      <b>${esc(resultLabel(r))}</b>${r.doubtful ? ' <span class="iss">Unverified: hidden from the site until verified</span>' : r.oio ? ' <span class="gap-tag">OIO on the site</span>' : ''}
+      ${eventHeading(r)}
       ${r.raw_line ? `<p class="meta">${r.parse_ok ? 'As written' : 'Could not be read cleanly. As written'}: ${esc(r.raw_line)}</p>` : ''}
       <div class="adm-row-edit">${FIELDS.map(([k, l]) => `<label>${l}<input name="${k}" value="${esc(r[k] ?? '')}"></label>`).join('')}</div>
+      ${eventFixHTML(r)}
       <div class="adm-actions">${r.verified
         ? '<button class="btn sm" data-act="save-verified">Save</button>'
         : '<button class="btn sm" data-act="verify">Save and mark as verified</button><button class="btn sm alt" data-act="save">Save, keep unverified</button>'}
@@ -409,7 +428,25 @@
       const msg = $('unv-msg'); if (msg) { msg.className = 'form-done ok'; msg.textContent = `✓ Event named: ${r.results} results are now under it${r.merged ? ' (joined an existing event)' : ''}. Tick Verified on the rows and press Done to put them on the site.`; }
     } catch (err) { done.className = 'form-done err'; done.textContent = `Not saved: ${err.message}`; btn.disabled = false; }
   });
+  // "Correct this event" / "Move only this result": from any result card, in the Unverified tab or an opened upload.
+  async function eventFixClick(e) {
+    const save = e.target.closest('[data-ev-save]'), move = e.target.closest('[data-ev-move]');
+    if (!save && !move) return false;
+    const box = e.target.closest('.event-edit'), done = box.querySelector('.form-done');
+    const f = { name: box.querySelector('[name=ev_name]').value, country: box.querySelector('[name=ev_country]').value, start_date: box.querySelector('[name=ev_start]').value, end_date: box.querySelector('[name=ev_end]').value };
+    if (save && !confirm(`Change the event for everyone filed under it to "${f.name}", ${f.country}, ${f.start_date}?`)) return true;
+    done.className = 'form-done'; done.textContent = 'Saving…';
+    try {
+      const r = await api('/api/admin/unverified', { method: 'POST', body: save ? { eventFix: { id: Number(box.dataset.event), ...f } } : { moveResult: { id: Number(box.dataset.placing), ...f } } });
+      done.className = 'form-done ok';
+      done.textContent = save ? `✓ Event corrected: ${r.results} result${r.results === 1 ? '' : 's'} now show ${f.country} · ${f.name}.` : `✓ Moved. ${f.country} · ${f.name} now has ${r.results} result${r.results === 1 ? '' : 's'}.`;
+      box.closest('form').querySelector('.event-head').innerHTML = `<span class="ev-country">${esc(f.country)}</span> <b>${esc(f.name)}</b> <span class="meta">updated</span>`;
+    } catch (err) { done.className = 'form-done err'; done.textContent = `Not saved: ${err.message}`; }
+    return true;
+  }
+  $('adm-batches').addEventListener('click', eventFixClick);
   $('unv-list').addEventListener('click', async e => {
+    if (await eventFixClick(e)) return;
     if (e.target.id === 'unv-done') {
       const cards = [...$('unv-list').querySelectorAll('.check-card')].filter(c => c.querySelector('input[name="__verify"]').checked);
       e.target.disabled = true; $('unv-msg').textContent = 'Saving…';

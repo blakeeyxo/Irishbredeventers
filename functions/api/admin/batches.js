@@ -7,7 +7,8 @@ export async function onRequestGet({ env, request }) {
   const id = Number(new URL(request.url).searchParams.get('id'));
   if (id) {
     // One upload's results, for editing. Fixes are saved through /api/admin/unverified (any placing by id).
-    const { results } = await env.DB.prepare(`SELECT ${PLACING_COLUMNS}, IFNULL(r.raw_line, '') AS raw_line, IFNULL(r.parse_ok, 1) AS parse_ok
+    const { results } = await env.DB.prepare(`SELECT ${PLACING_COLUMNS}, IFNULL(r.raw_line, '') AS raw_line, IFNULL(r.parse_ok, 1) AS parse_ok,
+      (SELECT COUNT(*) FROM results rr WHERE rr.event_id = e.id) AS event_results
       ${PLACING_JOIN} WHERE p.batch_id = ? ${PLACING_ORDER} LIMIT 2000`).bind(id).all();
     return json({ rows: results });
   }

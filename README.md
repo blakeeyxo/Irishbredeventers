@@ -338,3 +338,6 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
 - Domain and mailbox pricing with Smarthost
 - Which mailing service
 - Charlie's real sample files for parser testing
+
+## Owner area: result cards and event fixes
+Every result card shows its country and event name as a heading. Open "Correct the event" on a card to fix the event name, country or dates for all results in that event, or move just that one result to another event, without re-importing. `tests/guards.test.js` fails if a multi-argument function is passed bare to `.map()` (the cause of "[object Object]"), and `esc()` refuses objects and arrays.

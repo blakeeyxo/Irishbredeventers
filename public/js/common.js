@@ -1,6 +1,16 @@
 /* Shared helpers used by every page. */
 (function () {
-  const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // Objects and arrays must never be printed as text: they show up as "[object Object]".
+  function guardText(x) {
+    if (x !== null && typeof x === 'object') {
+      const msg = 'esc() was given ' + (Array.isArray(x) ? 'an array' : 'an object') + ', not text';
+      if (typeof window !== 'undefined' && window.IBER_STRICT) throw new Error(msg);
+      if (typeof console !== 'undefined') console.error(msg, x);
+      return '';
+    }
+    return x ?? '';
+  }
+  const esc = x => String(guardText(x)).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   async function api(path, opts = {}) {
     const init = { method: opts.method || 'GET', headers: {} };
