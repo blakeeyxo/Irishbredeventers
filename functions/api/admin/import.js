@@ -8,6 +8,9 @@ export async function onRequestPost({ env, request, waitUntil }) {
   if (!b || !Array.isArray(b.rows)) return bad('Bad request');
   const rows = cleanRows(b.rows, new Date().getFullYear());
   if (!rows.length) return bad('There are no rows with a horse name to save.');
+  // Never save a result whose event heading was not read: it would end up under the wrong event.
+  const noEvent = rows.filter(r => r.event_name === 'Event not given' || /\(\s*[A-Z]{3,4}\s*\)/.test(r.class_name)).length;
+  if (noEvent) return bad(`${noEvent} result${noEvent === 1 ? ' has' : 's have'} no readable event heading above ${noEvent === 1 ? 'it' : 'them'}, so nothing was saved. Fix the Event, Country and Start date on those rows (Edit), then save again.`);
   const out = await importResults(env.DB, rows, { decisions: b.decisions || {}, weekLabel: str(b.weekLabel, 120), sourceNotes: str(b.sourceNotes, 200) });
   if (out.needsDecision) return json({ needsDecision: out.needsDecision }, { status: 409 });
 

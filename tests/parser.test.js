@@ -274,3 +274,17 @@ test('an event heading with no month is still an event (month from the article d
   const pasted = parseResults(text, { defaultYear: 2026 });
   assert.equal(pasted.rows[1].start_date, '2026-09-25');
 });
+
+test('an unreadable event heading is never taken for a class of the event above', async () => {
+  const { parseResults } = await import('../lib/parser.js');
+  const text = [
+    'Canadian Test Event (CAN) 25th - 27th September 2026', 'CCI 2*',
+    '2nd Kilbunny Kanyou (ISH) – 2018 gelding by Kannan (KWPN) out of ISHD Cosmos (ISH) by OBOS Quality 004 (OLD). Breeder: Richard O’Hara. Rider: Selina O’Hanlon (CAN) 30.0, 0, 0.0 = 30.0.',
+    'South Test Event (GBR) the weekend of 25th', 'CCI 3* Short Sec M',
+    '3rd Kilbunny Cyclone (ISH) – 2018 gelding by Canturo (HOLST) out of Agonda (KWPN) by Silverstone (ZANG). Breeder: Richard O’Hara. Rider: Safia Woodward (GBR) 31.0, 0, 0.0 = 31.0.'
+  ].join('\n');
+  const r = parseResults(text, { defaultYear: 2026 });
+  const cyclone = r.rows.find(x => x.horse_name === 'Kilbunny Cyclone');
+  assert.ok(cyclone, 'row still read');
+  assert.notEqual(cyclone.event_name, 'Canadian Test Event');
+});

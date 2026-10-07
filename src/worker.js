@@ -156,8 +156,9 @@ export default {
       for (const [k, v] of Object.entries(PRIVATE)) out.headers.set(k, v);
       return out;
     } catch (e) {
-      console.error(e);
-      return jsonError('Something went wrong on the server.', 500);
+      console.error('handler failed', path, e && e.stack || e);
+      // The owner area is behind a login, so it gets the real reason; the public site does not.
+      return jsonError(ownerApi ? `Something went wrong on the server: ${String(e && e.message || e).slice(0, 300)}` : 'Something went wrong on the server.', 500);
     }
   }
 };
