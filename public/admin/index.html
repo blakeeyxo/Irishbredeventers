@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/site.css?v=3">
-<link rel="stylesheet" href="/admin/admin.css?v=9">
+<link rel="stylesheet" href="/admin/admin.css?v=10">
 </head>
 <body>
 
@@ -193,6 +193,12 @@
     </div>
     <div id="sire-pane" hidden>
       <p class="intro">Correct a stallion's name, breed code or [TIH]. If the same stallion is in the records under two spellings (a typo in an article, e.g. <i>Imperial Hights</i>), type the right name, or pick it under "Join into", and the two become one: all their progeny, mares and results move across, and the stallion numbers follow.</p>
+      <form class="form obos-form" id="obos-form">
+        <b>How the site writes OBOS</b> <span class="meta">(OBOS and O.B.O.S. are treated as the same name for matching and counting)</span>
+        <label class="chk"><input type="radio" name="spelling" value="OBOS"> OBOS</label>
+        <label class="chk"><input type="radio" name="spelling" value="O.B.O.S."> O.B.O.S.</label>
+        <span class="form-done" role="status"></span>
+      </form>
       <form class="form breed-search" id="sire-search">
         <label>Stallion name<input type="search" name="q" maxlength="100" placeholder="e.g. Imperial Heights (leave empty for the busiest sires)"></label>
         <div class="adm-actions"><button class="btn" type="submit">Find stallions</button></div>
@@ -253,6 +259,6 @@
 </footer>
 
 <script src="/js/common.js?v=3"></script>
-<script src="/admin/admin.js?v=10"></script>
+<script src="/admin/admin.js?v=11"></script>
 </body>
 </html>

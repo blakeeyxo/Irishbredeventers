@@ -235,3 +235,7 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .feat-room { color: var(--navy); font-weight: 600; font-size: 13.5px; margin: 4px 0; }
 .feat-full { background: #FFF4EC; border-left: 3px solid var(--gold-bright); padding: 8px 10px; font-size: 13.5px; margin: 6px 0; }
 .all-sires-head { margin: 20px 0 6px !important; }
+.obos-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; background: var(--paper); border: 1px solid var(--rule); padding: 10px 12px; margin-bottom: 14px; max-width: none; }
+.obos-form .chk { margin: 0; }
+.obos-form .form-done.ok { color: var(--navy); }
+.obos-form .form-done.err { color: var(--alert); }

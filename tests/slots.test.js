@@ -63,3 +63,13 @@ test('stallion names match however they are typed', async () => {
   assert.deepEqual(await ids('Tyson'), [6]); // short names must match exactly
   assert.deepEqual(await ids('Cruising'), [5]);
 });
+
+test('OBOS and O.B.O.S. are the same name; dotted initials match without the dots', async () => {
+  const { normaliseName, canonObos } = await import('../lib/names.js');
+  assert.equal(normaliseName('O.B.O.S. Quality 004'), normaliseName('OBOS Quality 004'));
+  assert.equal(normaliseName('O.B.O.S Quality 004'), 'obos quality 004');
+  assert.equal(canonObos('O.B.O.S. Quality 004 (OLD)'), 'OBOS Quality 004 (OLD)');
+  assert.equal(canonObos('Lagans O. B. O. S Quality'), 'Lagans OBOS Quality');
+  assert.equal(normaliseName('St. Ghyvan'), 'st ghyvan'); // words with dots are unchanged
+  assert.equal(normaliseName('Cornet Obolensky'), 'cornet obolensky');
+});

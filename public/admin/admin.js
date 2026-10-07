@@ -1130,8 +1130,14 @@
   async function loadSires(q = '') {
     $('sire-list').innerHTML = '<div class="empty-state">Loading…</div>';
     const d = await api(`/api/admin/breeding?${new URLSearchParams({ kind: 'sires', q })}`);
+    for (const r of $('obos-form').elements.spelling) r.checked = r.value === (d.obosSpelling || 'OBOS');
     $('sire-list').innerHTML = d.sires.map(sireCard).join('') || '<div class="empty-state">No stallions match.</div>';
   }
+  $('obos-form').addEventListener('change', async e => {
+    const done = $('obos-form').querySelector('.form-done');
+    try { const r = await api('/api/admin/breeding', { method: 'POST', body: { kind: 'obos', spelling: e.target.value } }); done.className = 'form-done ok'; done.textContent = `✓ The site now writes ${r.obosSpelling} (within a few minutes).`; }
+    catch (err) { done.className = 'form-done err'; done.textContent = `Not saved: ${err.message}`; }
+  });
   $('sire-search').addEventListener('submit', e => { e.preventDefault(); loadSires(e.target.elements.q.value.trim()); });
   $('sire-list').addEventListener('click', e => {
     const a = e.target.closest('[data-sire-progeny]');

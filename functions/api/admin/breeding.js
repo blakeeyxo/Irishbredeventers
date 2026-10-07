@@ -6,7 +6,10 @@ import { findHorses, gapCount, saveBreeding, findSires, saveSire } from '../../.
 export async function onRequestGet({ env, request }) {
   const u = new URL(request.url).searchParams;
   const q = (u.get('q') || '').slice(0, 100), sire = (u.get('sire') || '').slice(0, 300), gaps = u.get('gaps') === '1';
-  if (u.get('kind') === 'sires') return json({ sires: await findSires(env.DB, { q }) });
+  if (u.get('kind') === 'sires') {
+    const obos = await env.DB.prepare("SELECT value FROM settings WHERE key = 'obos_spelling'").first();
+    return json({ sires: await findSires(env.DB, { q }), obosSpelling: obos ? obos.value : 'OBOS' });
+  }
   const [found, missing, sires] = await Promise.all([
     findHorses(env.DB, { q, sire, gaps }),
     gapCount(env.DB),
@@ -17,6 +20,12 @@ export async function onRequestGet({ env, request }) {
 
 export async function onRequestPost({ env, request }) {
   const b = await readJson(request);
+  // How OBOS is written on the site.
+  if (b && b.kind === 'obos') {
+    const v = b.spelling === 'O.B.O.S.' ? 'O.B.O.S.' : 'OBOS';
+    await env.DB.prepare("INSERT INTO settings (key, value) VALUES ('obos_spelling', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").bind(v).run();
+    return json({ ok: true, obosSpelling: v });
+  }
   const id = Number(b && b.id);
   if (!Number.isInteger(id)) return bad('Choose a horse.');
   try {

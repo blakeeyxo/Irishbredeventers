@@ -1,6 +1,9 @@
 /* IrishBredEventingResults (IBER) public site. */
 (function () {
-  const { esc, api, ordinal, niceDate, turnstileReady, mountTurnstile, turnstileToken, resetTurnstile } = window.IBE;
+  const { esc: escText, api, ordinal, niceDate, turnstileReady, mountTurnstile, turnstileToken, resetTurnstile } = window.IBE;
+  // OBOS is stored one way; the site writes it the way the owner chose (Breeding records → Stallions & sires).
+  let obosDotted = false;
+  const esc = v => escText(obosDotted && v !== null && v !== undefined ? String(v).replace(/\bOBOS\b/g, 'O.B.O.S.') : v);
   const $ = id => document.getElementById(id);
   const SITE = 'IrishBredEventingResults';
   const HOME_ROWS = window.matchMedia('(max-width: 720px)').matches ? 8 : 20;
@@ -754,6 +757,7 @@
     $('year').textContent = new Date().getFullYear();
     showNotice();
     try { state.config = await api('/api/config'); } catch { /* keep defaults */ }
+    obosDotted = state.config.obosSpelling === 'O.B.O.S.';
     turnstileReady(state.config.turnstileSiteKey);
     document.querySelectorAll('form .ts-slot').forEach(s => mountTurnstile(s.closest('form')));
     render();
