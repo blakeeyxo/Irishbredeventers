@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/site.css?v=3">
-<link rel="stylesheet" href="/admin/admin.css?v=10">
+<link rel="stylesheet" href="/admin/admin.css?v=11">
 </head>
 <body>
 
@@ -36,6 +36,7 @@
     <button class="chip" data-a="ads">Ads</button>
     <button class="chip" data-a="stallions">Stallions</button>
     <button class="chip" data-a="breeding">Breeding records</button>
+    <button class="chip" data-a="analytics">Analytics</button>
     <button class="chip" data-a="comments">Comments <span class="count" id="n-comments" hidden></span></button>
     <button class="chip" data-a="corrections">Corrections <span class="count" id="n-corrections" hidden></span></button>
     <button class="chip" data-a="enquiries">Ad enquiries <span class="count" id="n-enquiries" hidden></span></button>
@@ -183,6 +184,18 @@
     </section>
   </div>
 
+  <!-- ANALYTICS -->
+  <div class="adm-pane" id="adm-analytics">
+    <h3>Analytics</h3>
+    <p class="intro">Private to the owner area. Counts visits (one per browser session), page views by page, and clicks on adverts and link cards. Nothing personal is stored: no cookies, IP addresses or names, just a daily total for each.</p>
+    <form class="form an-range" id="an-range">
+      <div class="form-row"><label>From<input type="date" name="from"></label><label>To<input type="date" name="to"></label></div>
+      <div class="adm-actions"><button class="btn sm" type="submit">Show</button>
+        <button class="btn sm alt" type="button" data-days="7">Last 7 days</button><button class="btn sm alt" type="button" data-days="30">Last 30 days</button><button class="btn sm alt" type="button" data-days="365">Last 12 months</button></div>
+    </form>
+    <div id="an-out"></div>
+  </div>
+
   <!-- BREEDING RECORDS -->
   <div class="adm-pane" id="adm-breeding">
     <h3>Breeding records</h3>
@@ -259,6 +272,6 @@
 </footer>
 
 <script src="/js/common.js?v=3"></script>
-<script src="/admin/admin.js?v=11"></script>
+<script src="/admin/admin.js?v=12"></script>
 </body>
 </html>

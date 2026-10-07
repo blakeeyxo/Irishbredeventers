@@ -49,11 +49,26 @@
     if (view !== 'horse') document.title = view === 'home' ? names.home : `${names[view]} · ${SITE}`;
   }
 
+  // Private analytics for the owner area: a count of visits, page views and ad clicks. No cookies or personal data.
+  function track(data) {
+    try {
+      const body = JSON.stringify(data);
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/track', body);
+      else fetch('/api/track', { method: 'POST', body, keepalive: true }).catch(() => {});
+    } catch { /* never in the way */ }
+  }
+  const PAGE_KEY = { home: 'home', results: 'results', news: 'news', stallions: 'stallions', about: 'about', search: 'search' }; // horse pop-ups count in openHorse
+  let lastTracked = null;
+
   let lastPath = null;
   function render() {
     const r = routeFromUrl();
     showView(r.view);
     const path = r.view + '/' + (r.id || '');
+    if (path !== lastTracked && PAGE_KEY[r.view]) {
+      lastTracked = path;
+      track({ k: 'view', p: r.view === 'news' && r.id ? 'article' : r.view === 'stallions' && r.id ? 'stallion' : PAGE_KEY[r.view] });
+    }
     if (path !== lastPath && !r.hash) window.scrollTo({ top: 0 });
     lastPath = path;
     if (r.view === 'home') renderHome();
@@ -386,6 +401,7 @@
     }).join('');
   }
   async function openHorse(id) {
+    track({ k: 'view', p: 'horse' });
     const el = $('horse-modal');
     el.innerHTML = `${CLOSE}<div class="empty-state">Loading…</div>`;
     openOverlay('horse-overlay');
@@ -579,19 +595,19 @@
   const hostOf = url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
   const AD_PAGE = { home: 'home', results: 'results', horse: 'results', search: 'results', news: 'news', stallions: 'stallions', about: 'about' };
   const AD_LABEL = '<span class="ad-label">Advertisement</span>';
-  function adHTML(ad, banner) {
+  function adHTML(ad, banner, space = '') {
     const cls = banner ? 'banner' : 'slot ad-box';
     if (!ad) {
       return `<a class="${cls} ad-open" href="/about#advertise" data-link>${AD_LABEL}<span class="ad-open-text">${banner ? 'This banner space is available. Advertise here' : 'Advertise here'}</span></a>`;
     }
     const inner = ad.image_key ? adImg(ad, !banner) : `<span class="${banner ? 'banner-name' : 'ad-name'}">${esc(ad.name)}</span>`;
     const body = banner ? `${AD_LABEL}${inner}` : `${AD_LABEL}<span class="ad-body">${inner}</span>`;
-    return ad.link ? `<a class="${cls}" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored">${body}</a>` : `<div class="${cls}">${body}</div>`;
+    return ad.link ? `<a class="${cls}" href="${esc(ad.link)}" target="_blank" rel="noopener sponsored" data-ad-id="${ad.id}" data-space="${esc(space)}">${body}</a>` : `<div class="${cls}">${body}</div>`;
   }
   // A link card (an article on another website) fills a side space that has no advert, in the owner's order;
   // any space still empty shows "Advertise here".
   function linkCardHTML(l) {
-    return `<a class="slot ad-box link-card" href="${esc(l.url)}" target="_blank" rel="noopener">
+    return `<a class="slot ad-box link-card" href="${esc(l.url)}" target="_blank" rel="noopener" data-link-id="${l.id}">
       <span class="ad-label">Read more</span>
       ${l.image_key ? `<span class="card-img"><img src="${imgUrl(l.image_key)}" alt="" loading="lazy"></span>` : ''}
       <span class="card-body"><span class="card-kicker">${esc(l.source_name || hostOf(l.url))} ↗</span><b>${esc(l.title)}</b></span></a>`;
@@ -604,8 +620,9 @@
     // The page's own advert for a space comes first, then one kept in that space on every page.
     const slot = pos => state.ads.slots[`${page}:${pos}`] || state.ads.slots[`all:${pos}`];
     const cards = [...(state.links || [])];
-    const side = pos => { const ad = slot(pos); return ad ? adHTML(ad, false) : cards.length ? linkCardHTML(cards.shift()) : adHTML(null, false); };
-    $('banner-top').innerHTML = adHTML(slot('top'), true);
+    const space = pos => `${page}:${pos}`;
+    const side = pos => { const ad = slot(pos); return ad ? adHTML(ad, false, space(pos)) : cards.length ? linkCardHTML(cards.shift()) : adHTML(null, false); };
+    $('banner-top').innerHTML = adHTML(slot('top'), true, space('top'));
     const order = ['left1', 'right1', 'left2', 'right2', 'left3', 'right3'].map(p => [p, side(p)]);
     const html = Object.fromEntries(order);
     $('side-left').innerHTML = ['left1', 'left2', 'left3'].map(p => html[p]).join('');
@@ -756,6 +773,13 @@
   async function start() {
     $('year').textContent = new Date().getFullYear();
     showNotice();
+    // One visit per browser session (kept in the tab's session storage, not a cookie).
+    try { if (!sessionStorage.getItem('iber-visit')) { sessionStorage.setItem('iber-visit', '1'); track({ k: 'visit' }); } } catch { /* private mode */ }
+    document.addEventListener('click', e => {
+      const ad = e.target.closest('a[data-ad-id]'), card = e.target.closest('a[data-link-id]');
+      if (ad) track({ k: 'ad', a: Number(ad.dataset.adId), s: ad.dataset.space });
+      if (card) track({ k: 'link', a: Number(card.dataset.linkId) });
+    });
     try { state.config = await api('/api/config'); } catch { /* keep defaults */ }
     obosDotted = state.config.obosSpelling === 'O.B.O.S.';
     turnstileReady(state.config.turnstileSiteKey);

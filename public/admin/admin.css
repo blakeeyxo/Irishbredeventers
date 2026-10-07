@@ -239,3 +239,18 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .obos-form .chk { margin: 0; }
 .obos-form .form-done.ok { color: var(--navy); }
 .obos-form .form-done.err { color: var(--alert); }
+
+/* ---------- Analytics ---------- */
+.an-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--rule); background: var(--paper); margin: 8px 0 20px; }
+.an-tiles div { padding: 12px 14px; border-left: 1px solid var(--rule); }
+.an-tiles div:first-child { border-left: 0; }
+.an-tiles span { display: block; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); }
+.an-tiles b { font-family: var(--serif); font-size: 28px; color: var(--navy); }
+#an-out h4 { margin: 18px 0 6px; color: var(--navy); }
+.an-table { width: 100%; max-width: 760px; border-collapse: collapse; font-size: 13.5px; background: var(--paper); border: 1px solid var(--rule); }
+.an-table th { text-align: left; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); padding: 6px 10px; border-bottom: 1px solid var(--rule-strong); }
+.an-table td { padding: 6px 10px; border-top: 1px solid var(--rule); }
+.an-table .num { text-align: right; white-space: nowrap; }
+.an-bar { width: 50%; }
+.an-bar span { display: block; height: 12px; background: var(--navy); border-radius: 0 3px 3px 0; min-width: 2px; }
+@media (max-width: 720px) { .an-tiles { grid-template-columns: 1fr 1fr; } .an-tiles div:nth-child(3) { border-left: 0; } .an-tiles div:nth-child(n+3) { border-top: 1px solid var(--rule); } }

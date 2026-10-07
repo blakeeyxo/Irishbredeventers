@@ -19,6 +19,8 @@ import * as stallions from '../functions/api/stallions.js';
 import * as stallion from '../functions/api/stallions/[slot].js';
 import * as adminStallions from '../functions/api/admin/stallions.js';
 import * as adminBreeding from '../functions/api/admin/breeding.js';
+import * as adminAnalytics from '../functions/api/admin/analytics.js';
+import * as track from '../functions/api/track.js';
 import * as news from '../functions/api/news.js';
 import * as links from '../functions/api/links.js';
 import * as ads from '../functions/api/ads.js';
@@ -68,6 +70,8 @@ const ROUTES = {
   '/api/admin/ads': adminAds,
   '/api/admin/stallions': adminStallions,
   '/api/admin/breeding': adminBreeding,
+  '/api/admin/analytics': adminAnalytics,
+  '/api/track': track,
   '/api/admin/comments': adminComments,
   '/api/admin/corrections': adminCorrections,
   '/api/admin/enquiries': adminEnquiries,

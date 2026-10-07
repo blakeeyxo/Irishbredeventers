@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
 
   /* ---------- Tabs ---------- */
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), analytics: () => loadAnalytics(), comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -1166,6 +1166,39 @@
     document.querySelector('[data-breed-mode="horses"]').click();
     document.querySelector('#adm-tabs button[data-a="breeding"]').click();
   }
+
+  /* ---------- Analytics (private): visits, page views, ad clicks ---------- */
+  const PAGE_NAMES = { home: 'Home', results: 'Results', news: 'News', article: 'News articles', stallions: 'Stallions', stallion: 'Stallion pages', about: 'About', search: 'Search', horse: 'Horse pages' };
+  async function loadAnalytics(range) {
+    const f = $('an-range').elements;
+    if (range) { f.from.value = range.from; f.to.value = range.to; }
+    $('an-out').innerHTML = '<div class="empty-state">Loading…</div>';
+    try {
+      const d = await api(`/api/admin/analytics?${new URLSearchParams({ from: f.from.value, to: f.to.value })}`);
+      if (!slotPages.length) { const a = await api('/api/admin/ads'); slotPages = a.pages; slotPositions = a.positions; }
+      f.from.value = d.from; f.to.value = d.to;
+      const n = x => Number(x || 0).toLocaleString('en-IE');
+      const max = Math.max(1, ...d.pages.map(p => p.n));
+      $('an-out').innerHTML = `
+        <p class="meta">${esc(niceDate(d.from))} to ${esc(niceDate(d.to))}</p>
+        <div class="an-tiles"><div><span>Website visits</span><b>${n(d.visits)}</b></div><div><span>Page views</span><b>${n(d.views)}</b></div>
+          <div><span>Ad clicks</span><b>${n(d.adClicks)}</b></div><div><span>Link card clicks</span><b>${n(d.linkClicks)}</b></div></div>
+        <h4>Page views by page</h4>
+        ${d.pages.length ? `<table class="an-table"><tbody>${d.pages.map(p => `<tr><td>${esc(PAGE_NAMES[p.page] || p.page)}</td><td class="an-bar"><span style="width:${(p.n / max) * 100}%"></span></td><td class="num">${n(p.n)}</td></tr>`).join('')}</tbody></table>` : '<p class="meta">No page views in these dates.</p>'}
+        <h4>Ad clicks</h4>
+        ${d.ads.length ? `<table class="an-table"><thead><tr><th>Advert</th><th>Space</th><th class="num">Clicks</th></tr></thead><tbody>${d.ads.map(a => `<tr><td>${esc(a.name || 'Removed advert')}</td><td>${esc(slotName(a.placement))}</td><td class="num">${n(a.n)}</td></tr>`).join('')}</tbody></table>` : '<p class="meta">No ad clicks in these dates.</p>'}
+        ${d.links.length ? `<h4>Link card clicks</h4><table class="an-table"><tbody>${d.links.map(l => `<tr><td>${esc(l.title || 'Removed link card')}</td><td class="num">${n(l.n)}</td></tr>`).join('')}</tbody></table>` : ''}
+        <h4>Day by day</h4>
+        ${d.days.length ? `<table class="an-table"><thead><tr><th>Date</th><th class="num">Visits</th><th class="num">Page views</th><th class="num">Ad clicks</th></tr></thead><tbody>${d.days.map(x => `<tr><td>${esc(niceDate(x.day))}</td><td class="num">${n(x.visits)}</td><td class="num">${n(x.views)}</td><td class="num">${n(x.ad_clicks)}</td></tr>`).join('')}</tbody></table>` : '<p class="meta">Nothing recorded in these dates yet.</p>'}`;
+    } catch (err) { $('an-out').innerHTML = `<div class="empty-state">${esc(err.message)}</div>`; }
+  }
+  $('an-range').addEventListener('submit', e => { e.preventDefault(); loadAnalytics(); });
+  $('an-range').addEventListener('click', e => {
+    const b = e.target.closest('[data-days]');
+    if (!b) return;
+    const to = new Date().toISOString().slice(0, 10), from = new Date(Date.now() - (Number(b.dataset.days) - 1) * 864e5).toISOString().slice(0, 10);
+    loadAnalytics({ from, to });
+  });
 
   /* ---------- Comments ---------- */
   async function loadComments() {
