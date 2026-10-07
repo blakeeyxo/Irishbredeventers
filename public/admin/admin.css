@@ -266,3 +266,6 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .problems { margin: 6px 0; padding-left: 20px; color: var(--alert); font-size: 13.5px; }
 .problems li { margin: 2px 0; }
 .rownum { color: var(--ink-faint); font-size: 11px; }
+.event-fix { border: 1px solid var(--gold-bright); background: #FFF9F3; padding: 12px 14px; margin-bottom: 12px; max-width: none; }
+.event-fix .meta { display: block; margin: 2px 0 8px; }
+.event-fix .form-done.ok { color: var(--navy); } .event-fix .form-done.err { color: var(--alert); }

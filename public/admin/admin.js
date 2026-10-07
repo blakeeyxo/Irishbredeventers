@@ -4,6 +4,7 @@
   const $ = id => document.getElementById(id);
 
   /* ---------- Tabs ---------- */
+  let countryList = [];
   const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), analytics: () => loadAnalytics(), comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
@@ -23,6 +24,7 @@
     }
     if (!$('adm-country').options.length) {
       $('adm-country').innerHTML = s.countries.map(c => `<option>${esc(c)}</option>`).join('');
+      countryList = s.countries;
       $('adm-country').value = 'England';
     }
     return s;
@@ -353,9 +355,17 @@
   }
   async function loadUnverified() {
     const d = await api('/api/admin/unverified');
-    $('unv-list').innerHTML = d.rows.length ? `<div class="unv-bar"><span id="unv-count">Nothing ticked: nothing will change.</span>
+    const nameBox = d.placeholders.map(p => `<form class="form event-fix" data-id="${p.id}">
+        <b>${p.results} result${p.results === 1 ? '' : 's'} have no event name in the article</b>
+        <span class="meta">${esc(String(p.classes || '').split(',').join(' · '))}</span>
+        <div class="form-row"><label>Event name<input name="name" maxlength="200" required placeholder="e.g. the event's full name"></label>
+          <label>Country<select name="country" required><option value="">Choose…</option>${countryList.map(c => `<option>${esc(c)}</option>`).join('')}</select></label></div>
+        <div class="form-row"><label>Starts<input name="start_date" type="date" required></label><label>Ends (optional)<input name="end_date" type="date"></label></div>
+        <div class="adm-actions"><button class="btn sm" type="submit">Name the event for all ${p.results}</button><span class="form-done" role="status"></span></div>
+      </form>`).join('');
+    $('unv-list').innerHTML = (nameBox || '') + (d.rows.length ? `<div class="unv-bar"><span id="unv-count">Nothing ticked: nothing will change.</span>
         <button class="btn" type="button" id="unv-done" disabled>Done: put ticked rows on the site</button><span class="form-done" id="unv-msg" role="status"></span></div>
-      ${d.rows.map((r, i) => rowEditCard(r, true, i + 1)).join('')}` : '<div class="empty-state">Nothing to check. Every result is on the site.</div>';
+      ${d.rows.map((r, i) => rowEditCard(r, true, i + 1)).join('')}` : '<div class="empty-state">Nothing to check. Every result is on the site.</div>');
   }
   async function rowAction(e) {
     const b = e.target.closest('button[data-act]');
@@ -386,6 +396,18 @@
     if (e.target.name !== '__verify') { card.querySelector('input[name="__verify"]').checked = true; card.classList.add('edited'); }
     card.classList.toggle('ticked', card.querySelector('input[name="__verify"]').checked);
     unvCount();
+  });
+  $('unv-list').addEventListener('submit', async e => {
+    const f = e.target.closest('.event-fix');
+    if (!f) return;
+    e.preventDefault();
+    const done = f.querySelector('.form-done'), btn = f.querySelector('button[type=submit]');
+    btn.disabled = true; done.className = 'form-done'; done.textContent = 'Saving…';
+    try {
+      const r = await api('/api/admin/unverified', { method: 'POST', body: { eventFix: { id: Number(f.dataset.id), name: f.elements.name.value, country: f.elements.country.value, start_date: f.elements.start_date.value, end_date: f.elements.end_date.value } } });
+      await loadUnverified();
+      const msg = $('unv-msg'); if (msg) { msg.className = 'form-done ok'; msg.textContent = `✓ Event named: ${r.results} results are now under it${r.merged ? ' (joined an existing event)' : ''}. Tick Verified on the rows and press Done to put them on the site.`; }
+    } catch (err) { done.className = 'form-done err'; done.textContent = `Not saved: ${err.message}`; btn.disabled = false; }
   });
   $('unv-list').addEventListener('click', async e => {
     if (e.target.id === 'unv-done') {

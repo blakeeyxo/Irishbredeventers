@@ -83,3 +83,13 @@ test('unverified rows say what is wrong in plain words', async () => {
   assert.match(problemsFor({ ...base, dam_sire: 'Silverstone ZANG)' })[0], /isn't closed/);
   assert.match(problemsFor(base)[0], /Check it against the article/);
 });
+
+test('every spelling of OBOS Quality 004 links to it; relatives and grandparents never do', async () => {
+  const { sireFamily, canonicalSire } = await import('../lib/names.js');
+  for (const n of ['OBOS Quality 004', 'OBOS Quality 004 (OLD)', 'OBOS Quality', 'OBOB Quality 004', 'OBOS Qualitu 004', 'OBOS 004', 'O.B.O.S. Quality 004', 'obos quality 004'])
+    assert.equal(sireFamily(n), 'OBOS Quality 004', n);
+  for (const n of ['Lagans OBOS Quality', 'Lagos OBOS Quality', 'Lagans OBOB Quality', 'OBOS Quality 005', 'Quality Time', 'Cornet Obolensky', 'OBOS Dreamer'])
+    assert.equal(sireFamily(n), null, n);
+  assert.equal(canonicalSire('Lagans OBOS Quality'), 'Lagans OBOS Quality');
+  assert.equal(canonicalSire('OBOS Quality'), 'OBOS Quality 004');
+});

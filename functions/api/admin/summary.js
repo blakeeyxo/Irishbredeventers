@@ -2,8 +2,11 @@
 import { json } from '../../../lib/http.js';
 import { COUNTRIES } from '../../../lib/parser.js';
 import { TO_CHECK_SQL } from '../../../lib/results.js';
+import { tidyKnownSires } from '../../../lib/breeding.js';
 
 export async function onRequestGet({ env, data }) {
+  // Every owner-area visit links any spelling of a known stallion (OBOS Quality 004) to its record.
+  await tidyKnownSires(env.DB).catch(e => console.error('sire tidy failed', e));
   const r = await env.DB.prepare(`SELECT
       (SELECT COUNT(*) FROM placings p WHERE ${TO_CHECK_SQL}) AS unverified,
       (SELECT COUNT(*) FROM comments WHERE status = 'pending') AS comments,

@@ -94,7 +94,7 @@ Do these once, in order. Everything is on the free plans to start.
   `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` / `0009_ad_crop.sql` / `0010_ad_phone_crop.sql`
   (advert crop settings) and `0011_page_ad_slots_stallions.sql` (per-page ad slots, stallion listings,
   comment spam flag), `0012_hsi_2025_nov_dec_results.sql` (November–December 2025 results), `0013_batch_published.sql`
-  `0014_horse_breeding_source.sql`, `0015_dotted_names_obos.sql`, `0016_analytics.sql` and `0017_news_no_facebook.sql` apply
+  `0014_horse_breeding_source.sql`, `0015_dotted_names_obos.sql`, `0016_analytics.sql` and `0017_news_no_facebook.sql` and `0018_june1_classes.sql` apply
   on deploy.) `0005_launch_content.sql`
   loads Charlie's real results (14–16 February 2025 and the week of 6 April 2026), his four articles and
   the three link cards. It never adds example ads or the fictional sample weeks.
@@ -254,6 +254,15 @@ and uploads store OBOS). Breeding records → Stallions & sires has "How the sit
 happens to a row you leave alone. Fix a row (editing ticks it) or tick Verified, then press Done; only ticked rows go
 live. In the weekly upload's check table, fixing a row and pressing Done ticks it Verified too.
 
+**Stallions that appear under several spellings.** OBOS Quality 004 is always one record: "OBOS Quality", "OBOB Quality
+004", "OBOS Qualitu 004", "OBOS 004" and the dotted forms all link to it, as sire and as dam sire alike (rule and list in
+`SIRE_FAMILIES`, `lib/names.js`; nothing may be added in front, so Lagans OBOS Quality and Lagos OBOS Quality, a son,
+stay separate and no grandparents are mixed up). New uploads link automatically, and existing spellings are joined the
+first time the owner area is opened after a deploy and after every upload.
+
+**Results the article gives no event for.** They are held back from the site and shown at the top of the Unverified tab
+with a form to name the event (name, country, dates) for all of them at once; then tick Verified and press Done.
+
 **Weekly upload result.** After saving, the owner area shows "X new · Y duplicates skipped · Z failed" and one row per
 event with how many results it now has on the site. A duplicate is the same horse in the same class of the same event
 (name, start date and country), so a row from another event or date is never skipped. Failed rows are saved but hidden
@@ -309,7 +318,7 @@ For each flagged row, decide: is the file unusual (fine, it goes to the check ta
 - Results: year tabs, then all twelve month tabs within every year. Months without results are shown lighter and say
   "Archive for this month coming soon" (or, for months still to come, that results appear once the events have run);
   they fill in by themselves as results are imported. Each event shows its dates, country, number of classes,
-  Irish-bred placings and the Horse Sport Ireland report it came from (as plain text: results never link out to HSI).
+  Irish-bred placings. No source is named on the public site: all results are Charlie's.
 - Stallions page: six paid listings, each with its progeny breakdown. No donation button. No scheduled newsletter.
 - Any sire, dam, dam sire or breeder that isn't recorded shows as "UNK", and a horse with any of its breeding
   (sire, dam or dam sire) unknown is marked "OIO" (Of Irish Origin). That is not a problem: the horse is shown.
