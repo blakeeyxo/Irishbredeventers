@@ -237,8 +237,8 @@ every spelling used in the results, separated by commas. **Clear** shows the lis
 **Breeding records tab.** Find a horse (by name or former name, by a stallion's progeny, or only those with part of
 their breeding missing) and fill in or correct its sire, dam, dam sire, breeder, year of birth, sex and breed. Every
 result of that horse on the site shows the new details straight away (and the stallion numbers follow). Each horse
-has a **Find on sporthorse-data.com** link (a search of that site for the horse's name) and a "Where this came from"
-box for the page address. Nothing is copied from other sites automatically. If the corrected details make it the
+has a **View on site** link (its public page). All breeding comes from the submitted results and Charlie's records,
+and no breeding source is named anywhere on the site or in the owner area. If the corrected details make it the
 same horse as another record (same name, year, sire and dam; usually a typo in an article), the two are joined.
 Each stallion listing in the Stallions tab links straight to its progeny here.
 

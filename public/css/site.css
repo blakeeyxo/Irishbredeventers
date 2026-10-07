@@ -421,6 +421,8 @@ html { scroll-padding-top: calc(var(--top-h, 260px) + 12px); }
 .horse-modal { max-width: 900px; }
 .horse-title { margin-right: 40px; }
 .horse-modal .horse-grid { margin-bottom: 26px; }
+.ped b a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--gold-bright); }
+.ped b a:hover { color: var(--gold); }
 .modal-source { font-size: 14px; color: var(--ink-faint); border-top: 1px solid var(--rule); padding-top: 14px; margin: 8px 0 0; }
 .modal-source a { color: var(--navy); font-weight: 600; }
 @media (max-width: 720px) {

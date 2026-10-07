@@ -1035,7 +1035,6 @@
 
   /* ---------- Breeding records: find a horse, correct its breeding ---------- */
   const taggedName = (name, breed, tih) => name ? `${name}${breed ? ` (${breed})` : ''}${tih ? '[TIH]' : ''}` : '';
-  const shdLink = name => `https://www.google.com/search?q=${encodeURIComponent(`site:sporthorse-data.com "${name}"`)}`;
   function breedCard(h) {
     const v = {
       sire: taggedName(h.sire, h.sire_breed, h.sire_tih), dam: taggedName(h.dam, h.dam_breed, h.dam_tih),
@@ -1046,7 +1045,7 @@
     return `<form class="form breed-card" data-id="${h.id}">
       <div class="breed-head"><b>${esc(h.name)}</b> <span class="meta">${[h.birth_year, h.sex, h.breed_code].filter(Boolean).map(esc).join(' · ')}${h.former ? ` · was ${esc(h.former)}` : ''} · ${h.runs} result${h.runs === 1 ? '' : 's'}${h.last_run ? `, latest ${esc(niceDate(h.last_run))}` : ''}</span>
         ${missing.length ? `<span class="gap-tag">Missing: ${missing.join(', ')}</span>` : '<span class="st st-live">Complete</span>'}
-        <a class="breed-look" href="${shdLink(h.name)}" target="_blank" rel="noopener">Find on sporthorse-data.com ↗</a></div>
+        ${h.placing_id ? `<a class="breed-look" href="/horse/${h.placing_id}" target="_blank" rel="noopener">View on site ↗</a>` : ''}</div>
       <div class="breed-grid">
         ${field('sire', 'Sire', ' list="breed-sires"')}${field('dam', 'Dam')}${field('dam_sire', 'Dam sire', ' list="breed-sires"')}${field('breeder', 'Breeder (county)')}
         <label>Year of birth<input name="birth_year" type="number" min="1950" max="2100" value="${esc(h.birth_year ?? '')}"></label>
@@ -1054,7 +1053,6 @@
         <label>Breed<input name="breed" value="${esc(h.breed_code || '')}" placeholder="e.g. ISH" maxlength="8"></label>
         <label class="chk"><input type="checkbox" name="tih" value="1"${h.tih_flag ? ' checked' : ''}> Traditional Irish Horse [TIH]</label>
       </div>
-      <label>Where this came from (optional)<input name="source" value="${esc(h.breeding_source || '')}" maxlength="300" placeholder="e.g. the sporthorse-data.com page address"></label>
       <div class="adm-actions"><button class="btn sm" type="submit">Save breeding</button>${h.breeding_updated_at ? `<span class="meta">Last updated ${esc(niceDate(h.breeding_updated_at))}</span>` : ''}</div>
       <div class="form-done" role="status"></div>
     </form>`;
@@ -1100,7 +1098,7 @@
     return `<form class="form breed-card sire-card" data-id="${x.id}">
       <div class="breed-head"><b>${esc(x.name)}</b> <span class="meta">${x.progeny} horse${x.progeny === 1 ? '' : 's'} by him · ${x.results} result${x.results === 1 ? '' : 's'} · dam sire of ${x.as_dam_sire}</span>
         ${x.similar.length ? `<span class="gap-tag">Also spelt: ${esc(x.similar.join(', '))}?</span>` : ''}
-        <a class="breed-look" href="${shdLink(x.name)}" target="_blank" rel="noopener">Find on sporthorse-data.com ↗</a></div>
+        <a class="breed-look" href="/search?${new URLSearchParams({ q: x.name, field: 'sire' })}" target="_blank" rel="noopener">View progeny on site ↗</a></div>
       <div class="breed-grid">
         <label>Name<input name="name" value="${esc(x.name)}" maxlength="120" required></label>
         <label>Breed code<input name="breed" value="${esc(x.breed_code || '')}" maxlength="8" placeholder="e.g. ISH"></label>

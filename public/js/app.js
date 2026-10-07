@@ -358,8 +358,10 @@
   });
 
   /* ---------- Horse page ---------- */
-  const ped = (cls, role, name, missing = 'Not in the results') => name
-    ? `<div class="ped ${cls}"><span>${role}</span><b>${esc(name)}</b></div>`
+  // A known sire, dam or dam sire links to its breeding line: every result by that sire or out of that dam.
+  const pedName = n => String(n).replace(/\s*[([].*$/, '').trim();
+  const ped = (cls, role, name, missing = 'Not in the results', field = '') => name
+    ? `<div class="ped ${cls}"><span>${role}</span><b>${field ? `<a href="/search?${new URLSearchParams({ q: pedName(name), field })}" data-link data-close-modal>${esc(name)}</a>` : esc(name)}</b></div>`
     : `<div class="ped ${cls} missing"><span>${role}</span><b>${missing}</b></div>`;
 
   const CLOSE = '<button class="modal-close" aria-label="Close">&times;</button>';
@@ -402,9 +404,9 @@
         <div>
           <h3 class="section-title">Pedigree</h3>
           <div class="pedigree">
-            ${ped('sire', 'Sire', isUnk(h.sire) ? '' : h.sire, 'UNK')}${ped('dam', 'Dam', isUnk(h.dam) ? '' : h.dam, 'UNK')}
+            ${ped('sire', 'Sire', isUnk(h.sire) ? '' : h.sire, 'UNK', 'sire')}${ped('dam', 'Dam', isUnk(h.dam) ? '' : h.dam, 'UNK', 'dam')}
             ${ped('ss', "Sire's sire", '')}${ped('sd', "Sire's dam", '')}
-            ${ped('ds', 'Dam sire', isUnk(h.dam_sire) ? '' : h.dam_sire, 'UNK')}${ped('dd', "Dam's dam", '')}
+            ${ped('ds', 'Dam sire', isUnk(h.dam_sire) ? '' : h.dam_sire, 'UNK', 'sire')}${ped('dd', "Dam's dam", '')}
           </div>
         </div>
         <div>
