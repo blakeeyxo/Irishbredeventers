@@ -94,7 +94,8 @@ Do these once, in order. Everything is on the free plans to start.
   `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` / `0009_ad_crop.sql` / `0010_ad_phone_crop.sql`
   (advert crop settings) and `0011_page_ad_slots_stallions.sql` (per-page ad slots, stallion listings,
   comment spam flag), `0012_hsi_2025_nov_dec_results.sql` (November–December 2025 results), `0013_batch_published.sql`
-  and `0014_horse_breeding_source.sql` apply on deploy.) `0005_launch_content.sql`
+  `0014_horse_breeding_source.sql`, `0015_dotted_names_obos.sql`, `0016_analytics.sql` and `0017_news_no_facebook.sql` apply
+  on deploy.) `0005_launch_content.sql`
   loads Charlie's real results (14–16 February 2025 and the week of 6 April 2026), his four articles and
   the three link cards. It never adds example ads or the fictional sample weeks.
 - [ ] Open `https://irishbredeventers.<your-subdomain>.workers.dev` and check results show
@@ -241,6 +242,17 @@ has a **View on site** link (its public page). All breeding comes from the submi
 and no breeding source is named anywhere on the site or in the owner area. If the corrected details make it the
 same horse as another record (same name, year, sire and dam; usually a typo in an article), the two are joined.
 Each stallion listing in the Stallions tab links straight to its progeny here.
+
+**Analytics tab (owner only).** Website visits (one per browser session), page views by page, and clicks on adverts
+and link cards, for any date range. Only a daily count is kept (table `analytics`): no cookies, IP addresses or
+personal details, and bots are ignored. The site reports to `/api/track`.
+
+**OBOS.** "O.B.O.S." and "OBOS" are the same name for matching and counting (dotted initials match without the dots,
+and uploads store OBOS). Breeding records → Stallions & sires has "How the site writes OBOS" (default OBOS).
+
+**Unverified tab.** Only real problems are listed, each with what's wrong in plain words. No change, no click: nothing
+happens to a row you leave alone. Fix a row (editing ticks it) or tick Verified, then press Done; only ticked rows go
+live. In the weekly upload's check table, fixing a row and pressing Done ticks it Verified too.
 
 **Weekly upload result.** After saving, the owner area shows "X new · Y duplicates skipped · Z failed" and one row per
 event with how many results it now has on the site. A duplicate is the same horse in the same class of the same event
