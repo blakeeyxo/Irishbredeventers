@@ -382,10 +382,21 @@
         <div class="form-row"><label>Starts<input name="start_date" type="date" required></label><label>Ends (optional)<input name="end_date" type="date"></label></div>
         <div class="adm-actions"><button class="btn sm" type="submit">Name the event for all ${p.results}</button><span class="form-done" role="status"></span></div>
       </form>`).join('');
-    $('unv-list').innerHTML = (nameBox || '') + (d.rows.length ? `<div class="unv-bar"><span id="unv-count">Nothing ticked: nothing will change.</span>
+    const dupBox = (d.duplicates || []).length ? `<div class="form event-fix"><b>Possible duplicates: the same horse, class and score under two events on the same dates</b>
+      ${d.duplicates.map(x => `<div class="dup-row"><span><b>${esc(x.horse_name)}</b> · ${esc(ordinal(x.position))} · ${esc(x.class_name)}</span>
+        ${[[x.id1, x.country1, x.event1], [x.id2, x.country2, x.event2]].map(([id, c, ev]) => `<span class="meta"><span class="ev-country">${esc(c)}</span> ${esc(ev)}
+          <button class="btn sm alt" type="button" data-dup-del="${id}">Delete this copy</button></span>`).join('')}</div>`).join('')}</div>` : '';
+    $('unv-list').innerHTML = dupBox + (nameBox || '') + (d.rows.length ? `<div class="unv-bar"><span id="unv-count">Nothing ticked: nothing will change.</span>
         <button class="btn" type="button" id="unv-done" disabled>Done: put ticked rows on the site</button><span class="form-done" id="unv-msg" role="status"></span></div>
       ${d.rows.map((r, i) => rowEditCard(r, true, i + 1)).join('')}` : '<div class="empty-state">Nothing to check. Every result is on the site.</div>');
   }
+  $('unv-list').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-dup-del]');
+    if (!b || !confirm('Delete this copy from the site? The other copy stays.')) return;
+    b.disabled = true;
+    try { await api('/api/admin/unverified', { method: 'POST', body: { id: Number(b.dataset.dupDel), remove: true } }); refreshSummary(); loadUnverified(); }
+    catch (err) { b.disabled = false; alert(err.message); }
+  });
   async function rowAction(e) {
     const b = e.target.closest('button[data-act]');
     if (!b) return;

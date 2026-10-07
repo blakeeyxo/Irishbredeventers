@@ -16,7 +16,14 @@ export async function onRequestGet({ env }) {
   const { results: placeholders } = await env.DB.prepare(`SELECT e.id, e.name, e.start_date, COUNT(r.id) AS results,
       (SELECT GROUP_CONCAT(DISTINCT r2.class_name) FROM results r2 WHERE r2.event_id = e.id) AS classes
     FROM events e JOIN results r ON r.event_id = e.id WHERE e.name LIKE 'Event heading missing%' GROUP BY e.id`).all();
-  return json({ rows: results.map(r => ({ ...r, problems: problemsFor(r) })), placeholders });
+  // The same horse, class and score listed under two events that run on the same dates: one of them is misfiled.
+  const { results: duplicates } = await env.DB.prepare(`SELECT p1.id AS id1, e1.name AS event1, e1.country AS country1, p2.id AS id2, e2.name AS event2, e2.country AS country2,
+      p1.horse_name, c1.name AS class_name, p1.position, p1.score
+    FROM placings p1 JOIN classes c1 ON c1.id = p1.class_id JOIN events e1 ON e1.id = c1.event_id
+    JOIN placings p2 ON p2.id > p1.id AND p2.horse_name = p1.horse_name AND IFNULL(p2.score, -1) = IFNULL(p1.score, -1) AND p2.position IS p1.position
+    JOIN classes c2 ON c2.id = p2.class_id AND c2.name = c1.name JOIN events e2 ON e2.id = c2.event_id
+    WHERE e1.id <> e2.id AND e1.start_date <= IFNULL(e2.end_date, e2.start_date) AND e2.start_date <= IFNULL(e1.end_date, e1.start_date) LIMIT 200`).all();
+  return json({ rows: results.map(r => ({ ...r, problems: problemsFor(r) })), placeholders, duplicates });
 }
 
 // { id, fields: {...}, verify: true|false }  or  { id, remove: true }

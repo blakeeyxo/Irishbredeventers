@@ -278,3 +278,4 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .event-edit { margin: 8px 0; border: 1px dashed #b9b9a8; border-radius: 6px; padding: 6px 10px; }
 .event-edit summary { cursor: pointer; font-weight: 600; }
 .event-edit .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.dup-row { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; border-top: 1px solid #ddd; }
