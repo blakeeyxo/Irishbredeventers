@@ -127,7 +127,7 @@ Turning now at the horses who took a T10Place in the UK, 14.2% were themselves T
 If those responsible for the Irish Sport Horse (be they those that set out the future breeding plans or those that breed these valuable mares or the producers and sellers) don’t retain these TIH mares in Ireland, then the Traditional Irish Horse will become extinct.
 
 Thank you Charlie Ripman as always for all the great statistics. We are very proud and determined to retain our traditional mares in our breeding programme. These high blood mares going back to old Irish blood lines are without doubt unique. We feel very strongly that they will present standout opportunities moving forward in a marketplace that will become so muddied by similarity.
-Traditional Irish Horse Association #irishheritage #irishculture #irishhorse', 'Proof, if it were needed, why Traditionally bred Irish mares are so important to the export market. Looking at the eventing results for the week of 16.5 22 there were 49 classes in the UK and just 11 in the USA. Because…', '', 'Charlie Ripman on Facebook', '2022-05-25 12:00:00', 3
+Traditional Irish Horse Association #irishheritage #irishculture #irishhorse', 'Proof, if it were needed, why Traditionally bred Irish mares are so important to the export market. Looking at the eventing results for the week of 16.5 22 there were 49 classes in the UK and just 11 in the USA. Because…', '', 'Charlie Ripman', '2022-05-25 12:00:00', 3
 WHERE NOT EXISTS (SELECT 1 FROM news WHERE title = 'Proof, if it were needed, why Traditionally bred Irish mares are so important to the export market.');
 
 INSERT INTO news (title, body, snippet, source_url, source_name, published_at, sort_order)
@@ -142,7 +142,7 @@ This shows how influential TIH is in the breeding of Event horses aimed at expor
 
 Irish Draught Horse Society Limited. Northern Ireland
 January 20, 2022
-Charlie Ripman continues to produce fantastic information highlighting the value of the Traditional Irish Horse (TIH) which as you will be aware can only have Irish Draught, Tb and / or Connemara blood in the pedigree.', 'I accept that this is early on in the research but I am looking at the horses that achieved a Top 10 Place in the UK in 2021 and were born in 2004 and later. There are 4,525 in total which includes all T10 Placed Irish…', '', 'Charlie Ripman on Facebook', '2022-01-20 12:00:00', 4
+Charlie Ripman continues to produce fantastic information highlighting the value of the Traditional Irish Horse (TIH) which as you will be aware can only have Irish Draught, Tb and / or Connemara blood in the pedigree.', 'I accept that this is early on in the research but I am looking at the horses that achieved a Top 10 Place in the UK in 2021 and were born in 2004 and later. There are 4,525 in total which includes all T10 Placed Irish…', '', 'Charlie Ripman', '2022-01-20 12:00:00', 4
 WHERE NOT EXISTS (SELECT 1 FROM news WHERE title = 'I accept that this is early on in the research but I am looking at the horses that achieved a Top 10 Place in the UK in 2021 and were born in 2004 and later.');
 
 INSERT INTO link_cards (title, url, teaser, source_name, card_date, sort_order)
