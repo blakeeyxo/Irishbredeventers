@@ -96,6 +96,16 @@ const SIGN_IN = /^\/signin(\/|$)/;
 const OWNER_PAGES = /^\/admin(\/|$)/;
 const OWNER_API = /^\/api\/admin(\/|$)/;
 
+const CACHEABLE = /^\/api\/(home|results|search|news|links|ads|config|stallions(\/\d)?|horse\/[^/]+)$/;
+const EDGE_SECONDS = 300;
+// The pages the public site loads first; anything else expires by itself within EDGE_SECONDS.
+async function clearPublicCache(origin) {
+  const year = new Date().getFullYear();
+  const paths = ['/api/home', '/api/news', '/api/links', '/api/ads', '/api/config', '/api/stallions', '/api/results',
+    `/api/results?season=${year}`, `/api/results?season=${year - 1}`, ...[1, 2, 3, 4, 5, 6].map(n => `/api/stallions/${n}`)];
+  await Promise.all(paths.map(p => caches.default.delete(new Request(origin + p)).catch(() => {})));
+}
+
 const PRIVATE = { 'cache-control': 'no-store', 'x-robots-tag': 'noindex, nofollow' };
 const jsonError = (message, status) => new Response(JSON.stringify({ error: message }), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', ...PRIVATE }
@@ -149,8 +159,22 @@ export default {
       waitUntil: p => ctx.waitUntil(p),
       next: () => handler(context)
     };
+    // Public reads are kept at the edge for a few minutes, so a busy day (or a crawler) costs the database one
+    // read of each page, not one per visit. The owner area clears them after every save.
+    const cacheable = request.method === 'GET' && !ownerApi && CACHEABLE.test(path);
+    const cacheKey = cacheable ? new Request(url.origin + path + url.search) : null;
+    if (cacheable) {
+      const hit = await caches.default.match(cacheKey).catch(() => null);
+      if (hit) return hit;
+    }
     try {
       const res = await handler(context);
+      if (cacheable && res.status === 200) {
+        const stored = new Response(res.clone().body, res);
+        stored.headers.set('cache-control', `public, max-age=${EDGE_SECONDS}`);
+        ctx.waitUntil(caches.default.put(cacheKey, stored).catch(() => {}));
+      }
+      if (ownerApi && request.method !== 'GET' && res.status < 400) ctx.waitUntil(clearPublicCache(url.origin));
       if (!ownerApi) return res;
       const out = new Response(res.body, res);
       for (const [k, v] of Object.entries(PRIVATE)) out.headers.set(k, v);
