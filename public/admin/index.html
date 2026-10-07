@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/site.css?v=3">
-<link rel="stylesheet" href="/admin/admin.css?v=13">
+<link rel="stylesheet" href="/admin/admin.css?v=14">
 </head>
 <body>
 
@@ -199,38 +199,18 @@
   <!-- BREEDING RECORDS -->
   <div class="adm-pane" id="adm-breeding">
     <h3>Breeding records</h3>
-    <p class="intro" id="horse-intro">Find a horse and fill in or correct its breeding: sire, dam, dam sire, breeder, year of birth, sex and breed. Every result of that horse on the site shows the new details straight away, and the stallion numbers follow. <b>View on site</b> opens the horse's page as visitors see it. Type names with their codes if you have them, e.g. <i>Womanizer (KWPN)</i> or <i>Cruising (ISH)[TIH]</i>; leave a box empty (or type UNK) if it isn't known.</p>
-    <div class="chips breed-mode" role="tablist">
-      <button class="chip active" type="button" data-breed-mode="horses">Horses</button>
-      <button class="chip" type="button" data-breed-mode="sires">Stallions &amp; sires</button>
-    </div>
-    <div id="sire-pane" hidden>
-      <p class="intro">Correct a stallion's name, breed code or [TIH]. If the same stallion is in the records under two spellings (a typo in an article, e.g. <i>Imperial Hights</i>), type the right name, or pick it under "Join into", and the two become one: all their progeny, mares and results move across, and the stallion numbers follow.</p>
-      <form class="form obos-form" id="obos-form">
-        <b>How the site writes OBOS</b> <span class="meta">(OBOS and O.B.O.S. are treated as the same name for matching and counting)</span>
-        <label class="chk"><input type="radio" name="spelling" value="OBOS"> OBOS</label>
-        <label class="chk"><input type="radio" name="spelling" value="O.B.O.S."> O.B.O.S.</label>
-        <span class="form-done" role="status"></span>
-      </form>
-      <form class="form breed-search" id="sire-search">
-        <label>Stallion name<input type="search" name="q" maxlength="100" placeholder="e.g. Imperial Heights (leave empty for the busiest sires)"></label>
-        <div class="adm-actions"><button class="btn" type="submit">Find stallions</button></div>
-      </form>
-      <div id="sire-list"></div>
-    </div>
-    <div id="horse-pane">
+    <p class="intro">Find a horse or a stallion and fill in or correct its breeding: sire, dam, dam sire, breeder, year of birth and breed (and sex for a horse). Stallions are edited exactly the same way, and a stallion written under two spellings can be joined into one. Every result of that horse on the site shows the new details straight away, and the stallion numbers follow. <b>View on site</b> opens the horse's page as visitors see it. Type names with their codes if you have them, e.g. <i>Womanizer (KWPN)</i> or <i>Cruising (ISH)[TIH]</i>; leave a box empty (or type UNK) if it isn't known.</p>
     <form class="form breed-search" id="breed-search">
       <div class="form-row">
-        <label>Horse name or former name<input type="search" name="q" maxlength="100" placeholder="e.g. MM Irish Clover"></label>
+        <label>Horse or stallion name (or a former name)<input type="search" name="q" maxlength="100" placeholder="e.g. MM Irish Clover or Imperial Heights"></label>
         <label>Sire (all the progeny of a stallion)<input type="search" name="sire" maxlength="300" list="breed-sires" placeholder="e.g. Sligo Candy Boy"></label>
       </div>
       <label class="chk"><input type="checkbox" name="gaps" value="1"> Only horses with part of their breeding missing <span id="breed-gaps"></span></label>
-      <div class="adm-actions"><button class="btn" type="submit">Find horses</button></div>
+      <div class="adm-actions"><button class="btn" type="submit">Find</button></div>
     </form>
     <datalist id="breed-sires"></datalist>
     <p class="meta" id="breed-count"></p>
     <div id="breed-list"></div>
-    </div>
   </div>
 
   <!-- STALLIONS -->
@@ -272,6 +252,6 @@
 </footer>
 
 <script src="/js/common.js?v=3"></script>
-<script src="/admin/admin.js?v=14"></script>
+<script src="/admin/admin.js?v=15"></script>
 </body>
 </html>

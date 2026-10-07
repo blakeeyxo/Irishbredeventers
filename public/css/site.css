@@ -529,3 +529,4 @@ a.bar-row:hover .bar-label { color: var(--navy); text-decoration: underline; tex
     font-size: clamp(14px, 4.2vw, 18px); letter-spacing: 0; text-transform: none; border-bottom-width: 3px; white-space: nowrap;
   }
 }
+.stallion-pedigree { font-size: 14.5px; color: var(--ink-soft); margin: 0 0 10px; }

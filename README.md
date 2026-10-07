@@ -94,7 +94,7 @@ Do these once, in order. Everything is on the free plans to start.
   `0007_hsi_2026_results.sql` (the 2026 Horse Sport Ireland results) and `0008_ad_display.sql` / `0009_ad_crop.sql` / `0010_ad_phone_crop.sql`
   (advert crop settings) and `0011_page_ad_slots_stallions.sql` (per-page ad slots, stallion listings,
   comment spam flag), `0012_hsi_2025_nov_dec_results.sql` (November–December 2025 results), `0013_batch_published.sql`
-  `0014_horse_breeding_source.sql`, `0015_dotted_names_obos.sql`, `0016_analytics.sql` and `0017_news_no_facebook.sql` and `0018_june1_classes.sql` apply
+  `0014_horse_breeding_source.sql`, `0015_dotted_names_obos.sql`, `0016_analytics.sql` and `0017_news_no_facebook.sql` and `0018_june1_classes.sql` and `0019_stallion_pedigree.sql` apply
   on deploy.) `0005_launch_content.sql`
   loads Charlie's real results (14–16 February 2025 and the week of 6 April 2026), his four articles and
   the three link cards. It never adds example ads or the fictional sample weeks.
@@ -247,8 +247,10 @@ Each stallion listing in the Stallions tab links straight to its progeny here.
 and link cards, for any date range. Only a daily count is kept (table `analytics`): no cookies, IP addresses or
 personal details, and bots are ignored. The site reports to `/api/track`.
 
-**OBOS.** "O.B.O.S." and "OBOS" are the same name for matching and counting (dotted initials match without the dots,
-and uploads store OBOS). Breeding records → Stallions & sires has "How the site writes OBOS" (default OBOS).
+**Dots in names.** A full stop never makes a different name: "O.B.O.S.", "O. B. O. S" and "OBOS" are one name, as are
+"J. W. Rosbotham" and "JW Rosbotham", "P.S. I Love You" and "PS I Love You", "St. Ghyvan" and "St Ghyvan". This applies to
+every sire, dam, breeder and horse name when results are uploaded or edited, so a new spelling joins the existing record
+instead of making a second one (the name already on file is kept). OBOS is always written OBOS. There is no setting.
 
 **Unverified tab.** Only real problems are listed, each with what's wrong in plain words. No change, no click: nothing
 happens to a row you leave alone. Fix a row (editing ticks it) or tick Verified, then press Done; only ticked rows go
@@ -280,9 +282,11 @@ against the space itself (placement `all:left1` etc.). A page's own advert for t
 **Stallions tab: Sires mentioned most.** The top 20 sires of the last 12 months, plus any other sire by name, each
 with a Feature button that puts him into a free listing (or, when all six are taken, the listing you choose).
 
-**Breeding records: Stallions & sires.** Rename a stallion, set his breed code or [TIH], or join two spellings of the
-same stallion (e.g. "Imperial Hights" into "Imperial Heights"): his progeny, mares and results all move across, and
-horses that turn out to be the same are joined too.
+**Breeding records: stallions are edited like horses.** One search finds a horse or a stallion. A stallion has the same
+fields as a horse (his own sire, dam, dam sire, breeder, year of birth, breed, [TIH]), plus his name, and "Join into" for
+two spellings of the same stallion (e.g. "Imperial Hights" into "Imperial Heights"): his progeny, mares and results all
+move across, and horses that turn out to be the same are joined too. When a stallion's own breeding is filled in it is
+shown on his public stallion page.
 
 **Comments.** Every comment goes to the approval queue. If the Turnstile spam check did not pass, the comment is
 still queued but marked "Spam check did not pass" so it can be read carefully before approving.

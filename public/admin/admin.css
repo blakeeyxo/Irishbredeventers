@@ -219,8 +219,7 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .st-feature .form-done.ok { background: #EEF5F1; border-left: 3px solid var(--navy); }
 .st-feature .form-done.err { background: #FBEDEF; border-left: 3px solid var(--alert); color: var(--alert); }
 
-/* ---------- Breeding records: Horses / Stallions & sires ---------- */
-.breed-mode { display: flex; gap: 6px; margin: 4px 0 14px; }
+/* ---------- Breeding records ---------- */
 .sire-card .adm-actions a { font-size: 13px; font-weight: 600; color: var(--navy); }
 
 /* ---------- Ads tab: link cards section, every-page option ---------- */
@@ -235,10 +234,6 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .feat-room { color: var(--navy); font-weight: 600; font-size: 13.5px; margin: 4px 0; }
 .feat-full { background: #FFF4EC; border-left: 3px solid var(--gold-bright); padding: 8px 10px; font-size: 13.5px; margin: 6px 0; }
 .all-sires-head { margin: 20px 0 6px !important; }
-.obos-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; background: var(--paper); border: 1px solid var(--rule); padding: 10px 12px; margin-bottom: 14px; max-width: none; }
-.obos-form .chk { margin: 0; }
-.obos-form .form-done.ok { color: var(--navy); }
-.obos-form .form-done.err { color: var(--alert); }
 
 /* ---------- Analytics ---------- */
 .an-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--rule); background: var(--paper); margin: 8px 0 20px; }
@@ -269,3 +264,10 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .event-fix { border: 1px solid var(--gold-bright); background: #FFF9F3; padding: 12px 14px; margin-bottom: 12px; max-width: none; }
 .event-fix .meta { display: block; margin: 2px 0 8px; }
 .event-fix .form-done.ok { color: var(--navy); } .event-fix .form-done.err { color: var(--alert); }
+
+/* ---------- Breeding records: horses and stallions in one list ---------- */
+.breed-group { margin: 20px 0 4px; color: var(--navy); }
+.kind-tag { display: inline-block; font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #fff; background: var(--navy); padding: 1px 7px; vertical-align: 2px; }
+.kind-tag.horse { background: var(--ink-faint); }
+.join-into { grid-column: span 2; }
+@media (max-width: 560px) { .join-into { grid-column: auto; } }

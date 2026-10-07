@@ -93,3 +93,12 @@ test('every spelling of OBOS Quality 004 links to it; relatives and grandparents
   assert.equal(canonicalSire('Lagans OBOS Quality'), 'Lagans OBOS Quality');
   assert.equal(canonicalSire('OBOS Quality'), 'OBOS Quality 004');
 });
+
+test('a full stop never makes a different name', async () => {
+  const { normaliseName } = await import('../lib/names.js');
+  const same = [['O.B.O.S. Quality 004', 'OBOS Quality 004'], ['J. W. Rosbotham', 'JW Rosbotham'], ['J.W. Rosbotham', 'J. W. Rosbotham'], ['G.H.S.', 'GHS'],
+    ['P.S. I Love You', 'PS I Love You'], ['St. Ghyvan', 'St Ghyvan'], ['Mr. Lincoln', 'Mr Lincoln'], ['R.C. Equine Ltd', 'RC Equine Ltd'], ['Mary K. Smith', 'Mary K Smith']];
+  for (const [a, b] of same) assert.equal(normaliseName(a), normaliseName(b), `${a} / ${b}`);
+  assert.notEqual(normaliseName('J. W. Rosbotham'), normaliseName('J. Rosbotham'));
+  assert.notEqual(normaliseName('Lagans OBOS Quality'), normaliseName('OBOS Quality'));
+});

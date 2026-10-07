@@ -1,9 +1,6 @@
 /* IrishBredEventingResults (IBER) public site. */
 (function () {
-  const { esc: escText, api, ordinal, niceDate, turnstileReady, mountTurnstile, turnstileToken, resetTurnstile } = window.IBE;
-  // OBOS is stored one way; the site writes it the way the owner chose (Breeding records → Stallions & sires).
-  let obosDotted = false;
-  const esc = v => escText(obosDotted && v !== null && v !== undefined ? String(v).replace(/\bOBOS\b/g, 'O.B.O.S.') : v);
+  const { esc, api, ordinal, niceDate, turnstileReady, mountTurnstile, turnstileToken, resetTurnstile } = window.IBE;
   const $ = id => document.getElementById(id);
   const SITE = 'IrishBredEventingResults';
   const HOME_ROWS = window.matchMedia('(max-width: 720px)').matches ? 8 : 20;
@@ -679,6 +676,14 @@
       $('stallion-grid').innerHTML = `<div class="empty-state">${esc(e.message)}</div>`;
     }
   }
+  // His own breeding, when the owner has filled it in: "By X out of Y (by Z). Bred by B. Foaled 2010."
+  function pedigreeLine(p) {
+    if (!p) return '';
+    const by = p.sire ? `By ${esc(p.sire)}` : '', out = p.dam ? `${by ? ' out of' : 'Out of'} ${esc(p.dam)}${p.dam_sire ? ` by ${esc(p.dam_sire)}` : ''}` : '';
+    const rest = [p.breeder ? `Bred by ${esc(p.breeder)}` : '', p.foaled ? `Foaled ${esc(p.foaled)}` : ''].filter(Boolean);
+    const text = [`${by}${out}`.trim(), ...rest].filter(Boolean).join('. ');
+    return text ? `<p class="stallion-pedigree">${text}.</p>` : '';
+  }
   async function renderStallion(slot) {
     const el = $('stallion-detail');
     el.innerHTML = '<div class="empty-state">Loading…</div>';
@@ -709,6 +714,7 @@
           <p class="eyebrow">Stallion</p>
           <h2 class="page-title">${esc(s.name)}</h2>
           ${s.blurb ? `<p class="page-intro">${esc(s.blurb)}</p>` : ''}
+          ${pedigreeLine(d.pedigree)}
           ${s.link ? `<p><a class="text-link" href="${esc(s.link)}" target="_blank" rel="noopener">Visit the stud's website ↗</a></p>` : ''}
         </div>
       </div>
@@ -780,7 +786,6 @@
       if (card) track({ k: 'link', a: Number(card.dataset.linkId) });
     });
     try { state.config = await api('/api/config'); } catch { /* keep defaults */ }
-    obosDotted = state.config.obosSpelling === 'O.B.O.S.';
     turnstileReady(state.config.turnstileSiteKey);
     document.querySelectorAll('form .ts-slot').forEach(s => mountTurnstile(s.closest('form')));
     render();
