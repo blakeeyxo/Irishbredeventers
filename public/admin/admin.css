@@ -254,3 +254,15 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .an-bar { width: 50%; }
 .an-bar span { display: block; height: 12px; background: var(--navy); border-radius: 0 3px 3px 0; min-width: 2px; }
 @media (max-width: 720px) { .an-tiles { grid-template-columns: 1fr 1fr; } .an-tiles div:nth-child(3) { border-left: 0; } .an-tiles div:nth-child(n+3) { border-top: 1px solid var(--rule); } }
+
+/* ---------- Unverified: tick to verify, Done to publish ---------- */
+.unv-bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; background: var(--paper); border: 1px solid var(--rule-strong); padding: 10px 12px; margin-bottom: 10px; }
+.unv-bar .form-done.ok { color: var(--navy); }
+.unv-bar .form-done.err { color: var(--alert); }
+.check-card { border-left: 3px solid var(--alert); padding-left: 12px; }
+.check-card.ticked { border-left-color: var(--navy); background: #F4F9F6; }
+.check-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.verify-tick { font-weight: 600; color: var(--navy); }
+.problems { margin: 6px 0; padding-left: 20px; color: var(--alert); font-size: 13.5px; }
+.problems li { margin: 2px 0; }
+.rownum { color: var(--ink-faint); font-size: 11px; }

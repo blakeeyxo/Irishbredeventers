@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/site.css?v=3">
-<link rel="stylesheet" href="/admin/admin.css?v=11">
+<link rel="stylesheet" href="/admin/admin.css?v=12">
 </head>
 <body>
 
@@ -67,7 +67,7 @@
   <!-- UNVERIFIED -->
   <div class="adm-pane" id="adm-unverified">
     <h3>Unverified results</h3>
-    <p class="intro">Only real problems are listed here: lines that couldn't be read properly, entries that look wrong (a foaling year of 2105, "out of" twice, scores that don't add up), the same horse twice in a class, or results the article marked as not verified. They are <b>hidden from the public site</b> until you fix them and press "Save and mark as verified"; the horse then appears in its class. A horse that is only missing part of its breeding isn't a problem: it is on the site as OIO, with UNK for the missing names, and isn't listed here.</p>
+    <p class="intro">Only real problems are listed: each row says what's wrong with it in plain words. They are <b>hidden from the public site</b>. <b>No change, no click:</b> leave a row alone and nothing happens. <b>To put a row on the site:</b> fix what's wrong (editing a row ticks it) or tick <b>Verified</b> yourself, then press <b>Done</b>. Only the ticked rows go live. A horse that is only missing part of its breeding isn't a problem: it is on the site as OIO, with UNK for the missing names, and isn't listed here.</p>
     <div id="unv-list"></div>
   </div>
 
@@ -272,6 +272,6 @@
 </footer>
 
 <script src="/js/common.js?v=3"></script>
-<script src="/admin/admin.js?v=12"></script>
+<script src="/admin/admin.js?v=13"></script>
 </body>
 </html>

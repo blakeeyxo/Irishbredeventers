@@ -73,3 +73,13 @@ test('OBOS and O.B.O.S. are the same name; dotted initials match without the dot
   assert.equal(normaliseName('St. Ghyvan'), 'st ghyvan'); // words with dots are unchanged
   assert.equal(normaliseName('Cornet Obolensky'), 'cornet obolensky');
 });
+
+test('unverified rows say what is wrong in plain words', async () => {
+  const { problemsFor } = await import('../lib/checks.js');
+  const base = { raw_line: '', parse_ok: 1, foaled: 2015, dressage: '30', show_jumping: '4', cross_country: '0', score: 34, sire: 'A (ISH)', dam: 'B (ISH)', dam_sire: 'C (TB)', position: 1, event_name: 'X' };
+  assert.match(problemsFor({ ...base, foaled: 2105 })[0], /year of birth \(2105\)/);
+  assert.match(problemsFor({ ...base, score: 38.1 })[0], /don't add up/);
+  assert.match(problemsFor({ ...base, dam: 'B (ISH) out of D (TB)' })[0], /"out of"/);
+  assert.match(problemsFor({ ...base, dam_sire: 'Silverstone ZANG)' })[0], /isn't closed/);
+  assert.match(problemsFor(base)[0], /Check it against the article/);
+});

@@ -98,6 +98,16 @@
     ['class_name', 'Class'], ['event_name', 'Event'], ['country', 'Country'], ['start_date', 'Event start (YYYY-MM-DD)']
   ];
 
+  // What a parser problem means, in plain words, for the check table.
+  const PLAIN_ISSUES = {
+    'Horse name not found': "Couldn't find the horse's name.", 'Year or sex not found': "Couldn't find the year of birth and sex (e.g. \"2015 gelding\").",
+    'Sex not found': "Couldn't find the sex (gelding, mare or stallion).", 'Sire not found': "Couldn't find the sire (no \"by …\").",
+    'Dam not found': "Couldn't find the dam (no \"out of …\").", 'Breeding not found': "Couldn't find the sire or the dam.",
+    '"out of" appears twice': '"out of" appears twice, so the dam and dam sire are mixed up.',
+    'No event heading above it': 'No event heading above this line, so the event is unknown.', 'No class heading above it': 'No class heading above this line.',
+    'No country for the event': "The event heading doesn't say which country."
+  };
+  const plainIssue = x => PLAIN_ISSUES[x] || `${String(x).replace(/\.$/, '')}.`;
   function rowHTML(r, i) {
     const status = r.skip ? 'skip' : r.issues.length ? 'bad' : r.warnings.length ? 'warn' : '';
     const edit = imp.editing === i ? `<tr class="edit-row"><td colspan="8"><div class="adm-row-edit">${EDIT_FIELDS.map(([k, l, t]) => t === 'check'
@@ -105,7 +115,7 @@
       : `<label>${l}<input data-f="${k}" data-i="${i}" value="${esc(r[k] ?? '')}"></label>`).join('')}</div>
       <div class="adm-actions"><button class="btn sm" type="button" data-done="${i}">Done</button></div></td></tr>` : '';
     return `<tr class="${status}">
-      <td data-label="Place">${esc(ordinal(r.position))}</td>
+      <td data-label="Place"><small class="rownum">Row ${i + 1}</small><br>${esc(ordinal(r.position))}</td>
       <td data-label="Horse"><b>${esc(r.horse_name || '?')}</b>${r.breed ? ` <small>(${esc(r.breed)})</small>` : ''}${r.tih_flag ? ' <small class="tih">TIH</small>' : ''}
         ${r.former_name ? `<br><small>was ${esc(r.former_name)}</small>` : ''}<br><small>${esc([r.foaled, r.sex].filter(Boolean).join(' ') || 'year and sex?')}</small></td>
       <td data-label="Sire × Dam">${tagged(r.sire, r.sire_breed, r.sire_tih)} × ${tagged(r.dam, r.dam_breed, r.dam_tih)}<br><small>dam by ${r.dam_sire ? tagged(r.dam_sire, r.dam_sire_breed, r.dam_sire_tih) : '–'}</small></td>
@@ -113,10 +123,10 @@
       <td data-label="Rider">${esc(r.rider_name || '–')}${r.rider_country ? ` <small>${esc(r.rider_country)}</small>` : ''}</td>
       <td data-label="Score">${esc(scoreText(r) || '–')}</td>
       <td data-label="Event">${esc(r.event_name || '?')}<br><small>${esc(r.class_name || '?')} · ${esc(r.country || '?')}</small>
-        ${r.issues.length ? `<div class="iss">⚠ ${esc(r.issues.join('; '))}</div>` : ''}
+        ${r.issues.length ? `<div class="iss">⚠ Row ${i + 1}: ${r.issues.map(x => esc(plainIssue(x))).join(' ')}</div>` : ''}
         ${r.warnings.length ? `<div class="adm-warn">${esc(r.warnings.join('; '))}</div>` : ''}</td>
       <td data-label="Options" class="opts">
-        <label class="chk"><input type="checkbox" data-unv="${i}" ${r.verified ? '' : 'checked'}> Unverified</label>
+        <label class="chk verify-tick"><input type="checkbox" data-ver="${i}" ${r.verified ? 'checked' : ''}> Verified</label>
         <label class="chk"><input type="checkbox" data-skip="${i}" ${r.skip ? 'checked' : ''}> Leave out</label>
         <button class="btn sm alt" type="button" data-edit="${i}">${imp.editing === i ? 'Close' : 'Fix'}</button></td></tr>${edit}`;
   }
@@ -170,7 +180,7 @@
     box.innerHTML = `<div style="margin-top:30px;">
       <h3>Check before saving</h3>
       <p class="intro"><b>${incl.length}</b> placings in <b>${imp.events}</b> event${imp.events === 1 ? '' : 's'} and <b>${imp.classes}</b> class${imp.classes === 1 ? '' : 'es'}.
-        <span class="iss">${bad} could not be read cleanly</span> and are ticked Unverified. ${warn} ${warn === 1 ? 'has' : 'have'} notes. Click <b>Fix</b> on any row to correct it.</p>
+        <span class="iss">${bad} could not be read cleanly</span>: each says what's wrong and on which row. They are not ticked Verified, so they stay off the site unless you fix them: click <b>Fix</b>, correct the row and press <b>Done</b>, and it is ticked and goes live when you save. Leave a row alone and nothing changes. ${warn} ${warn === 1 ? 'row has' : 'rows have'} notes.</p>
       ${questionsHTML()}
       <div class="adm-bar"><label class="chk"><input type="checkbox" id="imp-only" ${imp.onlyProblems ? 'checked' : ''}> Show only rows with warnings</label>
         <span>New on file if saved: ${nc.horses ?? '…'} horses, ${nc.sires ?? '…'} sires, ${nc.dams ?? '…'} dams, ${nc.breeders ?? '…'} breeders</span></div>
@@ -193,7 +203,7 @@
     if (!imp) return;
     if (t.id === 'imp-only') { imp.onlyProblems = t.checked; renderImport(); return; }
     if (t.id === 'imp-week') { imp.weekLabel = t.value; return; }
-    if (t.dataset.unv !== undefined) { imp.rows[t.dataset.unv].verified = !t.checked; return; }
+    if (t.dataset.ver !== undefined) { imp.rows[t.dataset.ver].verified = t.checked; return; }
     if (t.dataset.skip !== undefined) { imp.rows[t.dataset.skip].skip = t.checked; renderImport(); recheckSoon(); return; }
     if (t.type === 'radio') { imp.decisions[t.name] = t.value === 'new' ? 'new' : t.value; renderImport(); return; }
     if (t.dataset.f) {
@@ -210,16 +220,18 @@
     if (b.dataset.edit !== undefined) { const i = Number(b.dataset.edit); imp.editing = imp.editing === i ? null : i; renderImport(); }
     if (b.dataset.done !== undefined) {
       const r = imp.rows[b.dataset.done];
+      // Changed and Done: the row is verified and goes live when the upload is saved (unless a problem is left).
       if (r.edited) {
         revalidate(r);
         if (!r.warnings.includes('Edited by hand')) r.warnings = r.warnings.concat('Edited by hand');
+        if (!r.issues.length) r.verified = true;
       }
       imp.editing = null; renderImport();
     }
     if (b.id === 'imp-confirm') confirmImport();
   });
 
-  // After a fix, drop the problems that are now solved. Charlie still decides the Unverified tick.
+  // After a fix, drop the problems that are now solved (Done then ticks the row Verified if none are left).
   function revalidate(r) {
     const solved = {
       'Horse name not found': !!r.horse_name, 'Year or sex not found': !!(r.foaled && r.sex), 'Sex not found': !!r.sex,
@@ -317,7 +329,18 @@
     ['sire', 'Sire'], ['dam', 'Dam'], ['dam_sire', 'Dam sire'], ['breeder', 'Breeder'], ['dressage', 'Dressage'], ['show_jumping', 'Show jumping'], ['cross_country', 'Cross country'], ['score', 'Final score']];
 
   // One result as an editable card: in the Unverified tab, and under an upload opened with Edit.
-  function rowEditCard(r) {
+  // In the Unverified tab (check = true) each row has a Verified tick box instead of buttons: nothing is saved
+  // until Done, and only ticked rows go live. Editing a row ticks it.
+  function rowEditCard(r, check = false, n = 0) {
+    if (check) {
+      return `<form class="adm-card check-card" data-id="${r.id}">
+        <div class="check-head"><label class="chk verify-tick"><input type="checkbox" name="__verify"> Verified: put it on the site</label>
+          <b>Row ${n}: ${esc(r.horse_name || '?')}</b> <span class="meta">${esc(ordinal(r.position))} · ${esc(r.country)} · ${esc(r.event_name)} · ${esc(r.class_name)}</span></div>
+        <ul class="problems">${(r.problems || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+        ${r.raw_line ? `<p class="meta">As written in the article: ${esc(r.raw_line)}</p>` : ''}
+        <div class="adm-row-edit">${FIELDS.map(([k, l]) => `<label>${l}<input name="${k}" value="${esc(r[k] ?? '')}"></label>`).join('')}</div>
+        <div class="adm-actions"><button class="btn sm alt" data-act="remove">Delete this result</button><span class="form-done" role="status"></span></div></form>`;
+    }
     return `<form class="adm-card" data-id="${r.id}" data-verified="${r.verified ? 1 : 0}">
       <b>${esc(r.horse_name || '?')}</b>${r.doubtful ? ' <span class="iss">Unverified: hidden from the site until verified</span>' : r.oio ? ' <span class="gap-tag">OIO on the site</span>' : ''} <span class="meta">${esc(r.country)} · ${esc(r.event_name)} · ${esc(r.class_name)}</span>
       ${r.raw_line ? `<p class="meta">${r.parse_ok ? 'As written' : 'Could not be read cleanly. As written'}: ${esc(r.raw_line)}</p>` : ''}
@@ -330,7 +353,9 @@
   }
   async function loadUnverified() {
     const d = await api('/api/admin/unverified');
-    $('unv-list').innerHTML = d.rows.length ? d.rows.map(rowEditCard).join('') : '<div class="empty-state">Nothing to check. Every result is on the site.</div>';
+    $('unv-list').innerHTML = d.rows.length ? `<div class="unv-bar"><span id="unv-count">Nothing ticked: nothing will change.</span>
+        <button class="btn" type="button" id="unv-done" disabled>Done: put ticked rows on the site</button><span class="form-done" id="unv-msg" role="status"></span></div>
+      ${d.rows.map((r, i) => rowEditCard(r, true, i + 1)).join('')}` : '<div class="empty-state">Nothing to check. Every result is on the site.</div>';
   }
   async function rowAction(e) {
     const b = e.target.closest('button[data-act]');
@@ -344,12 +369,43 @@
     try {
       await api('/api/admin/unverified', { method: 'POST', body });
       refreshSummary();
-      if (inUnverified) return loadUnverified();
+      if (inUnverified) { form.remove(); return unvCount(); }
       if (b.dataset.act === 'remove') form.remove();
       else { b.disabled = false; form.querySelector('.form-done').textContent = 'Saved.'; }
     } catch (err) { alert(err.message); b.disabled = false; }
   }
-  $('unv-list').addEventListener('click', rowAction);
+  // Unverified tab: edit → ticked; tick count; Done saves and publishes only the ticked rows.
+  const unvCount = () => {
+    const n = $('unv-list').querySelectorAll('input[name="__verify"]:checked').length;
+    $('unv-count').textContent = n ? `${n} row${n === 1 ? '' : 's'} ticked: Done puts ${n === 1 ? 'it' : 'them'} on the site.` : 'Nothing ticked: nothing will change.';
+    $('unv-done').disabled = !n;
+  };
+  $('unv-list').addEventListener('input', e => {
+    const card = e.target.closest('.check-card');
+    if (!card) return;
+    if (e.target.name !== '__verify') { card.querySelector('input[name="__verify"]').checked = true; card.classList.add('edited'); }
+    card.classList.toggle('ticked', card.querySelector('input[name="__verify"]').checked);
+    unvCount();
+  });
+  $('unv-list').addEventListener('click', async e => {
+    if (e.target.id === 'unv-done') {
+      const cards = [...$('unv-list').querySelectorAll('.check-card')].filter(c => c.querySelector('input[name="__verify"]').checked);
+      e.target.disabled = true; $('unv-msg').textContent = 'Saving…';
+      let done = 0;
+      try {
+        for (const c of cards) {
+          const fields = Object.fromEntries([...new FormData(c)].filter(([k]) => k !== '__verify'));
+          await api('/api/admin/unverified', { method: 'POST', body: { id: Number(c.dataset.id), fields, verify: true } });
+          done++;
+        }
+        refreshSummary();
+        await loadUnverified();
+        $('unv-msg').className = 'form-done ok'; $('unv-msg').textContent = `✓ ${done} result${done === 1 ? ' is' : 's are'} now on the site.`;
+      } catch (err) { $('unv-msg').className = 'form-done err'; $('unv-msg').textContent = `${done} saved, then: ${err.message}`; e.target.disabled = false; }
+      return;
+    }
+    rowAction(e);
+  });
   $('adm-batches').addEventListener('click', rowAction);
 
   /* ---------- Images: shrink before upload ---------- */

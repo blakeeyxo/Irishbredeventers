@@ -3,13 +3,15 @@
 // on the site as OIO / UNK and is not listed here.
 import { json, bad, readJson, str } from '../../../lib/http.js';
 import { PLACING_COLUMNS, PLACING_JOIN, PLACING_ORDER, TO_CHECK_SQL, refreshBatchCounts } from '../../../lib/results.js';
+import { problemsFor } from '../../../lib/checks.js';
 
 const EDITABLE = ['horse_name', 'former_name', 'breed', 'sex', 'sire', 'dam', 'dam_sire', 'breeder', 'dressage', 'show_jumping', 'cross_country'];
 
 export async function onRequestGet({ env }) {
   const { results } = await env.DB.prepare(`SELECT ${PLACING_COLUMNS}, IFNULL(r.raw_line, '') AS raw_line, IFNULL(r.parse_ok, 1) AS parse_ok,
       IFNULL(r.article_url, '') AS article_url ${PLACING_JOIN} WHERE ${TO_CHECK_SQL} ${PLACING_ORDER} LIMIT 1000`).all();
-  return json({ rows: results });
+  // Each row says what is wrong with it, in plain words.
+  return json({ rows: results.map(r => ({ ...r, problems: problemsFor(r) })) });
 }
 
 // { id, fields: {...}, verify: true|false }  or  { id, remove: true }
