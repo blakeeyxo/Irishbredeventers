@@ -232,3 +232,6 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
   .feat-table tr { padding: 6px 0; border-top: 1px solid var(--rule); }
   .feat-table td { border: 0; padding: 1px 0; text-align: left !important; }
 }
+.feat-room { color: var(--navy); font-weight: 600; font-size: 13.5px; margin: 4px 0; }
+.feat-full { background: #FFF4EC; border-left: 3px solid var(--gold-bright); padding: 8px 10px; font-size: 13.5px; margin: 6px 0; }
+.all-sires-head { margin: 20px 0 6px !important; }

@@ -968,34 +968,51 @@
   function renderFeature(d) {
     const featured = new Map(d.listings.filter(l => l.name).flatMap(l => (l.matched || []).map(m => [m, l.slot])));
     const free = d.listings.filter(l => !l.name).map(l => l.slot);
-    const slotSel = () => `<select class="feat-slot">${d.listings.map(l => `<option value="${l.slot}"${l.slot === free[0] ? ' selected' : ''}>Listing ${l.slot}${l.name ? ` (replaces ${esc(l.name)})` : ' (free)'}</option>`).join('')}</select>`;
+    // The top 6 is a hard limit: when every listing is taken, nothing is replaced until the owner picks one to swap out.
+    const slotSel = () => `<select class="feat-slot">${free.length ? '' : '<option value="" selected>Choose a listing to swap out…</option>'}${d.listings.map(l => `<option value="${l.slot}"${l.slot === free[0] ? ' selected' : ''}>Listing ${l.slot}${l.name ? ` (swap out ${esc(l.name)})` : ' (free)'}</option>`).join('')}</select>`;
+    stallionSlotSel = slotSel;
     $('st-feature').innerHTML = `<h4>Sires mentioned most <small>${esc(d.window.label)}</small></h4>
-      <p class="meta">Put any sire into one of the six listings with one click (you can add a photo and blurb afterwards). ${free.length ? `${free.length} listing${free.length === 1 ? ' is' : 's are'} free.` : 'All six are taken: choose which listing to replace.'}</p>
+      <p class="meta">Put any sire into the top 6 with one click (you can add a photo and blurb afterwards).</p>
+      ${free.length ? `<p class="feat-room">${free.length} of 6 listing${free.length === 1 ? ' is' : 's are'} free.</p>`
+        : '<p class="feat-full"><b>The top 6 is full.</b> To add a sire, choose which listing to swap out next to him, then press Add to top 6. Nothing changes until you do.</p>'}
       <table class="feat-table"><thead><tr><th>#</th><th>Sire</th><th class="num">Mentions</th><th class="num">Horses</th><th class="num">Wins</th><th></th></tr></thead><tbody>
       ${d.top.map((t, i) => `<tr data-sire="${esc(t.name)}"><td>${i + 1}</td><td><b>${esc(t.name)}</b></td><td class="num">${t.mentions}</td><td class="num">${t.horses}</td><td class="num">${t.wins}</td>
-        <td class="acts">${featured.has(t.name) ? `<span class="st st-live">In listing ${featured.get(t.name)}</span>` : `${slotSel()} <button class="btn sm" type="button" data-feature>Feature</button>`}</td></tr>`).join('')}
+        <td class="acts">${featured.has(t.name) ? `<span class="st st-live">In listing ${featured.get(t.name)}</span>` : `${slotSel()} <button class="btn sm" type="button" data-feature>Add to top 6</button>`}</td></tr>`).join('')}
       </tbody></table>
-      <div class="feat-any" data-any><label>Any other sire<input class="feat-name" list="sire-names" placeholder="Start typing a sire's name"></label> ${slotSel()} <button class="btn sm" type="button" data-feature>Feature</button></div>
-      <div class="form-done" role="status" id="feat-done"></div>`;
+      <div class="form-done" role="status" id="feat-done"></div>
+      <h4 class="all-sires-head">All sires</h4>
+      <form class="feat-any" id="all-sires-search"><label>Find a sire<input name="q" type="search" list="sire-names" placeholder="Type part of a name, or leave empty for the sires with most horses"></label>
+        <button class="btn sm alt" type="submit">Show</button></form>
+      <table class="feat-table" id="all-sires"><tbody><tr><td class="meta">Loading…</td></tr></tbody></table>`;
+    stallionFeatured = featured;
+    loadAllSires('');
   }
+  let stallionSlotSel = () => '', stallionFeatured = new Map();
+  async function loadAllSires(q) {
+    const d = await api(`/api/admin/breeding?${new URLSearchParams({ kind: 'sires', q })}`);
+    $('all-sires').innerHTML = `<thead><tr><th>Sire</th><th class="num">Horses</th><th class="num">Results</th><th></th></tr></thead><tbody>
+      ${d.sires.map(x => `<tr data-sire="${esc(x.name)}"><td><b>${esc(x.name)}</b>${x.breed_code ? ` <small>(${esc(x.breed_code)})</small>` : ''}</td><td class="num">${x.progeny}</td><td class="num">${x.results}</td>
+        <td class="acts">${stallionFeatured.has(x.name) ? `<span class="st st-live">In listing ${stallionFeatured.get(x.name)}</span>` : `${stallionSlotSel()} <button class="btn sm" type="button" data-feature>Add to top 6</button>`}</td></tr>`).join('')
+        || '<tr><td class="meta">No sires match.</td></tr>'}</tbody>`;
+  }
+  $('st-feature').addEventListener('submit', e => { if (e.target.id === 'all-sires-search') { e.preventDefault(); loadAllSires(e.target.elements.q.value.trim()); } });
   $('st-feature').addEventListener('click', async e => {
     const b = e.target.closest('[data-feature]');
     if (!b) return;
-    const row = b.closest('[data-sire], [data-any]');
-    const name = row.dataset.sire || row.querySelector('.feat-name').value.trim();
-    const slot = Number(row.querySelector('.feat-slot').value);
-    if (!name) return;
-    const sel = row.querySelector('.feat-slot'), replacing = /replaces/.test(sel.options[sel.selectedIndex].text);
-    if (replacing && !confirm(`Put ${name} into Listing ${slot}? It replaces the stallion there now.`)) return;
+    const row = b.closest('[data-sire]');
+    const name = row.dataset.sire, sel = row.querySelector('.feat-slot'), slot = Number(sel.value);
+    const say = (ok, text) => { $('feat-done').className = `form-done ${ok ? 'ok' : 'err'}`; $('feat-done').textContent = text; $('feat-done').scrollIntoView({ block: 'nearest' }); };
+    if (!slot) return say(false, `The top 6 is full. Choose which listing to swap out next to ${name}, then press Add to top 6 again.`);
+    const swapping = /swap out/.test(sel.options[sel.selectedIndex].text);
+    if (swapping && !confirm(`Swap ${sel.options[sel.selectedIndex].text.match(/swap out (.*)\)/)[1]} out of Listing ${slot} and put ${name} in?`)) return;
     const form = new FormData(); form.append('slot', slot); form.append('name', name); form.append('sire_names', name);
     b.disabled = true;
     try {
       const r = await api('/api/admin/stallions', { method: 'POST', form });
       stallionNote = { slot, ...savedText(r) };
       await loadStallions();
-      $('feat-done').className = 'form-done ok';
-      $('feat-done').textContent = `✓ ${name} is now Stallions – Listing ${slot}. Add a photo and blurb below.`;
-    } catch (err) { $('feat-done').className = 'form-done err'; $('feat-done').textContent = `Not saved: ${err.message}`; b.disabled = false; }
+      say(true, `✓ ${name} is now in the top 6 as Stallions – Listing ${slot}. Add a photo and blurb below.`);
+    } catch (err) { say(false, `Not saved: ${err.message}`); b.disabled = false; }
   });
   $('st-list').addEventListener('submit', async e => {
     e.preventDefault();
