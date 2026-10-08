@@ -44,6 +44,10 @@ import * as adminComments from '../functions/api/admin/comments.js';
 import * as adminCorrections from '../functions/api/admin/corrections.js';
 import * as adminEnquiries from '../functions/api/admin/enquiries.js';
 import * as adminSummary from '../functions/api/admin/summary.js';
+import * as sharedStallions from '../functions/api/shared/stallions.js';
+import * as sharedHorse from '../functions/api/shared/horse/[id].js';
+import * as adminSharedSources from '../functions/api/admin/shared/sources.js';
+import * as adminSharedUpload from '../functions/api/admin/shared/upload.js';
 
 const ROUTES = {
   '/api/config': config,
@@ -75,7 +79,11 @@ const ROUTES = {
   '/api/admin/comments': adminComments,
   '/api/admin/corrections': adminCorrections,
   '/api/admin/enquiries': adminEnquiries,
-  '/api/admin/summary': adminSummary
+  '/api/admin/summary': adminSummary,
+  // Shared horse database (both sites): stallions, horses, pedigree, breeders.
+  '/api/shared/stallions': sharedStallions,
+  '/api/admin/shared/sources': adminSharedSources,
+  '/api/admin/shared/upload': adminSharedUpload
 };
 
 const METHOD_EXPORT = { GET: 'onRequestGet', HEAD: 'onRequestGet', POST: 'onRequestPost', DELETE: 'onRequestDelete' };
@@ -85,6 +93,8 @@ function match(pathname) {
   if (ROUTES[path]) return { mod: ROUTES[path], params: {} };
   const h = path.match(/^\/api\/horse\/([^/]+)$/);
   if (h) return { mod: horse, params: { id: decodeURIComponent(h[1]) } };
+  const sh = path.match(/^\/api\/shared\/horse\/(\d+)$/);
+  if (sh) return { mod: sharedHorse, params: { id: sh[1] } };
   const st = path.match(/^\/api\/stallions\/(\d)$/);
   if (st) return { mod: stallion, params: { slot: st[1] } };
   if (path.startsWith('/media/')) return { mod: media, params: { path: path.slice(7).split('/') } };
@@ -96,12 +106,12 @@ const SIGN_IN = /^\/signin(\/|$)/;
 const OWNER_PAGES = /^\/admin(\/|$)/;
 const OWNER_API = /^\/api\/admin(\/|$)/;
 
-const CACHEABLE = /^\/api\/(home|results|search|news|links|ads|config|stallions(\/\d)?|horse\/[^/]+)$/;
+const CACHEABLE = /^\/api\/(home|results|search|news|links|ads|config|stallions(\/\d)?|horse\/[^/]+|shared\/stallions|shared\/horse\/\d+)$/;
 const EDGE_SECONDS = 300;
 // The pages the public site loads first; anything else expires by itself within EDGE_SECONDS.
 async function clearPublicCache(origin) {
   const year = new Date().getFullYear();
-  const paths = ['/api/home', '/api/news', '/api/links', '/api/ads', '/api/config', '/api/stallions', '/api/results',
+  const paths = ['/api/home', '/api/news', '/api/links', '/api/ads', '/api/config', '/api/stallions', '/api/results', '/api/shared/stallions',
     `/api/results?season=${year}`, `/api/results?season=${year - 1}`, ...[1, 2, 3, 4, 5, 6].map(n => `/api/stallions/${n}`)];
   await Promise.all(paths.map(p => caches.default.delete(new Request(origin + p)).catch(() => {})));
 }

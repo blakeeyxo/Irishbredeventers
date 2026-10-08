@@ -19,6 +19,13 @@
       "binding": "DB",
       "database_name": "irishbredeventers",
       "migrations_dir": "migrations"
+    },
+    {
+      // Shared horse database: stallions, horses, pedigree and breeders read by every site (lib/shared.js).
+      // The same database_name in both Workers connects them to the one database.
+      "binding": "SHARED",
+      "database_name": "irishbredhorses",
+      "migrations_dir": "migrations-shared"
     }
   ],
   // R2 bucket for news photos and ad images (created on first deploy if missing).
@@ -47,5 +54,48 @@
     "MAIL_PROVIDER": "resend",
     "MAIL_FROM": "IrishBredEventingResults <info@iber.ie>"
   },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+
+  // IrishBredShowjumpingResults (IBSR): the same code as a second Worker, with its own database, image bucket and
+  // look. Built from public/ + sites/ibsr.js into dist/ibsr, so `npm run deploy:ibsr` builds before it deploys.
+  // Nothing here touches IBER: different Worker name, different D1 database, different R2 bucket.
+  // The dashboard settings above (Access, Turnstile, emails) are set again on the IBSR Worker, with its own values.
+  "env": {
+    "ibsr": {
+      "name": "irishbredshowjumpers",
+      "assets": {
+        "directory": "./dist/ibsr",
+        "binding": "ASSETS",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": ["/api/*", "/media/*", "/admin", "/admin/*", "/signin", "/signin/*"]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "irishbredshowjumpers",
+          "database_id": "c7ebabb0-0bac-4d8d-80e6-3b4a13e6b3ea",
+          "migrations_dir": "migrations-ibsr"
+        },
+        {
+          "binding": "SHARED",
+          "database_name": "irishbredhorses",
+          "migrations_dir": "migrations-shared"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA",
+          "bucket_name": "irishbredshowjumpers-media"
+        }
+      ],
+      // keep_vars (top level) applies here too: dashboard values on the IBSR Worker survive deploys.
+      "vars": {
+        "SITE_ID": "ibsr",
+        "SITE_URL": "https://irishbredshowjumpers.emerblakeey.workers.dev",
+        "MAIL_PROVIDER": "resend",
+        "MAIL_FROM": "IrishBredShowjumpingResults <info@iber.ie>"
+      },
+      "observability": { "enabled": true }
+    }
+  }
 }

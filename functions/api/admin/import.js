@@ -2,6 +2,7 @@
 import { json, bad, readJson, siteUrl, str } from '../../../lib/http.js';
 import { cleanRows, importResults } from '../../../lib/import.js';
 import { sendEmails, resultsEmail } from '../../../lib/mail.js';
+import { siteFor } from '../../../lib/sites.js';
 
 export async function onRequestPost({ env, request, waitUntil }) {
   const b = await readJson(request);
@@ -19,7 +20,7 @@ export async function onRequestPost({ env, request, waitUntil }) {
     const { results } = await env.DB.prepare('SELECT email, token FROM subscribers WHERE confirmed = 1').all();
     const base = siteUrl(env, request);
     const summary = `${out.results} new Irish-bred placing${out.results === 1 ? ' has' : 's have'} been added to the results.`;
-    const messages = results.map(s => resultsEmail(s.email, `${base}/results`, `${base}/api/unsubscribe?token=${s.token}`, summary));
+    const messages = results.map(s => resultsEmail(siteFor(env), s.email, `${base}/results`, `${base}/api/unsubscribe?token=${s.token}`, summary));
     out.emailed = messages.length;
     waitUntil(sendEmails(env, messages).catch(e => console.error('results email failed', e)));
   }

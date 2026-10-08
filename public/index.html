@@ -2,20 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>IrishBredEventingResults (IBER)</title>
+<title data-site="title">IrishBredEventingResults (IBER)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="IrishBredEventingResults (IBER): every Irish-bred eventing result worldwide, searchable by horse, sire, dam, dam sire and breeder.">
-<meta name="application-name" content="IrishBredEventingResults">
-<meta property="og:site_name" content="IrishBredEventingResults">
-<meta property="og:title" content="IrishBredEventingResults (IBER)">
-<meta property="og:description" content="Every Irish-bred eventing result worldwide, with breeding and breeder.">
+<meta name="description" data-site-attr="content=description" content="IrishBredEventingResults (IBER): every Irish-bred eventing result worldwide, searchable by horse, sire, dam, dam sire and breeder.">
+<meta name="application-name" data-site-attr="content=name" content="IrishBredEventingResults">
+<meta property="og:site_name" data-site-attr="content=name" content="IrishBredEventingResults">
+<meta property="og:title" data-site-attr="content=title" content="IrishBredEventingResults (IBER)">
+<meta property="og:description" data-site-attr="content=ogDescription" content="Every Irish-bred eventing result worldwide, with breeding and breeder.">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#0F6741">
+<meta name="theme-color" data-site-attr="content=themeColor" content="#0F6741">
 <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/site.css?v=7">
+<link rel="stylesheet" href="/css/site.css?v=8">
 </head>
 <body>
 
@@ -23,9 +23,9 @@
 <div class="topbar" id="topbar">
 <header class="site-header">
   <div class="container hdr-inner">
-    <a href="/" class="brand" data-link aria-label="IrishBredEventingResults home">
-      <span class="brand-mark" aria-hidden="true">IBER</span>
-      <h1 class="brand-name">IrishBred<wbr><span>Eventing</span><wbr>Results</h1>
+    <a href="/" class="brand" data-link data-site-attr="aria-label=homeLabel" aria-label="IrishBredEventingResults home">
+      <span class="brand-mark" data-site="short" aria-hidden="true">IBER</span>
+      <h1 class="brand-name" data-site="nameHtml">IrishBred<wbr><span>Eventing</span><wbr>Results</h1>
     </a>
     <div class="hdr-right">
       <form class="hdr-search" id="search-form" role="search">
@@ -67,8 +67,8 @@
     <div class="home-lower">
       <div class="card">
         <p class="eyebrow">This week's commentary</p>
-        <h3 id="hero-headline">Irish-bred eventing results, every week</h3>
-        <p id="hero-copy">Every Irish-bred horse placed in eventing worldwide, with its breeding and breeder.</p>
+        <h3 id="hero-headline" data-site="heroHeadline">Irish-bred eventing results, every week</h3>
+        <p id="hero-copy" data-site="heroCopy">Every Irish-bred horse placed in eventing worldwide, with its breeding and breeder.</p>
         <a class="text-link" id="hero-link" href="/news" data-link>Read the full commentary →</a>
       </div>
       <div class="signup-slot"></div>
@@ -96,7 +96,7 @@
       <div class="legend-grid">
         <div><b>Pl</b><p>The horse's placing in the whole class, not just among Irish-breds, so numbers can skip.</p></div>
         <div><b>Sire × Dam</b><p>The dam's own sire is shown underneath as "dam by …".</p></div>
-        <div><b>Score</b><p>Dressage, show jumping and cross country penalties, then the final score. Lowest wins.</p></div>
+        <div><b>Score</b><p data-site="legendScore">Dressage, show jumping and cross country penalties, then the final score. Lowest wins.</p></div>
         <div><b>Former names</b><p>Shown under the horse and included in search.</p></div>
         <div><b>OIO</b><p>Of Irish Origin: part of the horse's breeding (sire, dam or dam sire) is not recorded.</p></div>
         <div><b>UNK</b><p>Unknown: a sire, dam, dam sire or breeder that isn't recorded.</p></div>
@@ -109,7 +109,7 @@
       <h3 class="section-title">Corrections and additions</h3>
       <p class="page-intro">Spotted a mistake or a missing horse? Tell us and it will be checked before the results are changed.</p>
       <form class="form" id="correction-form">
-        <label>Event and class<input type="text" name="event" required maxlength="200" placeholder="e.g. Thoresby, CCI4*-S Section G"></label>
+        <label>Event and class<input type="text" name="event" required maxlength="200" data-site-attr="placeholder=correctionExample" placeholder="e.g. Thoresby, CCI4*-S Section G"></label>
         <label>What needs correcting or adding<textarea name="message" required maxlength="3000"></textarea></label>
         <label>Your email (optional)<input type="email" name="email" maxlength="200"></label>
         <div class="ts-slot"></div>
@@ -164,10 +164,10 @@
 
   <!-- ABOUT -->
   <section class="view" id="view-about">
-    <div class="about-photo"><img src="/img/xc-jump.jpg" alt="An Irish-bred horse jumping a cross-country fence"></div>
+    <div class="about-photo" data-site="aboutPhotoHtml"><img src="/img/xc-jump.jpg" alt="An Irish-bred horse jumping a cross-country fence"></div>
     <p class="eyebrow">About</p>
-    <h2 class="page-title">About IrishBredEventingResults</h2>
-    <div class="prose">
+    <h2 class="page-title" data-site="aboutTitle">About IrishBredEventingResults</h2>
+    <div class="prose" data-site="aboutHtml">
       <p>IrishBredEventingResults (IBER) has tracked the performance of Irish-bred horses across the world's eventing circuits for close to twenty years — first as a set of spreadsheets, then as weekly posts on Horse Sport Ireland and The Irish Field, read by thousands of breeders, owners and riders every week.</p>
       <p>This site is that same weekly results service, given a permanent, searchable home. It stays independent, stays free for breeders and owners to use, and stays in the same voice it's always had.</p>
       <p>Every result traces back to the horse's breeding, so a mare sold as a foal in 2009 is just as easy to find as this week's winner.</p>
@@ -176,8 +176,8 @@
     <div class="panel">
       <h2>Contact</h2>
       <dl class="contact-list">
-        <dt>Email</dt><dd><a href="mailto:info@iber.ie">info@iber.ie</a></dd>
-        <dt>Phone</dt><dd><a href="tel:+353872165442">+353 87 216 5442</a></dd>
+        <dt>Email</dt><dd data-site="emailLinkHtml"><a href="mailto:info@iber.ie">info@iber.ie</a></dd>
+        <dt>Phone</dt><dd data-site="phoneLinkHtml"><a href="tel:+353872165442">+353 87 216 5442</a></dd>
         <dt>Read more</dt><dd><a href="https://www.irishfield.ie" target="_blank" rel="noopener">The Irish Field</a> · <a href="https://www.horsesportireland.ie" target="_blank" rel="noopener">Horse Sport Ireland</a></dd>
       </dl>
     </div>
@@ -185,7 +185,7 @@
     <div class="panel" id="advertise">
       <p class="eyebrow">Advertise</p>
       <h2>Advertise here</h2>
-      <p>Reach breeders, owners and riders who follow Irish-bred eventing every week.</p>
+      <p data-site="advertiseReach">Reach breeders, owners and riders who follow Irish-bred eventing every week.</p>
       <p>If you want more information, leave your email below and we'll be in touch.</p>
       <h3 class="section-title">Advertising enquiry</h3>
       <form class="form" id="enquiry-form">
@@ -221,8 +221,8 @@
 <footer class="site-foot">
   <div class="container foot-inner">
     <div>
-      <div class="foot-brand">IrishBred<span>Eventing</span>Results</div>
-      <p>Every Irish-bred eventing result, worldwide.</p>
+      <div class="foot-brand" data-site="footNameHtml">IrishBred<span>Eventing</span>Results</div>
+      <p data-site="footTagline">Every Irish-bred eventing result, worldwide.</p>
     </div>
     <div>
       <h4>Explore</h4>
@@ -234,13 +234,13 @@
     </div>
     <div>
       <h4>Contact</h4>
-      <p><a href="mailto:info@iber.ie">info@iber.ie</a></p>
-      <p><a href="tel:+353872165442">+353 87 216 5442</a></p>
+      <p data-site="emailLinkHtml"><a href="mailto:info@iber.ie">info@iber.ie</a></p>
+      <p data-site="phoneLinkHtml"><a href="tel:+353872165442">+353 87 216 5442</a></p>
       <p><a href="/about#privacy" data-link>Privacy</a></p>
     </div>
   </div>
   <div class="container foot-base">
-    <span>© <span id="year"></span> IrishBredEventingResults (IBER)</span>
+    <span>© <span id="year"></span> <span data-site="copyright">IrishBredEventingResults (IBER)</span></span>
     <span>We keep only what you send us: an email address for results emails, and approved comments.</span>
   </div>
 </footer>
@@ -267,7 +267,8 @@
   <div class="modal horse-modal" id="horse-modal" role="dialog" aria-modal="true" aria-label="Horse record"></div>
 </div>
 
+<script src="/js/site.js?v=1"></script>
 <script src="/js/common.js?v=4"></script>
-<script src="/js/app.js?v=13"></script>
+<script src="/js/app.js?v=14"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
 
   /* ---------- Tabs ---------- */
   let countryList = [];
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), analytics: () => loadAnalytics(), comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), shared: () => loadShared(), analytics: () => loadAnalytics(), comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -1451,6 +1451,108 @@
     if (b.dataset.enq === 'delete' && !confirm('Delete this enquiry?')) return;
     await api('/api/admin/enquiries', { method: 'POST', body: { id: Number(b.dataset.id), action: b.dataset.enq } });
     loadEnquiries(); refreshSummary();
+  });
+
+  /* ---------- Shared stallions and breeding (shared horse database, both sites) ---------- */
+  let shUpload = null; // { text, filename } of the file last checked; Save sends exactly this
+  const SH_OUTCOME = { new: 'New', updated: 'Updated', same: 'No change', held: 'Needs a decision' };
+
+  async function loadShared() {
+    let d;
+    try { d = await api('/api/admin/shared/sources'); } catch (e) { $('sh-totals').textContent = e.message; return; }
+    $('sh-totals').textContent = `On file: ${d.totals.horses} horses, ${d.totals.sires} sires with progeny, ${d.totals.breeders} breeders.`;
+    const keep = $('sh-source').value;
+    $('sh-source').innerHTML = '<option value="">Choose a source…</option>' + d.sources.map(s =>
+      `<option value="${s.id}">${esc(s.name)}${s.can_display ? '' : ' (hidden from visitors)'}</option>`).join('');
+    if (keep) $('sh-source').value = keep;
+    const yn = v => (v ? 'Yes' : 'No');
+    $('sh-sources').innerHTML = `<div class="table-scroll"><table class="adm-table"><tr><th>Source</th><th>Licence</th><th>Store</th><th>Show</th><th>Paid use</th><th>Horses</th><th></th></tr>
+      ${d.sources.map(s => `<tr><td><b>${esc(s.name)}</b>${s.terms_url ? `<br><a href="${esc(s.terms_url)}" target="_blank" rel="noopener">terms</a>` : ''}${s.notes ? `<br><span class="meta">${esc(s.notes)}</span>` : ''}</td>
+        <td>${esc(s.licence_status.replace(/_/g, ' '))}</td><td>${yn(s.can_store)}</td><td>${yn(s.can_display)}</td><td>${yn(s.can_republish_commercially)}</td>
+        <td>${s.horses}</td><td><button class="btn alt" type="button" data-edit-source="${s.id}">Edit</button></td></tr>`).join('')}</table></div>`;
+    $('sh-sources').querySelectorAll('[data-edit-source]').forEach(b => b.addEventListener('click', () => {
+      const s = d.sources.find(x => String(x.id) === b.dataset.editSource), f = $('sh-source-form');
+      for (const k of ['id', 'name', 'kind', 'licence_status', 'terms_url', 'contact', 'notes']) f.elements[k].value = s[k] ?? '';
+      for (const k of ['can_store', 'can_display', 'can_republish_commercially']) f.elements[k].checked = Boolean(s[k]);
+      f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }));
+    $('sh-ndupes').textContent = d.duplicates.length;
+    $('sh-ndupes').hidden = !d.duplicates.length;
+    $('sh-dupes').innerHTML = d.duplicates.length ? d.duplicates.map(m => `<div class="adm-row" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0;">
+        <span><b>${esc(m.a_name)}</b>${m.a_year ? ` (${m.a_year})` : ''} / <b>${esc(m.b_name)}</b>${m.b_year ? ` (${m.b_year})` : ''}</span>
+        <button class="btn alt" type="button" data-dupe="${m.id}" data-status="different">Different</button>
+        <button class="btn alt" type="button" data-dupe="${m.id}" data-status="same">Same</button></div>`).join('')
+      : '<p class="meta">None waiting.</p>';
+    $('sh-dupes').querySelectorAll('[data-dupe]').forEach(b => b.addEventListener('click', async () => {
+      await api('/api/admin/shared/sources', { method: 'POST', body: { duplicate: b.dataset.dupe, status: b.dataset.status } });
+      loadShared();
+    }));
+    $('sh-uploads').innerHTML = d.uploads.length ? `<div class="table-scroll"><table class="adm-table"><tr><th>When</th><th>Upload</th><th>Source</th><th>Rows</th><th>Added</th><th>Updated</th><th>Left out</th></tr>
+      ${d.uploads.map(u => `<tr><td>${esc(niceDate(u.created_at))}</td><td>${esc(u.label || u.filename || '–')}<br><span class="meta">${esc(u.created_by)}</span></td><td>${esc(u.source)}</td>
+        <td>${u.row_count}</td><td>${u.added}</td><td>${u.updated}</td><td>${u.held}</td></tr>`).join('')}</table></div>`
+      : '<p class="meta">No uploads yet.</p>';
+  }
+
+  function renderSharedPreview(r) {
+    const c = r.counts;
+    const notes = [...r.warnings.map(w => `<p class="adm-warn">${esc(w)}</p>`),
+      ...r.problems.map(p => `<p class="meta">Row ${p.line}: ${esc(p.message)}</p>`),
+      r.ignored.length ? `<p class="meta">Columns not used: ${esc(r.ignored.join(', '))}.</p>` : ''].join('');
+    const nothing = !c.new && !c.updated;
+    $('sh-preview').innerHTML = `<div class="summary-box">
+      <p><b>${c.rows} rows</b>: ${c.new} new, ${c.updated} updated, ${c.same} no change, ${c.held} need a decision.
+        This adds ${c.horsesAdded} horses in all (sires and dams first named here included) and ${c.breedersAdded} breeders.
+        ${r.possibleDuplicates ? `${r.possibleDuplicates} new names are close to ones on file and will be listed under Possible duplicates.` : ''}</p>
+      ${notes}
+      <div class="adm-actions">
+        <button class="btn" type="button" id="sh-save" ${nothing ? 'disabled' : ''}>Save ${c.new + c.updated} rows</button>
+        <span class="meta">${c.held ? 'Rows that need a decision are left out. Fix them in the file and upload it again.' : ''}</span>
+      </div>
+      <div class="form-done" id="sh-save-msg" role="status"></div>
+    </div>
+    <div class="table-scroll"><table class="adm-table stack imp-table"><tr><th>Row</th><th>Horse</th><th>What happens</th><th>Notes</th></tr>
+      ${r.rows.map(x => `<tr class="${x.outcome === 'held' ? 'bad' : x.outcome === 'same' ? 'skip' : ''}"><td>${x.line}</td><td>${esc(x.name)}</td>
+        <td>${SH_OUTCOME[x.outcome]}</td><td>${x.notes.map(esc).join('<br>')}</td></tr>`).join('')}</table></div>`;
+    const save = $('sh-save');
+    if (save) save.addEventListener('click', async () => {
+      save.disabled = true;
+      btnMsg($('sh-save-msg'), 'Saving…');
+      try {
+        const done = await api('/api/admin/shared/upload', { method: 'POST', body: sharedBody(true) });
+        btnMsg($('sh-save-msg'), done.saved ? `Saved: ${done.counts.horsesAdded} horses added, ${done.counts.horsesUpdated} updated.` : done.message);
+        loadShared();
+      } catch (e) { btnMsg($('sh-save-msg'), e.message); save.disabled = false; }
+    });
+  }
+
+  const sharedBody = save => ({
+    source_id: $('sh-source').value, text: shUpload.text, filename: shUpload.filename, label: $('sh-form').elements.label.value,
+    overwrite: $('sh-overwrite').checked, save
+  });
+
+  $('sh-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const file = $('sh-file').files[0];
+    const text = file ? await file.text() : $('sh-text').value;
+    if (!$('sh-source').value) { btnMsg($('sh-msg'), 'Choose where this data comes from first.'); return; }
+    if (!text.trim()) { btnMsg($('sh-msg'), 'Choose a CSV file or paste the rows.'); return; }
+    shUpload = { text, filename: file ? file.name : '' };
+    btnMsg($('sh-msg'), 'Checking…');
+    try {
+      renderSharedPreview(await api('/api/admin/shared/upload', { method: 'POST', body: sharedBody(false) }));
+      btnMsg($('sh-msg'), '');
+    } catch (err) { btnMsg($('sh-msg'), err.message); $('sh-preview').innerHTML = ''; }
+  });
+  $('sh-file').addEventListener('change', () => { if ($('sh-file').files[0]) $('sh-form').requestSubmit(); });
+  $('sh-overwrite').addEventListener('change', () => { if (shUpload) $('sh-form').requestSubmit(); });
+  $('sh-clear').addEventListener('click', () => { $('sh-form').reset(); shUpload = null; $('sh-preview').innerHTML = ''; btnMsg($('sh-msg'), ''); });
+  $('sh-source-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, body = Object.fromEntries(new FormData(f));
+    for (const k of ['can_store', 'can_display', 'can_republish_commercially']) body[k] = f.elements[k].checked;
+    const msg = f.querySelector('.form-done');
+    try { await api('/api/admin/shared/sources', { method: 'POST', body }); btnMsg(msg, 'Saved.'); f.reset(); f.elements.id.value = ''; loadShared(); }
+    catch (err) { btnMsg(msg, err.message); }
   });
 
   refreshSummary().then(loadBatches);

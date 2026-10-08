@@ -1,6 +1,7 @@
 // Results-email sign-up, step 1 of double opt-in: store the address and send a confirm link.
 import { json, bad, readJson, str, isEmail, verifyTurnstile, randomToken, siteUrl } from '../../lib/http.js';
 import { sendEmails, confirmEmail } from '../../lib/mail.js';
+import { siteFor } from '../../lib/sites.js';
 
 export async function onRequestPost({ env, request, waitUntil }) {
   const b = await readJson(request);
@@ -17,7 +18,7 @@ export async function onRequestPost({ env, request, waitUntil }) {
   // Same answer either way, so the form can't be used to check who is subscribed.
   if (!row.confirmed) {
     const url = `${siteUrl(env, request)}/api/subscribe/confirm?token=${row.token}`;
-    waitUntil(sendEmails(env, [confirmEmail(email, url)]).catch(e => console.error('confirm email failed', e)));
+    waitUntil(sendEmails(env, [confirmEmail(siteFor(env), email, url)]).catch(e => console.error('confirm email failed', e)));
   }
   return json({ ok: true });
 }

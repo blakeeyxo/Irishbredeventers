@@ -146,6 +146,50 @@ Until `MAIL_API_KEY` is set, sign-ups are stored but no email is sent (the owner
 
 ---
 
+## Sister site: IrishBredShowjumpingResults (IBSR)
+
+One codebase, two Workers. Each site's name, wording, colours, favicon and email look live in `sites/<id>.js`:
+
+- `sites/iber.js` holds exactly what `public/` already serves. `npm test` builds IBER from it and checks the result
+  matches `public/` byte for byte, so the eventing site can't change by accident.
+- `sites/ibsr.js` is showjumping: navy `#16233F` / `#0D1526` / `#2A3957` from the original demo, highlight blue `#3A8DDE`.
+- In the HTML, site-specific spots are marked `data-site="key"` (inner HTML) or `data-site-attr="attr=key"`.
+  `npm run build:ibsr` copies `public/` into `dist/ibsr` with IBSR's values (`lib/build-site.js`).
+- The Worker knows which site it is from `SITE_ID` (`lib/sites.js`; IBER when unset).
+
+IBSR is `env.ibsr` in `wrangler.jsonc`: Worker `irishbredshowjumpers`, its own D1 database `irishbredshowjumpers`
+(migrations in `migrations-ibsr/`, never IBER's), and its own R2 bucket `irishbredshowjumpers-media`.
+
+```bash
+npm run dev:ibsr                 # build dist/ibsr, then run it locally
+npm run db:migrate:local:ibsr    # IBSR's LOCAL database only
+npm run deploy:ibsr              # build, apply shared + IBSR migrations to their live databases, deploy the IBSR Worker
+```
+
+To put it live: in Cloudflare, add a second Worker named `irishbredshowjumpers` connected to this repo, with deploy
+command `npm run deploy:ibsr`, and set its own Access, Turnstile and email settings (step 3 to 5 above, on the IBSR
+Worker). The FEI import waits for FEI's terms.
+
+## Shared horse database (both sites)
+
+One D1 database, `irishbredhorses` (binding `SHARED`, tables in `migrations-shared/`), holds the horses, stallions,
+pedigrees and breeders that every site reads: IBER, IBSR, and later the black type pages. It follows `schema.sql`
+(sections 1 to 4). Both Workers list it by the same name in `wrangler.jsonc`, so they connect to the one database.
+IBER's own database and its Stallions page are unchanged.
+
+- **Upload:** owner area → **Shared stallions**. Choose the source, then a CSV (or paste from Excel), press **Check**,
+  then **Save**. Template: `/admin/shared-template.csv`. Matching rules are at the top of `lib/shared.js`.
+  Every horse, breeder and alias records its source; every value an upload sets is logged in `upload_change`
+  with the old value.
+- **Sources:** each has licence fields. A source not ticked "Can show" keeps its horses hidden from visitors.
+  `fei` starts hidden (terms not confirmed); `iber` is ours.
+- **Read:** `GET /api/shared/stallions?q=` and `GET /api/shared/horse/<id>` on either site.
+
+Set up once (in this order):
+1. Cloudflare → **Storage & databases → D1** → **Create**, name `irishbredhorses` (`irishbredshowjumpers` for IBSR is already made).
+2. Both deploys (`npm run deploy` for IBER, `npm run deploy:ibsr`) create the shared tables and apply any new ones.
+3. Locally: `npm run db:migrate:shared:local`.
+
 ## 2026 results from Horse Sport Ireland
 
 Charlie's 2026 season so far (37 weekly articles, 12 January to 28 September 2026) comes from the
