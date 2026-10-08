@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/site.css?v=8">
+<link rel="stylesheet" href="/css/site.css?v=10">
 </head>
 <body>
 
@@ -37,6 +37,7 @@
         <a href="/results" data-tab="results" data-link>Results</a>
         <a href="/news" data-tab="news" data-link>News</a>
         <a href="/stallions" data-tab="stallions" data-link>Stallions</a>
+        <a href="/for-sale" data-tab="for-sale" data-link>For sale</a>
         <a href="/about" data-tab="about" data-link>About</a>
       </nav>
     </div>
@@ -137,6 +138,101 @@
     <div id="stallion-detail" hidden></div>
   </section>
 
+  <!-- FOR SALE: ads sent in by sellers, approved and paid, from the shared database -->
+  <section class="view" id="view-for-sale">
+    <div id="fs-list">
+      <div class="fs-head">
+        <div>
+          <p class="eyebrow">For sale</p>
+          <h2 class="page-title">Horses for sale</h2>
+          <p class="page-intro">Irish-bred horses for sale, with their breeding. Every ad is checked before it goes up.</p>
+        </div>
+        <a class="btn" href="/for-sale/sell" data-link>I want to sell</a>
+      </div>
+      <form class="filters fs-filters" id="fs-filters">
+        <label>Search<input type="search" name="q" maxlength="80" placeholder="Name, sire, level…"></label>
+        <label>Sex<select name="sex"><option value="">Any</option><option value="mare">Mare</option><option value="gelding">Gelding</option><option value="stallion">Stallion</option><option value="colt">Colt</option><option value="filly">Filly</option></select></label>
+        <label>Age<span class="fs-range"><select name="age_min" aria-label="Youngest"><option value="">Any</option></select><span>to</span><select name="age_max" aria-label="Oldest"><option value="">Any</option></select></span></label>
+        <label>Height (hh)<span class="fs-range"><select name="height_min" aria-label="Smallest"><option value="">Any</option></select><span>to</span><select name="height_max" aria-label="Tallest"><option value="">Any</option></select></span></label>
+        <label>Price (€)<span class="fs-range"><select name="price_min" aria-label="Lowest price"><option value="">Any</option></select><span>to</span><select name="price_max" aria-label="Highest price"><option value="">Any</option></select></span></label>
+        <label>County<select name="county"><option value="">Anywhere</option></select></label>
+        <label>Sort<select name="sort"><option value="newest">Newest first</option><option value="price_low">Price: low to high</option><option value="price_high">Price: high to low</option><option value="youngest">Youngest first</option><option value="oldest">Oldest first</option><option value="tallest">Tallest first</option></select></label>
+        <button class="btn-quiet" type="reset" id="fs-clear">Clear</button>
+      </form>
+      <p class="filter-count" id="fs-count"></p>
+      <div class="fs-grid" id="fs-grid"><div class="empty-state">Loading…</div></div>
+      <div class="fs-pager" id="fs-pager"></div>
+    </div>
+
+    <div id="fs-detail" hidden></div>
+
+    <div id="fs-sell" hidden>
+      <p><a class="text-link" href="/for-sale" data-link>← Horses for sale</a></p>
+      <p class="eyebrow">For sale</p>
+      <h2 class="page-title">Sell your horse</h2>
+      <p class="page-intro">Fill in your horse's details and add some photos. We check every ad, then let you know the listing fee. Payment is by phone: call Charlie on <span data-site="phoneLinkHtml"><a href="tel:+353872165442">+353 87 216 5442</a></span>. Your ad goes live once it's paid. Your email and phone number are never shown on the site: buyers send their questions through a form and we email them on to you.</p>
+      <form class="form fs-sell-form" id="sell-form">
+        <h3 class="section-title">The horse</h3>
+        <label>Ad title<input type="text" name="title" required maxlength="100" placeholder="e.g. Talented 7yo ISH gelding, jumping 1.30m"></label>
+        <div class="form-row">
+          <label>Horse's name (optional)<input type="text" name="horse_name" maxlength="80"></label>
+          <label>Sex<select name="sex" required><option value="">Choose…</option><option value="mare">Mare</option><option value="gelding">Gelding</option><option value="stallion">Stallion</option><option value="colt">Colt</option><option value="filly">Filly</option></select></label>
+        </div>
+        <div class="form-row">
+          <label>Year of birth<input type="number" name="foaled_year" min="1990" max="2100" placeholder="e.g. 2019"></label>
+          <label>Height (hands)<input type="text" name="height_hh" inputmode="decimal" maxlength="5" placeholder="e.g. 16.2"></label>
+        </div>
+        <div class="form-row">
+          <label>Colour<input type="text" name="colour" maxlength="40" placeholder="e.g. Bay"></label>
+          <label>Studbook<input type="text" name="studbook" maxlength="20" placeholder="e.g. ISH, ID, TB"></label>
+        </div>
+        <div class="form-row">
+          <label>Sire<input type="text" name="sire" maxlength="80" placeholder="e.g. Cruising (ISH)"></label>
+          <label>Dam<input type="text" name="dam" maxlength="80"></label>
+        </div>
+        <div class="form-row">
+          <label>Dam's sire<input type="text" name="dam_sire" maxlength="80"></label>
+          <label>Level or experience<input type="text" name="level" maxlength="120" placeholder="e.g. Jumping 1.20m, ready to event"></label>
+        </div>
+        <fieldset class="fs-checks"><legend>Show this ad for</legend>
+          <label class="chk"><input type="checkbox" name="disciplines" value="eventing"> Eventing</label>
+          <label class="chk"><input type="checkbox" name="disciplines" value="showjumping"> Showjumping</label>
+        </fieldset>
+        <label>Description<textarea name="description" maxlength="5000" style="min-height:160px;" placeholder="Temperament, competition record, vetting, why you're selling…"></textarea></label>
+
+        <h3 class="section-title">Price and location</h3>
+        <div class="form-row">
+          <label>Price (€)<input type="text" name="price" inputmode="numeric" maxlength="10" placeholder="e.g. 12500"></label>
+          <label class="chk fs-poa"><input type="checkbox" name="price_on_request"> Price on request</label>
+        </div>
+        <div class="form-row">
+          <label>County<input type="text" name="county" maxlength="40" placeholder="e.g. Kilkenny"></label>
+          <label>Country<input type="text" name="country" maxlength="40" value="Ireland"></label>
+        </div>
+
+        <h3 class="section-title">Photos and video</h3>
+        <label>Photos (1 to 8, the first one is the main photo)<input type="file" name="photos" id="sell-photos" accept="image/jpeg,image/png,image/webp" multiple required></label>
+        <div class="fs-thumbs" id="sell-thumbs"></div>
+        <label>Video link (optional)<input type="url" name="video_url" maxlength="300" placeholder="https://www.youtube.com/…"></label>
+
+        <h3 class="section-title">Your details</h3>
+        <p class="form-note">Only used to send you your ad's updates and buyers' enquiries. Never shown on the site.</p>
+        <div class="form-row">
+          <label>Your name<input type="text" name="seller_name" required maxlength="80"></label>
+          <label>Selling as<select name="seller_type"><option value="private">Private seller</option><option value="breeder">Breeder</option><option value="dealer">Dealer</option></select></label>
+        </div>
+        <div class="form-row">
+          <label>Email<input type="email" name="seller_email" required maxlength="200"></label>
+          <label>Phone (optional)<input type="tel" name="seller_phone" maxlength="40"></label>
+        </div>
+        <label class="chk"><input type="checkbox" name="confirm" required> I own this horse or have permission to sell it, and I can use these photos.</label>
+        <div class="ts-slot"></div>
+        <button class="btn" type="submit">Send my ad for review</button>
+        <div class="form-done" role="status"></div>
+      </form>
+    </div>
+  </section>
+
   <!-- SEARCH -->
   <section class="view" id="view-search">
     <p class="eyebrow">Search</p>
@@ -187,6 +283,7 @@
       <h2>Advertise here</h2>
       <p data-site="advertiseReach">Reach breeders, owners and riders who follow Irish-bred eventing every week.</p>
       <p>If you want more information, leave your email below and we'll be in touch.</p>
+      <p>To book an advert and pay, call Charlie on <span data-site="phoneLinkHtml"><a href="tel:+353872165442">+353 87 216 5442</a></span>.</p>
       <h3 class="section-title">Advertising enquiry</h3>
       <form class="form" id="enquiry-form">
         <div class="form-row">
@@ -210,7 +307,7 @@
 
     <div class="panel" id="privacy">
       <h2>Privacy</h2>
-      <p class="privacy-copy">If you sign up for results emails we keep only your email address, use it only to send a link when new results are published, and never share or sell it. Every email has an unsubscribe link, and unsubscribing deletes your address. Comments show the name you give and your comment once approved. Correction and advertising forms keep your contact details only so we can reply. To have anything removed, email us.</p>
+      <p class="privacy-copy">If you sign up for results emails we keep only your email address, use it only to send a link when new results are published, and never share or sell it. Every email has an unsubscribe link, and unsubscribing deletes your address. Comments show the name you give and your comment once approved. Correction and advertising forms keep your contact details only so we can reply. If you sell a horse here, we keep your name, email and phone only to send you your ad's updates and buyers' messages; they are never shown on the site. A buyer's message to a seller is emailed to that seller. To have anything removed, email us.</p>
     </div>
   </section>
 
@@ -229,6 +326,7 @@
       <p><a href="/results" data-link>Results</a></p>
       <p><a href="/news" data-link>News</a></p>
       <p><a href="/stallions" data-link>Stallions</a></p>
+      <p><a href="/for-sale" data-link>For sale</a></p>
       <p><a href="/about" data-link>About</a></p>
       <p><a href="/about#advertise" data-link>Advertise</a></p>
     </div>
@@ -269,6 +367,6 @@
 
 <script src="/js/site.js?v=1"></script>
 <script src="/js/common.js?v=4"></script>
-<script src="/js/app.js?v=14"></script>
+<script src="/js/app.js?v=16"></script>
 </body>
 </html>

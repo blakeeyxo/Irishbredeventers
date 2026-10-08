@@ -190,6 +190,24 @@ Set up once (in this order):
 2. Both deploys (`npm run deploy` for IBER, `npm run deploy:ibsr`) create the shared tables and apply any new ones.
 3. Locally: `npm run db:migrate:shared:local`.
 
+## For sale (both sites)
+
+Horse ads live in the shared database (`migrations-shared/0003_listings.sql`, `lib/listings.js`) and their photos in
+the shared R2 bucket `irishbredhorses-media` (binding `LISTING_MEDIA`, served at `/listing-media/…`). Each ad is
+tagged eventing, showjumping or both, and each site shows the ads for its own discipline.
+
+1. A seller presses **I want to sell** (`/for-sale/sell`): details, 1 to 8 photos (made smaller in the browser),
+   their contact details. The ad waits in the owner area → **For sale → Waiting for review**.
+2. **Approve and request payment** (fee pre-filled from **For sale settings**) emails the seller the fee and the
+   payment instructions from the settings.
+3. When they've paid: **Mark paid and publish**. The ad is live for the number of days in the settings, and is linked
+   to the horse in the shared database when exactly one horse has its name (and year), so its page shows the breeding.
+4. **Mark sold** keeps it up with a SOLD badge until it ends; **Remove** takes it down; **Delete** removes it and its photos.
+
+Buyers never see the seller's email or phone: **Ask the seller** emails the seller (reply goes straight to the buyer)
+and keeps a copy under the ad in the owner area. The sell and enquiry forms need Turnstile (`TURNSTILE_SITE_KEY`,
+`TURNSTILE_SECRET`) and the emails need `MAIL_API_KEY`, on each Worker.
+
 ## 2026 results from Horse Sport Ireland
 
 Charlie's 2026 season so far (37 weekly articles, 12 January to 28 September 2026) comes from the

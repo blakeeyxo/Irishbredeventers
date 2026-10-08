@@ -19,7 +19,7 @@
   };
 
   /* ---------- Routing ---------- */
-  const VIEWS = ['home', 'results', 'search', 'horse', 'news', 'stallions', 'about'];
+  const VIEWS = ['home', 'results', 'search', 'horse', 'news', 'stallions', 'for-sale', 'about'];
   // The design preview (a single static page) keeps the route in memory; the live site uses real paths.
   const MEMORY = window.IBE_MEMORY_ROUTES === true;
   let memoryUrl = '/';
@@ -43,7 +43,7 @@
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
     const tab = view === 'horse' || view === 'search' ? null : view;
     document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
-    const names = { home: `${SITE} (${SHORT})`, results: 'Results', search: 'Search', news: 'News', stallions: 'Stallions', about: 'About' };
+    const names = { home: `${SITE} (${SHORT})`, results: 'Results', search: 'Search', news: 'News', stallions: 'Stallions', 'for-sale': 'For sale', about: 'About' };
     if (view !== 'horse') document.title = view === 'home' ? names.home : `${names[view]} · ${SITE}`;
   }
 
@@ -55,7 +55,7 @@
       else fetch('/api/track', { method: 'POST', body, keepalive: true }).catch(() => {});
     } catch { /* never in the way */ }
   }
-  const PAGE_KEY = { home: 'home', results: 'results', news: 'news', stallions: 'stallions', about: 'about', search: 'search' }; // horse pop-ups count in openHorse
+  const PAGE_KEY = { home: 'home', results: 'results', news: 'news', stallions: 'stallions', 'for-sale': 'forsale', about: 'about', search: 'search' }; // horse pop-ups count in openHorse
   let lastTracked = null;
 
   let lastPath = null;
@@ -65,7 +65,7 @@
     const path = r.view + '/' + (r.id || '');
     if (path !== lastTracked && PAGE_KEY[r.view]) {
       lastTracked = path;
-      track({ k: 'view', p: r.view === 'news' && r.id ? 'article' : r.view === 'stallions' && r.id ? 'stallion' : PAGE_KEY[r.view] });
+      track({ k: 'view', p: r.view === 'news' && r.id ? 'article' : r.view === 'stallions' && r.id ? 'stallion' : r.view === 'for-sale' && r.id ? (r.id === 'sell' ? 'sell' : 'listing') : PAGE_KEY[r.view] });
     }
     if (path !== lastPath && !r.hash) window.scrollTo({ top: 0 });
     lastPath = path;
@@ -81,6 +81,7 @@
     }
     if (r.view === 'horse') { showView('results'); renderResults(new URLSearchParams()); openHorse(Number(r.id)); }
     if (r.view === 'stallions') renderStallions(r.id);
+    if (r.view === 'for-sale') renderForSale(r.id, r.params);
     renderAds(r.view);
     if (r.view === 'news') renderNews().then(() => { if (r.id) openArticle(Number(r.id)); });
     if (r.hash) setTimeout(() => { const el = document.querySelector(r.hash); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 60);
@@ -590,7 +591,7 @@
     return ad.phone_key ? `<picture><source media="(max-width: 720px)" srcset="${imgUrl(ad.phone_key)}">${img}</picture>` : img;
   };
   const hostOf = url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
-  const AD_PAGE = { home: 'home', results: 'results', horse: 'results', search: 'results', news: 'news', stallions: 'stallions', about: 'about' };
+  const AD_PAGE = { home: 'home', results: 'results', horse: 'results', search: 'results', news: 'news', stallions: 'stallions', 'for-sale': 'forsale', about: 'about' };
   const AD_LABEL = ''; // adverts carry no label
   function adHTML(ad, banner, space = '') {
     const cls = banner ? 'banner' : 'slot ad-box';
@@ -625,6 +626,216 @@
     $('side-left').innerHTML = ['left1', 'left2', 'left3'].map(p => html[p]).join('');
     $('side-right').innerHTML = ['right1', 'right2', 'right3'].map(p => html[p]).join('');
   }
+
+  /* ---------- For sale: ads sent in by sellers, checked and paid, from the shared database ---------- */
+  const listingImg = key => `/listing-media/${key}`;
+  const THIS_YEAR = new Date().getFullYear();
+  const euro = c => `€${(c / 100).toLocaleString('en-IE', { maximumFractionDigits: 0 })}`;
+  const priceText = l => (l.price_on_request ? 'Price on request' : l.price_cents ? euro(l.price_cents) : '');
+  const hh = v => (v ? `${Number(v).toFixed(1).replace(/\.0$/, '')}hh` : '');
+  const cap = s => (s ? s[0].toUpperCase() + s.slice(1) : '');
+  const ageText = y => (y ? `${THIS_YEAR - y} yrs` : '');
+  const listedText = iso => {
+    if (!iso) return '';
+    const days = Math.floor((Date.now() - new Date(iso.replace(' ', 'T') + 'Z')) / 86400000);
+    return days <= 0 ? 'Listed today' : days === 1 ? 'Listed yesterday' : days < 30 ? `Listed ${days} days ago` : `Listed ${niceDate(iso)}`;
+  };
+  const factsLine = l => [cap(l.sex), ageText(l.foaled_year), hh(l.height_hh), l.studbook].filter(Boolean).map(esc).join(' · ');
+  const breedingLine = l => (l.sire || l.dam ? `${l.sire ? `by ${esc(l.sire)}` : ''}${l.dam ? `${l.sire ? ' ' : ''}out of ${esc(l.dam)}` : ''}${l.dam_sire ? ` (by ${esc(l.dam_sire)})` : ''}` : '');
+  const place = l => [l.county, l.country && l.country !== 'Ireland' ? l.country : (!l.county ? l.country : '')].filter(Boolean).map(esc).join(', ');
+
+  function fillOptions(sel, values, label) {
+    sel.insertAdjacentHTML('beforeend', values.map(v => `<option value="${v}">${esc(label(v))}</option>`).join(''));
+  }
+  const fsForm = $('fs-filters');
+  fillOptions(fsForm.elements.age_min, [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 15], v => `${v} yrs`);
+  fillOptions(fsForm.elements.age_max, [2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20], v => `${v} yrs`);
+  const HEIGHTS = [14, 14.2, 15, 15.2, 16, 16.2, 17, 17.2, 18];
+  fillOptions(fsForm.elements.height_min, HEIGHTS, hh);
+  fillOptions(fsForm.elements.height_max, HEIGHTS, hh);
+  const PRICES = [2500, 5000, 7500, 10000, 15000, 20000, 30000, 50000, 75000, 100000];
+  fillOptions(fsForm.elements.price_min, PRICES, v => euro(v * 100));
+  fillOptions(fsForm.elements.price_max, PRICES, v => euro(v * 100));
+  const FS_KEYS = ['q', 'sex', 'age_min', 'age_max', 'height_min', 'height_max', 'price_min', 'price_max', 'county', 'sort'];
+  function fsQuery(page) {
+    const q = new URLSearchParams();
+    for (const k of FS_KEYS) { const v = fsForm.elements[k].value.trim(); if (v && !(k === 'sort' && v === 'newest')) q.set(k, v); }
+    if (page > 1) q.set('page', page);
+    return q;
+  }
+  let fsTimer = null;
+  fsForm.addEventListener('input', () => { clearTimeout(fsTimer); fsTimer = setTimeout(() => navigate(`/for-sale${fsQuery(1).toString() ? `?${fsQuery(1)}` : ''}`, true), 300); });
+  fsForm.addEventListener('submit', e => e.preventDefault());
+  fsForm.addEventListener('reset', () => setTimeout(() => navigate('/for-sale', true), 0));
+
+  function listingCard(l) {
+    return `<a class="fs-card${l.status === 'sold' ? ' sold' : ''}" href="/for-sale/${l.id}" data-link>
+      <span class="fs-photo">${l.photo ? `<img src="${listingImg(l.photo)}" alt="" loading="lazy">` : `<span class="card-fallback" aria-hidden="true">${esc(SHORT)}</span>`}
+        ${l.status === 'sold' ? '<span class="fs-badge sold">Sold</span>' : `<span class="fs-badge">${esc(priceText(l))}</span>`}
+        ${l.photos > 1 ? `<span class="fs-count">${l.photos} photos</span>` : ''}</span>
+      <span class="fs-body">
+        <b class="fs-title">${esc(l.title)}</b>
+        <span class="fs-facts">${factsLine(l)}</span>
+        ${breedingLine(l) ? `<span class="fs-breeding">${breedingLine(l)}</span>` : ''}
+        ${l.level ? `<span class="fs-level">${esc(l.level)}</span>` : ''}
+        <span class="fs-meta">${[place(l), listedText(l.published_at)].filter(Boolean).join(' · ')}</span>
+      </span>
+    </a>`;
+  }
+
+  async function renderForSale(id, params) {
+    $('fs-list').hidden = !!id;
+    $('fs-detail').hidden = !id || id === 'sell';
+    $('fs-sell').hidden = id !== 'sell';
+    if (id === 'sell') return showSellForm();
+    if (id) return renderListing(Number(id));
+    for (const k of FS_KEYS) fsForm.elements[k].value = params.get(k) || (k === 'sort' ? 'newest' : '');
+    $('fs-grid').innerHTML = '<div class="empty-state">Loading…</div>';
+    try {
+      const d = await api(`/api/listings?${params}`);
+      const county = fsForm.elements.county, chosen = params.get('county') || '';
+      county.innerHTML = '<option value="">Anywhere</option>' + d.counties.map(c => `<option value="${esc(c.county)}">${esc(c.county)} (${c.n})</option>`).join('');
+      county.value = chosen;
+      const filtered = FS_KEYS.some(k => k !== 'sort' && params.get(k));
+      $('fs-count').textContent = d.total ? `${d.total} horse${d.total === 1 ? '' : 's'} for sale` : '';
+      $('fs-grid').innerHTML = d.listings.length ? d.listings.map(listingCard).join('')
+        : `<div class="empty-state">${filtered ? 'No horses match those filters. Try widening them.' : 'No horses for sale yet.'} <a class="text-link" href="/for-sale/sell" data-link>Sell your horse here →</a></div>`;
+      $('fs-pager').innerHTML = d.pages > 1 ? Array.from({ length: d.pages }, (_, i) => i + 1).map(n =>
+        `<a class="chip${n === d.page ? ' active' : ''}" href="/for-sale?${fsQuery(n)}" data-link>${n}</a>`).join('') : '';
+    } catch (e) {
+      $('fs-grid').innerHTML = `<div class="empty-state">${esc(e.message)}</div>`;
+      $('fs-pager').innerHTML = '';
+    }
+  }
+
+  async function renderListing(id) {
+    const el = $('fs-detail');
+    el.innerHTML = '<div class="empty-state">Loading…</div>';
+    let d;
+    try { d = await api(`/api/listings/${id}`); } catch (e) {
+      el.innerHTML = `<p><a class="text-link" href="/for-sale" data-link>← Horses for sale</a></p><div class="empty-state">${esc(e.message)}</div>`;
+      return;
+    }
+    const l = d.listing, ped = d.horse && d.horse.pedigree;
+    if (l.title) document.title = `${l.title} · For sale · ${SITE}`;
+    const facts = [['Name', l.horse_name], ['Sex', cap(l.sex)], ['Age', l.foaled_year ? `${THIS_YEAR - l.foaled_year} (born ${l.foaled_year})` : ''],
+      ['Height', hh(l.height_hh)], ['Colour', l.colour], ['Studbook', l.studbook], ['Sire', l.sire], ['Dam', l.dam], ["Dam's sire", l.dam_sire],
+      ['Level', l.level], ['Location', place(l)], ['Seller', cap(l.seller_type === 'private' ? 'Private seller' : l.seller_type)]].filter(([, v]) => v);
+    const cell = (k, cls = '') => {
+      const h = ped && ped[k];
+      return `<div class="fs-ped-cell ${cls}">${h ? `<b>${esc(h.name)}</b>${h.studbook ? ` <small>${esc(h.studbook)}</small>` : ''}` : '<span class="meta-line">Not recorded</span>'}</div>`;
+    };
+    const pedigree = ped && Object.keys(ped).length ? `
+      <section class="block"><h3 class="section-title">Breeding</h3>
+        <p class="meta-line">From the ${esc(SITE)} horse records${d.horse.breeder ? `. Bred by ${esc(d.horse.breeder)}${d.horse.breeder_county ? ` (${esc(d.horse.breeder_county)})` : ''}` : ''}.</p>
+        <div class="fs-ped"><div class="fs-ped-col">${cell('s')}${cell('d')}</div><div class="fs-ped-col">${cell('ss', 'sm')}${cell('sd', 'sm')}${cell('ds', 'sm')}${cell('dd', 'sm')}</div></div>
+      </section>` : '';
+    const video = l.video_url && /^https:\/\//.test(l.video_url) ? `<p><a class="text-link" href="${esc(l.video_url)}" target="_blank" rel="noopener nofollow">Watch the video →</a></p>` : '';
+    el.innerHTML = `
+      <p><a class="text-link" href="/for-sale" data-link>← Horses for sale</a></p>
+      <div class="fs-detail">
+        <div class="fs-gallery">
+          <div class="fs-main">${l.photos.length ? `<img id="fs-main-img" src="${listingImg(l.photos[0])}" alt="${esc(l.title)}">` : ''}${l.status === 'sold' ? '<span class="fs-badge sold">Sold</span>' : ''}</div>
+          ${l.photos.length > 1 ? `<div class="fs-thumbrow">${l.photos.map((k, i) => `<button type="button" class="${i ? '' : 'active'}" data-photo="${esc(k)}" aria-label="Photo ${i + 1}"><img src="${listingImg(k)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
+        </div>
+        <div class="fs-side">
+          <p class="eyebrow">For sale · Ad ${l.id}</p>
+          <h2 class="fs-detail-title">${esc(l.title)}</h2>
+          <p class="fs-price">${l.status === 'sold' ? 'Sold' : esc(priceText(l))}</p>
+          <p class="meta-line">${factsLine(l)}${l.published_at ? ` · ${esc(listedText(l.published_at))}` : ''}</p>
+          <dl class="fs-facts-table">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+          ${l.status === 'sold' ? '' : '<a class="btn" href="#fs-enquire">Ask the seller</a>'}
+        </div>
+      </div>
+      ${l.description ? `<section class="block"><h3 class="section-title">About this horse</h3><div class="prose fs-description">${esc(l.description)}</div>${video}</section>` : video}
+      ${pedigree}
+      ${l.status === 'sold' ? '<section class="block"><div class="empty-state">This horse has been sold.</div></section>' : `
+      <section class="block" id="fs-enquire"><h3 class="section-title">Ask the seller</h3>
+        <p class="page-intro">Your message is emailed to the seller, who will reply to you directly.</p>
+        <form class="form" id="fs-enquiry-form">
+          <div class="form-row"><label>Your name<input type="text" name="name" required maxlength="80"></label>
+          <label>Your email<input type="email" name="email" required maxlength="200"></label></div>
+          <label>Phone (optional)<input type="tel" name="phone" maxlength="40"></label>
+          <label>Message<textarea name="message" required maxlength="3000" placeholder="Is the horse still available? Can I come and see it?"></textarea></label>
+          <div class="ts-slot"></div>
+          <button class="btn" type="submit">Send to the seller</button>
+          <div class="form-done" role="status"></div>
+        </form>
+      </section>`}`;
+    el.querySelectorAll('[data-photo]').forEach(b => b.addEventListener('click', () => {
+      $('fs-main-img').src = listingImg(b.dataset.photo);
+      el.querySelectorAll('[data-photo]').forEach(x => x.classList.toggle('active', x === b));
+    }));
+    const form = $('fs-enquiry-form');
+    if (form) {
+      mountTurnstile(form);
+      form.addEventListener('submit', e => submitForm(e, '/api/listings/enquire',
+        f => ({ id: l.id, name: f.get('name'), email: f.get('email'), phone: f.get('phone'), message: f.get('message') }),
+        'Sent. The seller will reply to you by email.'));
+    }
+  }
+
+  /* "I want to sell": photos are made smaller in the browser before sending (long side 1600px), so uploads are quick. */
+  const sellForm = $('sell-form');
+  let sellPhotos = [];
+  function showSellForm() {
+    const box = sellForm.querySelector(`input[name=disciplines][value="${window.SITE.discipline}"]`);
+    if (box && !sellForm.querySelector('input[name=disciplines]:checked')) box.checked = true;
+    mountTurnstile(sellForm);
+  }
+  async function shrinkPhoto(file) {
+    try {
+      const bmp = await createImageBitmap(file);
+      const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bmp.width * scale); canvas.height = Math.round(bmp.height * scale);
+      canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
+      return blob ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file;
+    } catch { return file; }
+  }
+  function drawSellThumbs() {
+    $('sell-thumbs').innerHTML = sellPhotos.map((p, i) => `<figure><img src="${p.url}" alt=""><figcaption>${i ? `Photo ${i + 1}` : 'Main photo'}</figcaption>
+      <button type="button" class="btn-quiet" data-remove="${i}" aria-label="Remove photo ${i + 1}">Remove</button></figure>`).join('');
+    $('sell-thumbs').querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => {
+      URL.revokeObjectURL(sellPhotos[b.dataset.remove].url);
+      sellPhotos.splice(Number(b.dataset.remove), 1);
+      drawSellThumbs();
+    }));
+    $('sell-photos').required = !sellPhotos.length;
+  }
+  $('sell-photos').addEventListener('change', async e => {
+    const files = [...e.target.files].slice(0, 8 - sellPhotos.length);
+    for (const f of files) { const small = await shrinkPhoto(f); sellPhotos.push({ file: small, url: URL.createObjectURL(small) }); }
+    e.target.value = '';
+    drawSellThumbs();
+  });
+  sellForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const done = sellForm.querySelector('.form-done'), btn = sellForm.querySelector('button[type=submit]');
+    if (!sellPhotos.length) { done.textContent = 'Add at least one photo.'; return; }
+    const form = new FormData(sellForm);
+    form.delete('photos');
+    sellPhotos.forEach(p => form.append('photos', p.file));
+    let token = turnstileToken(sellForm);
+    for (let i = 0; !token && i < 24 && sellForm.querySelector('.ts-slot[data-widget]'); i++) { await new Promise(r => setTimeout(r, 250)); token = turnstileToken(sellForm); }
+    form.set('turnstile', token || '');
+    btn.disabled = true;
+    done.textContent = 'Sending your ad…';
+    try {
+      await api('/api/listings/submit', { method: 'POST', form });
+      sellForm.reset();
+      sellPhotos.forEach(p => URL.revokeObjectURL(p.url));
+      sellPhotos = [];
+      drawSellThumbs();
+      done.textContent = "Thanks, your ad has been sent. We'll check it and let you know the listing fee; payment is by phone to Charlie. It goes live once it's paid.";
+    } catch (err) {
+      done.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+      resetTurnstile(sellForm);
+    }
+  });
 
   /* ---------- Stallions: six paid listings, each with its progeny breakdown from the results ----------
      Every number on these pages covers the same rolling 12 months (the API works it out from today's date)

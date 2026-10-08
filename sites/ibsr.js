@@ -10,6 +10,7 @@ export default {
   discipline: 'showjumping',
   name: 'IrishBredShowjumpingResults',
   short: 'IBSR',
+  publicUrl: 'https://irishbredshowjumpers.emerblakeey.workers.dev',
 
   // Navy values from the original demo (reference/irishbredeventers-mockup-v2.html), plus a brighter blue
   // for stripes, underlines and focus rings (4.5:1 on the navy header, 3.5:1 on white).

@@ -6,7 +6,7 @@
 .adm-who { font-size: 13px; color: #C8CEDB; }
 .adm-main { padding-top: 32px; padding-bottom: 60px; }
 .adm-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 24px; }
-.adm-tabs .count { display: inline-block; min-width: 18px; margin-left: 5px; padding: 0 5px; background: var(--alert); color: #fff; font-size: 10.5px; line-height: 16px; text-align: center; }
+.adm-tabs .count, .adm-pane h3 .count { display: inline-block; min-width: 18px; margin-left: 5px; padding: 0 5px; background: var(--alert); color: #fff; font-size: 10.5px; line-height: 16px; text-align: center; }
 .adm-pane { display: none; }
 .adm-pane.active { display: block; }
 .adm-pane h3 { font-size: 22px; color: var(--navy); margin: 0 0 8px; padding-bottom: 10px; border-bottom: 1px solid var(--rule-strong); }
@@ -287,3 +287,21 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .frame-stage img { position: absolute; left: 0; top: 0; max-width: none; user-select: none; -webkit-user-drag: none; }
 .frame-zoom, .frame-whole { display: flex; gap: 10px; align-items: center; margin: 6px 0; }
 .frame-zoom input { flex: 1; }
+
+/* For sale */
+.fs-adm-status { margin: 10px 0 16px; }
+.fs-adm-card { background: var(--paper); border: 1px solid var(--rule); padding: 14px 16px; margin-bottom: 14px; }
+.fs-adm-top { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 14px; }
+.fs-adm-top img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--cream-2); }
+.fs-adm-top h4 { margin: 0 0 4px; font-family: var(--serif); font-size: 18px; color: var(--navy); }
+.fs-adm-card .meta { margin: 2px 0; }
+.fs-adm-photos { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.fs-adm-photos figure { margin: 0; width: 110px; }
+.fs-adm-photos img { width: 110px; height: 82px; object-fit: cover; display: block; }
+.fs-adm-photos button { font-size: 11.5px; padding: 2px 0; }
+.fs-adm-more { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--rule); align-items: baseline; }
+.fs-adm-more details[open] { flex-basis: 100%; }
+.fs-adm-more summary { cursor: pointer; font-size: 14px; }
+.fs-adm-card .fee { width: 110px; display: inline-block; padding: 9px 10px; border: 1px solid var(--rule-strong); font: 14px var(--sans); margin-left: 4px; }
+.fs-adm-card label:has(.fee) { display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--navy); }
+@media (max-width: 720px) { .fs-adm-top { grid-template-columns: minmax(0, 1fr); } }
