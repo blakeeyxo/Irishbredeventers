@@ -1,0 +1,82 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { memoryD1 } from './d1-shim.js';
+import { readFeiPaste, jumpingScore, feiName } from '../lib/fei.js';
+import { runFeiImport, sjSeason, sjWeekWinners, sjSearch, sjHorse } from '../lib/sj.js';
+import { runUpload } from '../lib/shared.js';
+
+const fresh = () => memoryD1(new URL('../migrations-shared/', import.meta.url));
+const JUMPING = readFileSync(new URL('./fixtures/fei-jumping.txt', import.meta.url), 'utf8');
+const EVENTING = readFileSync(new URL('./fixtures/fei-eventing.txt', import.meta.url), 'utf8');
+const showFei = db => db.raw.exec("UPDATE source SET can_display = 1, can_store = 1 WHERE slug = 'fei'");
+const noStudbook = JUMPING.replace('ABC MAYFLOWER', 'NO BOOK HORSE').replace('109WK62', '100XX01').replace('ISH - Irish Sport Horse Studbook (ISH)', '');
+
+test('reads an FEI jumping page: horse details, each result, faults and time', () => {
+  const { horses, problems } = readFeiPaste(JUMPING + EVENTING);
+  assert.equal(problems.length, 0);
+  const [h, ev] = horses;
+  assert.deepEqual([h.name, h.fei_id, h.foaled, h.sex, h.colour, h.studbook, h.irish, h.discipline],
+    ['Abc Mayflower', '109WK62', '2021-05-08', 'mare', 'Bay', 'ISH', true, 'jumping']);
+  assert.equal(h.results.length, 3);
+  assert.deepEqual([h.results[0].date, h.results[0].show, h.results[0].country, h.results[0].event, h.results[0].height_m, h.results[0].position, h.results[0].faults, h.results[0].time_s, h.results[0].athlete],
+    ['2026-09-20', 'Lanaken', 'BEL', 'CH-M-YH-S', 1.25, 19, 4, 72.11, 'Gemma Phelan']);
+  assert.equal(ev.discipline, 'eventing');
+  assert.deepEqual(jumpingScore('EL'), { faults: null, rounds: '', time: null, text: 'EL' });
+  assert.equal(feiName('SEVILLA VAN DE BERGHOEVE Z'), 'Sevilla van de Berghoeve Z');
+});
+
+test('import: one event over the show days, a class per competition and day, a result per horse; pasting again adds nothing', async () => {
+  const db = fresh();
+  const check = await runFeiImport(db, JUMPING + EVENTING, { year: 2026 });
+  assert.equal(check.saved, undefined);
+  assert.deepEqual([check.counts.horses, check.counts.results, check.counts.events, check.counts.classes], [1, 3, 1, 3]);
+  assert.match(check.left[0].why, /Eventing/);
+  const saved = await runFeiImport(db, JUMPING, { year: 2026, save: true, user: 'emer' });
+  assert.equal(saved.saved, true);
+  const ev = await db.prepare("SELECT name, country, start_date, end_date, source_id FROM competition_event").first();
+  assert.deepEqual([ev.name, ev.country, ev.start_date, ev.end_date], ['Lanaken', 'BEL', '2026-09-17', '2026-09-20']);
+  const fei = (await db.prepare("SELECT id FROM source WHERE slug = 'fei'").first()).id;
+  assert.equal(ev.source_id, fei);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM result WHERE source_id = ? AND upload_id IS NOT NULL').bind(fei).first()).n, 3, 'every result records its source and paste');
+  const horse = await db.prepare("SELECT name, fei_id, irish_bred, foaled_year FROM horse").first();
+  assert.deepEqual([horse.name, horse.fei_id, horse.irish_bred, horse.foaled_year], ['Abc Mayflower', '109WK62', 1, 2021]);
+  const again = await runFeiImport(db, JUMPING, { year: 2026, save: true });
+  assert.equal(again.saved, false);
+  assert.equal(again.counts.same, 3);
+});
+
+test('only Irish-bred: no studbook waits for a tick; other years are left out', async () => {
+  const db = fresh();
+  const r = await runFeiImport(db, noStudbook, { year: 2026 });
+  assert.equal(r.counts.horses, 0);
+  assert.equal(r.left[0].unclear, true);
+  const ticked = await runFeiImport(db, noStudbook, { year: 2026, includeUnclear: ['100XX01'] });
+  assert.equal(ticked.counts.results, 3);
+  const lastYear = await runFeiImport(db, JUMPING, { year: 2025 });
+  assert.match(lastYear.left[0].why, /No 2025 results/);
+});
+
+test('FEI results reach the site only when the FEI source may show; then results, winners, search and horse pages work', async () => {
+  const db = fresh();
+  const iber = (await db.prepare("SELECT id FROM source WHERE slug = 'iber'").first()).id;
+  await runUpload(db, 'Name,Year,Sire,Dam,Dam sire,Breeder\nAbc Mayflower,2021,Cruising (ISH),Abc Lady,Clover Hill,Mary Brennan', { sourceId: iber, save: true });
+  await runFeiImport(db, JUMPING, { year: 2026, save: true });
+  assert.equal((await sjSeason(db, 2026)).rows.length, 0, 'hidden while the FEI terms are unconfirmed');
+  showFei(db);
+  const season = await sjSeason(db, 2026);
+  assert.equal(season.rows.length, 3);
+  const top = season.rows[0];
+  assert.deepEqual([top.horse_name, top.sire, top.dam, top.dam_sire, top.breeder, top.event_name, top.class_date, top.score, top.rider_name],
+    ['Abc Mayflower', 'Cruising', 'Abc Lady', 'Clover Hill', 'Mary Brennan', 'Lanaken', '2026-09-20', '4(4+0)/72.11', 'Gemma Phelan'], 'breeding from the stallion upload joins the FEI results');
+  assert.equal(top.oio, 0);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM horse WHERE name_key = ?').bind('abc mayflower').first()).n, 1, 'the FEI horse matched the uploaded one');
+  assert.deepEqual(season.seasons, [2026]);
+  const winners = await sjWeekWinners(db);
+  assert.deepEqual(winners.map(w => w.class_date).sort(), ['2026-09-17', '2026-09-18']);
+  assert.equal((await sjSearch(db, 'cruising', 'sire')).total, 3);
+  assert.equal((await sjSearch(db, 'brennan', 'breeder')).total, 3);
+  assert.equal((await sjSearch(db, 'phelan', 'all')).total, 0, 'riders are not searched');
+  const page = await sjHorse(db, top.id);
+  assert.equal(page.runs.length, 3);
+});

@@ -5,7 +5,7 @@
 
   /* ---------- Tabs ---------- */
   let countryList = [];
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), shared: () => loadShared(), forsale: () => loadForSale(), analytics: () => loadAnalytics(), messages: () => { loadComments(); loadCorrections(); loadEnquiries(); } };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), shared: () => loadShared(), fei: () => loadFei(), forsale: () => loadForSale(), analytics: () => loadAnalytics(), messages: () => { loadComments(); loadCorrections(); loadEnquiries(); } };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -1760,6 +1760,56 @@
     } catch (err) { btnMsg(done, err.message); }
     finally { btn.disabled = false; }
   });
+
+  /* ---------- FEI results (showjumping site): FEI horse pages pasted in → shared database ---------- */
+  if (window.SITE && window.SITE.discipline === 'showjumping') document.querySelector('#adm-tabs [data-a="fei"]').hidden = false;
+  let feiTicked = [];
+  async function loadFei() {
+    const f = $('fei-form');
+    if (!f.elements.year.value) f.elements.year.value = new Date().getFullYear();
+    try {
+      const d = await api('/api/admin/shared/sources');
+      const fei = d.sources.find(s => s.slug === 'fei');
+      $('fei-visible').innerHTML = fei && fei.can_display
+        ? 'FEI results are <b>shown</b> on the site.'
+        : 'FEI results are saved but <b>hidden from visitors</b> until the FEI terms are confirmed. When they are, tick "Can show on the sites" for the FEI source under <b>Shared stallions → Sources</b>.';
+    } catch (e) { $('fei-visible').textContent = e.message; }
+  }
+  async function feiSend(save) {
+    const f = $('fei-form'), done = f.querySelector('.form-done');
+    btnMsg(done, save ? 'Saving…' : 'Checking…');
+    try {
+      const r = await api('/api/admin/fei', { method: 'POST', body: { text: f.elements.text.value, year: f.elements.year.value, label: f.elements.label.value, include_unclear: feiTicked, save } });
+      btnMsg(done, save ? (r.saved ? `Saved: ${r.counts.results} results added, ${r.counts.updated} updated.` : r.message) : '');
+      renderFei(r, save && r.saved);
+      if (save) loadFei();
+    } catch (e) { btnMsg(done, e.message); }
+  }
+  function renderFei(r, saved) {
+    const c = r.counts;
+    const OUT = { new: 'New', updated: 'Updated', same: 'Already on file' };
+    $('fei-preview').innerHTML = `<div class="summary-box">
+      <p><b>${c.horses} Irish-bred horse${c.horses === 1 ? '' : 's'}</b> with ${r.year} results: ${c.results} new result${c.results === 1 ? '' : 's'}, ${c.updated} updated, ${c.same} already on file
+        (${c.events} new show${c.events === 1 ? '' : 's'}, ${c.classes} new class${c.classes === 1 ? '' : 'es'}). ${c.horsesNew} new horse record${c.horsesNew === 1 ? '' : 's'}.</p>
+      ${r.left.length ? `<p class="meta"><b>Left out:</b></p><ul class="meta">${r.left.map(h => `<li>${esc(h.name)} (${esc(h.fei_id)}): ${esc(h.why)}
+        ${h.unclear ? ` <label class="chk"><input type="checkbox" data-fei-tick="${esc(h.fei_id)}" ${feiTicked.includes(h.fei_id) ? 'checked' : ''}> It's Irish-bred, include it</label>` : ''}</li>`).join('')}</ul>` : ''}
+      ${r.problems.map(p => `<p class="meta">${esc(p.message)}</p>`).join('')}
+      ${saved ? '' : `<div class="adm-actions"><button class="btn" type="button" id="fei-save" ${c.results || c.updated || c.horsesNew ? '' : 'disabled'}>Save</button></div>`}
+    </div>
+    ${r.horses.map(h => `<h4 style="margin:16px 0 4px;">${esc(h.name)} <span class="meta">${esc(h.fei_id)} · ${h.horse === 'new' ? 'new horse record' : h.horse === 'held' ? 'needs a decision' : 'matched to the horse on file'}</span></h4>
+      ${h.notes && h.notes.length ? `<p class="adm-warn">${h.notes.map(esc).join('<br>')}</p>` : ''}
+      ${h.results.length ? `<div class="table-scroll"><table class="adm-table stack imp-table"><tr><th>Date</th><th>Show</th><th>Level</th><th>Class</th><th>Pl</th><th>Score</th><th>Rider</th><th></th></tr>
+      ${h.results.map(x => `<tr class="${x.outcome === 'same' ? 'skip' : ''}"><td>${esc(niceDate(x.date))}</td><td>${esc(x.show)} (${esc(x.country)})</td><td>${esc(x.event)}</td><td>${esc(x.class)}</td>
+        <td>${x.position ? esc(ordinal(x.position)) : esc(x.status || '–')}</td><td>${esc(x.score)}</td><td>${esc(x.rider)}</td><td>${OUT[x.outcome]}</td></tr>`).join('')}</table></div>` : ''}`).join('')}`;
+    $('fei-preview').querySelectorAll('[data-fei-tick]').forEach(b => b.addEventListener('change', () => {
+      feiTicked = b.checked ? [...feiTicked, b.dataset.feiTick] : feiTicked.filter(x => x !== b.dataset.feiTick);
+      feiSend(false);
+    }));
+    const save = $('fei-save');
+    if (save) save.addEventListener('click', () => feiSend(true));
+  }
+  $('fei-form').addEventListener('submit', e => { e.preventDefault(); feiTicked = []; feiSend(false); });
+  $('fei-form').addEventListener('reset', () => { feiTicked = []; $('fei-preview').innerHTML = ''; });
 
   $('fs-settings').addEventListener('submit', async e => {
     e.preventDefault();

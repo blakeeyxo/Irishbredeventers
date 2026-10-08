@@ -100,9 +100,25 @@
   if (!MEMORY) window.addEventListener('popstate', render);
 
   /* ---------- Levels and weeks (for filters) ---------- */
-  const LEVEL_ORDER = ['CCI5*', 'CCI4*', 'CCI3*', 'CCI2*', 'CCI1*', 'Advanced', 'Intermediate', 'Pre-Novice', 'Novice', 'Beginner Novice',
-    'BE105', 'BE100', 'BE90', 'BE80', 'Preliminary', 'Modified', 'Training', 'Other'];
-  function levelOf(cls) {
+  // Showjumping (IBSR) levels come from the FEI event code on each class (row.level), e.g. CSI2*, CSIO5*, CH-M-YH-S.
+  const JUMPING = window.SITE.discipline === 'showjumping';
+  const LEVEL_ORDER = JUMPING
+    ? ['CSIO5*', 'CSIO4*', 'CSIO3*', 'CSIO2*', 'CSIO1*', 'CSI5*', 'CSI4*', 'CSI3*', 'CSI2*', 'CSI1*', 'Championships', 'Young horses', 'Juniors, young riders and ponies', 'Other']
+    : ['CCI5*', 'CCI4*', 'CCI3*', 'CCI2*', 'CCI1*', 'Advanced', 'Intermediate', 'Pre-Novice', 'Novice', 'Beginner Novice',
+      'BE105', 'BE100', 'BE90', 'BE80', 'Preliminary', 'Modified', 'Training', 'Other'];
+  function jumpingLevel(event) {
+    const e = String(event || '').toUpperCase();
+    const o = e.match(/^CSIO\s*([1-5])\*/);
+    if (o) return `CSIO${o[1]}*`;
+    if (/YH/.test(e)) return 'Young horses';
+    if (/^CSI[JYP]|^CH-[EM]-[JYP]|-J-|-Y-|-CH-/.test(e)) return 'Juniors, young riders and ponies';
+    const c = e.match(/^CSI[A-Z]*\s*([1-5])\*/);
+    if (c) return `CSI${c[1]}*`;
+    if (/^CH-/.test(e)) return 'Championships';
+    return 'Other';
+  }
+  function levelOf(cls, row) {
+    if (JUMPING) return jumpingLevel(row && row.level);
     const c = cls || '';
     const star = c.match(/\b(?:CCIO?|CIC|CCN)?\s*-?\s*([1-5])\s*\*/i);
     if (star) return `CCI${star[1]}*`;
@@ -267,9 +283,9 @@
     const weeks = [...new Set(rows.map(r => weekOf(r.start_date)).filter(Boolean))].sort().reverse();
     fillSelect($('f-week'), weeks.map(w => [w, weekLabel(w)]), f.week, 'All weeks');
     const inWeek = rows.filter(r => !$('f-week').value || weekOf(r.start_date) === $('f-week').value);
-    const levels = LEVEL_ORDER.filter(l => inWeek.some(r => levelOf(r.class_name) === l));
+    const levels = LEVEL_ORDER.filter(l => inWeek.some(r => levelOf(r.class_name, r) === l));
     fillSelect($('f-level'), levels.map(l => [l, l]), f.level, 'All levels');
-    const inLevel = inWeek.filter(r => !$('f-level').value || levelOf(r.class_name) === $('f-level').value);
+    const inLevel = inWeek.filter(r => !$('f-level').value || levelOf(r.class_name, r) === $('f-level').value);
     const events = [...new Map(inLevel.map(r => [String(r.event_id), `${r.event_name} (${r.country})`])).entries()];
     fillSelect($('f-event'), events, f.event, 'All events');
     const shown = inLevel.filter(r => !$('f-event').value || String(r.event_id) === $('f-event').value);
@@ -392,7 +408,7 @@
       month = m;
       return `${head}<tr class="row">
           <td class="c-pl">${esc(ordinal(r.position))}</td>
-          <td data-label="Date">${esc(r.date_text || niceDate(r.start_date))}</td>
+          <td data-label="Date">${esc(r.class_date ? niceDate(r.class_date) : (r.date_text || niceDate(r.start_date)))}</td>
           <td class="c-horse"><a href="${esc(eventHref(r))}" data-link data-close-modal>${esc(r.event_name)}</a><span class="sub">${esc(r.country)}</span></td>
           <td data-label="Class">${esc(r.class_name)}${statusTag(r)}</td>
           <td class="c-score">${scoreCell(r)}</td></tr>`;
@@ -411,6 +427,9 @@
     const dressage = runs.map(r => parseFloat(r.dressage)).filter(n => !isNaN(n));
     const xcKnown = runs.filter(r => r.cross_country !== '' && r.cross_country !== null);
     const xcClear = xcKnown.filter(r => parseFloat(r.cross_country) === 0).length;
+    // Showjumping: clear rounds and the biggest class jumped (heights are in the class name, e.g. "(1.45m)").
+    const faultsKnown = runs.filter(r => r.faults !== null && r.faults !== undefined);
+    const heights = runs.map(r => parseFloat((String(r.class_name).match(/\((\d\.\d{2})m\)/) || [])[1])).filter(n => !isNaN(n));
     const fact = (label, v) => `<div><span>${label}</span><b>${esc(v || '–')}</b></div>`;
     el.innerHTML = `${CLOSE}
       <p class="eyebrow">Horse</p>
@@ -431,8 +450,10 @@
           <div class="stats">
             <div><span>Runs recorded</span><b>${runs.length}</b></div>
             <div><span>Wins / Placings<small>1st / top three</small></span><b>${positions.filter(p => p === 1).length} / ${positions.filter(p => p <= 3).length}</b></div>
-            <div><span>Best dressage</span><b>${dressage.length ? Math.min(...dressage) : '–'}</b></div>
-            <div><span>Clear cross country</span><b>${xcKnown.length ? `${xcClear} of ${xcKnown.length}` : '–'}</b></div>
+            ${JUMPING ? `<div><span>Clear rounds</span><b>${faultsKnown.length ? `${faultsKnown.filter(r => r.faults === 0).length} of ${faultsKnown.length}` : '–'}</b></div>
+            <div><span>Biggest class</span><b>${heights.length ? `${Math.max(...heights).toFixed(2)}m` : '–'}</b></div>`
+            : `<div><span>Best dressage</span><b>${dressage.length ? Math.min(...dressage) : '–'}</b></div>
+            <div><span>Clear cross country</span><b>${xcKnown.length ? `${xcClear} of ${xcKnown.length}` : '–'}</b></div>`}
           </div>
         </div>
       </div>
@@ -902,7 +923,7 @@
     const s = d.stallion, t = d.totals, rows = d.rows, win = d.window;
     // Mentions (every placing), top-three finishes and wins by level, for the chart and its table.
     const byLevel = LEVEL_ORDER.map(level => {
-      const at = rows.filter(r => levelOf(r.class_name) === level);
+      const at = rows.filter(r => levelOf(r.class_name, r) === level);
       return { level, mentions: at.length, top3: at.filter(r => r.placing && r.placing <= 3).length, wins: at.filter(r => r.placing === 1).length };
     }).filter(x => x.mentions);
     const maxMentions = Math.max(0, ...byLevel.map(x => x.mentions));

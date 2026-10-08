@@ -1,10 +1,16 @@
 // A horse's profile: the chosen placing plus every other run under the same name.
 import { json, bad } from '../../../lib/http.js';
 import { PLACING_COLUMNS, PLACING_JOIN, PUBLIC_SQL } from '../../../lib/results.js';
+import { siteFor } from '../../../lib/sites.js';
+import { sjHorse } from '../../../lib/sj.js';
 
 export async function onRequestGet({ env, params }) {
   const id = Number(params.id);
   if (!Number.isInteger(id)) return bad('Bad id');
+  if (siteFor(env).discipline === 'showjumping') {
+    const d = env.SHARED ? await sjHorse(env.SHARED, id) : null;
+    return d ? json(d, { headers: { 'cache-control': 'public, max-age=60' } }) : bad('Not found', 404);
+  }
   const horse = await env.DB.prepare(`SELECT ${PLACING_COLUMNS} ${PLACING_JOIN} WHERE p.id = ? AND ${PUBLIC_SQL}`).bind(id).first();
   if (!horse) return bad('Not found', 404);
   const runs = await env.DB.prepare(`SELECT ${PLACING_COLUMNS} ${PLACING_JOIN}

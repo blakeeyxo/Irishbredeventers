@@ -1,0 +1,15 @@
+Horse Performance
+
+Name	A TOUCH OF FROST
+FEI ID	108LE24
+Age	11 - 03/06/2015
+Sex	Gelding
+Color	Grey
+Studbook	ISH - Irish Sport Horse Studbook (ISH)
+Registration	Eventing 2026
+Admin NF	IRL - Ireland
+4 Competition(s) / 1 Page(s)	
+Start Date	Show	NF	Event	 	FEI ID	Athlete	Pos.	MER	D	XC obs	XC tim	J obs	J tim	Score
+22/04/2026 16:00	Ballindenisk	IRL	CCIJ2*-L		10294702	Gilby MONAGHAN (IRL)	
+1
+	34.8	0	0	0	0	34.8
