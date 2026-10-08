@@ -2,6 +2,8 @@
 // shown in the results but are not indexed, so they never match a search.
 import { json } from '../../lib/http.js';
 import { PLACING_COLUMNS, PUBLIC_SQL } from '../../lib/results.js';
+import { siteFor } from '../../lib/sites.js';
+import { sjSearch } from '../../lib/sj.js';
 
 const FIELDS = {
   all: '',
@@ -22,6 +24,10 @@ export function ftsQuery(q, field) {
 export async function onRequestGet({ env, request }) {
   const url = new URL(request.url);
   const q = (url.searchParams.get('q') || '').slice(0, 100);
+  if (siteFor(env).discipline === 'showjumping') {
+    const r = env.SHARED ? await sjSearch(env.SHARED, q, url.searchParams.get('field') || 'all').catch(() => ({ total: 0, rows: [] })) : { total: 0, rows: [] };
+    return json({ q, ...r }, { headers: { 'cache-control': 'public, max-age=60' } });
+  }
   const match = ftsQuery(q, url.searchParams.get('field') || 'all');
   if (!match) return json({ q, total: 0, rows: [] });
   const [rows, count] = await Promise.all([

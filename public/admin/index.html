@@ -36,6 +36,7 @@
     <button class="chip" data-a="ads">Ads</button>
     <button class="chip" data-a="stallions">Stallions</button>
     <button class="chip" data-a="breeding">Breeding records</button>
+    <button class="chip" data-a="fei" hidden>FEI results</button>
     <button class="chip" data-a="shared">Shared stallions</button>
     <button class="chip" data-a="forsale">For sale <span class="count" id="n-forsale" hidden></span></button>
     <button class="chip" data-a="analytics">Analytics</button>
@@ -282,6 +283,24 @@
     <datalist id="sire-names"></datalist>
   </div>
 
+  <!-- FEI RESULTS (showjumping site) -->
+  <div class="adm-pane" id="adm-fei">
+    <h3>FEI results</h3>
+    <p class="intro">Showjumping results from the FEI database. Open a horse's page on the FEI database, select everything (Ctrl+A), copy (Ctrl+C) and paste it below. You can paste several horses one after another. Press <b>Check</b> to see what will be added, then <b>Save</b>. Pasting the same horse again only adds what's new.</p>
+    <p class="intro">Only Irish-bred horses are kept: those in an Irish studbook (ISH, Irish Draught, Connemara). A horse with no studbook on its FEI page is listed so you can tick it in if you know it's Irish-bred. Horses are matched to the shared horse records by FEI ID, then name and year, so any breeding you've uploaded under <b>Shared stallions</b> shows with their results.</p>
+    <p class="meta" id="fei-visible"></p>
+    <form class="form" id="fei-form" style="max-width:none;">
+      <div class="form-row">
+        <label>Results from the year<input type="number" name="year" min="2000" max="2100"></label>
+        <label>Name for this paste (optional)<input type="text" name="label" maxlength="120" placeholder="e.g. FEI results week of 15 September"></label>
+      </div>
+      <label>FEI horse pages<textarea name="text" style="min-height:220px;" placeholder="Horse Performance&#10;Name	ABC MAYFLOWER&#10;FEI ID	109WK62&#10;…"></textarea></label>
+      <div class="adm-actions"><button class="btn" type="submit">Check</button><button class="btn alt" type="reset">Clear</button></div>
+      <div class="form-done" role="status"></div>
+    </form>
+    <div id="fei-preview"></div>
+  </div>
+
   <!-- FOR SALE -->
   <div class="adm-pane" id="adm-forsale">
     <h3>For sale</h3>
@@ -374,6 +393,6 @@
 
 <script src="/js/site.js?v=1"></script>
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=24"></script>
+<script src="/admin/admin.js?v=25"></script>
 </body>
 </html>

@@ -191,6 +191,22 @@ Set up once (in this order):
    Both run at once after a merge, so the IBSR deploy waits 45 seconds and tries again if IBER's got there first.
 3. Locally: `npm run db:migrate:shared:local`.
 
+## Showjumping results from FEI pages (IBSR)
+
+IBSR's results, home, search and horse pages read from the shared database (`lib/sj.js`), in the same row shape as
+IBER's, so the pages work unchanged. Results come from FEI "Horse Performance" pages pasted into the IBSR owner area
+(**FEI results** tab, `lib/fei.js` reads them; tested on `tests/fixtures/fei-jumping.txt`):
+
+- Only Irish-bred horses are kept: an Irish studbook (ISH, Irish Draught, Connemara). A horse with no studbook on its
+  FEI page is listed and can be ticked in. Eventing pages are recognised and left out (they belong on IBER).
+- Only the chosen year's results (the current year by default).
+- Horses match the shared horse records by FEI ID, then name and year, so breeding uploaded under **Shared
+  stallions** (with an `FEI ID` column, ideally) shows with the results.
+- One event per show, country and week; a class per competition and day; one result per horse per class. Pasting a
+  horse again only adds what's new, and a changed placing is updated.
+- Everything is saved under the **FEI** source, which is **hidden from visitors** until its terms are confirmed:
+  tick "Can show on the sites" for FEI under Shared stallions → Sources to switch it on.
+
 ## For sale (both sites)
 
 Horse ads live in the shared database (`migrations-shared/0003_listings.sql`, `lib/listings.js`) and their photos in
