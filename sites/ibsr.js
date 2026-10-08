@@ -3,7 +3,7 @@
  * Same code as IBER, built into dist/ibsr by scripts/build-site.mjs and deployed as its own Worker
  * (wrangler.jsonc, env "ibsr") with its own database and image bucket.
  *
- * To confirm with Emer: contact details (IBER's for now), the About text, and an About photo.
+ * To confirm with Emer: contact details (IBER's for now) and the About text.
  */
 import iber from './iber.js';
 
@@ -31,7 +31,7 @@ export default {
     heroCopy: 'Every Irish-bred horse placed in international showjumping, with its breeding and breeder.',
     legendScore: 'Faults, then time. Fewest faults wins; time separates horses on the same faults.',
     correctionExample: 'e.g. Dublin Horse Show, CSIO5* Grand Prix',
-    aboutPhotoHtml: '',
+    aboutPhotoHtml: '<img src="/img/carling-hill.jpg" alt="Carling Hill, an Irish-bred showjumper, clearing a fence" style="object-position: center 18%;">',
     aboutTitle: 'About IrishBred<wbr>Showjumping<wbr>Results',
     aboutHtml: `
       <p>IrishBredShowjumpingResults (IBSR) is the showjumping sister site to IrishBredEventingResults. It lists Irish-bred horses placed in international showjumping, with their breeding and breeder.</p>
