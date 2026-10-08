@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { memoryD1 } from './d1-shim.js';
-import { readListing, createListing, listPublic, getPublic, addEnquiry, ownerAction, listForOwner, saveSettings, deleteListing, readEnquiry } from '../lib/listings.js';
+import { readListing, createListing, listPublic, getPublic, addEnquiry, ownerAction, listForOwner, saveSettings, deleteListing, readEnquiry, siteDisciplines } from '../lib/listings.js';
 import { runUpload } from '../lib/shared.js';
 
 const fresh = () => memoryD1(new URL('../migrations-shared/', import.meta.url));
@@ -112,7 +112,7 @@ test('rejecting tells the seller why; the owner can edit an ad and its sites', a
   const r = await ownerAction(db, id, 'reject', { reason: 'Photos are too dark.' });
   assert.equal(r.email, 'rejected');
   assert.equal(r.listing.reject_reason, 'Photos are too dark.');
-  await ownerAction(db, id, 'save', { ...AD, title: 'Edited', disciplines: ['eventing', 'showjumping'] });
+  await ownerAction(db, id, 'save', { ...AD, title: 'Edited', share_other: true });
   await ownerAction(db, id, 'approve', { fee: '20' });
   await ownerAction(db, id, 'publish');
   assert.equal((await getPublic(db, id, 'eventing')).title, 'Edited');
@@ -134,4 +134,24 @@ test('the owner can put an ad up for a seller who phoned, with only a phone numb
   assert.equal(saved.listing.seller_email, null);
   assert.equal(saved.listing.seller_phone, '086 555 1234');
   assert.ok(b);
+});
+
+test('each site keeps its own ads; "Also show on" shares one with the other site', async () => {
+  const db = fresh();
+  assert.deepEqual(siteDisciplines('ibsr', false), ['showjumping']);
+  assert.deepEqual(siteDisciplines('iber', true), ['eventing', 'showjumping']);
+  const mk = (site, share, title) => createListing(db, readListing({ ...AD, title, disciplines: siteDisciplines(site, share) }), { photoKeys: ['listings/x.jpg'], site });
+  const sj = await mk('ibsr', false, 'SJ only'), ev = await mk('iber', false, 'Eventing only'), both = await mk('iber', true, 'Eventing, shared');
+  for (const id of [sj, ev, both]) { await ownerAction(db, id, 'approve', { fee: '20' }); await ownerAction(db, id, 'publish'); }
+  const titles = async d => (await listPublic(db, d)).listings.map(l => l.title).sort().join(' | ');
+  assert.equal(await titles('eventing'), 'Eventing only | Eventing, shared');
+  assert.equal(await titles('showjumping'), 'Eventing, shared | SJ only');
+  // Owner areas: each site manages its own, including the one it shared.
+  assert.deepEqual((await listForOwner(db, 'live', 'iber')).listings.map(l => l.title).sort(), ['Eventing only', 'Eventing, shared']);
+  assert.deepEqual((await listForOwner(db, 'live', 'ibsr')).listings.map(l => l.title), ['SJ only']);
+  assert.equal((await listForOwner(db, 'live', 'ibsr')).counts.live, 1);
+  // Editing: unticking "Also show on" takes it off the other site; its own site stays whatever is sent.
+  await ownerAction(db, both, 'save', { ...AD, title: 'Eventing, shared', share_other: false, disciplines: ['showjumping'] });
+  assert.equal(await titles('showjumping'), 'SJ only');
+  assert.equal(await titles('eventing'), 'Eventing only | Eventing, shared');
 });

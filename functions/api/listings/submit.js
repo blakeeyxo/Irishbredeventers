@@ -4,7 +4,7 @@ import { json, bad, verifyTurnstile } from '../../../lib/http.js';
 import { withShared } from '../../../lib/shared-http.js';
 import { siteFor } from '../../../lib/sites.js';
 import { saveImage } from '../../../lib/images.js';
-import { readListing, createListing, MAX_PHOTOS } from '../../../lib/listings.js';
+import { readListing, createListing, siteDisciplines, MAX_PHOTOS } from '../../../lib/listings.js';
 import { needsListingStorage } from '../../../lib/listings-http.js';
 import { sendEmails, listingReceivedEmail } from '../../../lib/mail.js';
 
@@ -17,7 +17,7 @@ export const onRequestPost = ({ env, request, waitUntil }) => withShared(env, as
     return bad('The spam check did not pass. Please wait a moment and press Send again.');
   }
   const fields = Object.fromEntries([...form.entries()].filter(([, v]) => typeof v === 'string'));
-  fields.disciplines = form.getAll('disciplines');
+  fields.disciplines = siteDisciplines(siteFor(env).id, fields.share_other === 'on');
   const parsed = readListing(fields);
   const photos = form.getAll('photos').filter(f => f && typeof f === 'object' && f.size);
   if (!photos.length) parsed.errors.push('Add at least one photo.');

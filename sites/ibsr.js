@@ -59,7 +59,8 @@ export default {
     footTagline: 'Every Irish-bred showjumping result, worldwide.',
     copyright: 'IrishBredShowjumpingResults (IBSR)',
     adminTitle: 'Owner area · IrishBredShowjumpingResults',
-    adminFoot: 'IrishBredShowjumpingResults (IBSR) · Owner area'
+    adminFoot: 'IrishBredShowjumpingResults (IBSR) · Owner area',
+    otherSiteName: 'IrishBredEventingResults (eventing)'
   },
 
   favicon: { background: '#16233F', stripe: '#3A8DDE' },

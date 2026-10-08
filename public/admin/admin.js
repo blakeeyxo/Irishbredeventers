@@ -1622,7 +1622,7 @@
         <div>
           <h4>${esc(l.title)} <span class="meta">· Ad ${l.id}</span></h4>
           <p><b>${esc(price)}</b> · ${esc(facts)}${breeding ? ` · ${esc(breeding)}` : ''}</p>
-          <p class="meta">${esc(l.level || '')}${l.level ? ' · ' : ''}${esc([l.county, l.country].filter(Boolean).join(', '))} · For ${esc(l.disciplines.join(' and ') || 'no discipline')} · Sent in on ${esc((l.submitted_site || '').toUpperCase())}</p>
+          <p class="meta">${esc(l.level || '')}${l.level ? ' · ' : ''}${esc([l.county, l.country].filter(Boolean).join(', '))} · ${l.disciplines.length > 1 ? `Also shown on ${esc(window.SITE.otherName)}` : 'This site only'}</p>
           <p class="meta"><b>Seller:</b> ${esc(l.seller_name)} (${esc(l.seller_type)})${l.seller_email ? ` · <a href="mailto:${esc(l.seller_email)}">${esc(l.seller_email)}</a>` : ' · no email: pass buyers\' messages on by phone'}${l.seller_phone ? ` · <a href="tel:${esc(l.seller_phone)}">${esc(l.seller_phone)}</a>` : ''}</p>
           <p class="meta">${esc(dates)}${l.horse_link_name ? ` · Linked to the horse record <b>${esc(l.horse_link_name)}</b> <button class="btn-quiet" type="button" data-act="unlink">Unlink</button>` : ''}</p>
           ${l.reject_reason && st === 'rejected' ? `<p class="meta">Rejected: ${esc(l.reject_reason)}</p>` : ''}
@@ -1641,8 +1641,7 @@
             : k === 'seller_type' ? `<label>${label}<select name="seller_type">${['private', 'breeder', 'dealer'].map(x => `<option${l.seller_type === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>`
             : `<label>${label}<input type="text" name="${k}" value="${esc(k === 'price' ? (l.price_cents ? l.price_cents / 100 : '') : l[k] ?? '')}"></label>`).join('')}</div>
           <label class="chk"><input type="checkbox" name="price_on_request" ${l.price_on_request ? 'checked' : ''}> Price on request</label>
-          <label class="chk"><input type="checkbox" name="disciplines" value="eventing" ${l.disciplines.includes('eventing') ? 'checked' : ''}> Eventing</label>
-          <label class="chk"><input type="checkbox" name="disciplines" value="showjumping" ${l.disciplines.includes('showjumping') ? 'checked' : ''}> Showjumping</label>
+          <label class="chk"><input type="checkbox" name="share_other" ${l.disciplines.length > 1 ? 'checked' : ''}> Also show on ${esc(window.SITE.otherName)}</label>
           <label>Description<textarea name="description" style="min-height:140px;">${esc(l.description || '')}</textarea></label>
           <div class="adm-actions"><button class="btn" type="submit">Save changes</button></div>
           <div class="form-done" role="status"></div>
@@ -1697,7 +1696,7 @@
     card.querySelector('.fs-edit').addEventListener('submit', async e => {
       e.preventDefault();
       const f = e.target, body = Object.fromEntries(new FormData(f));
-      body.disciplines = [...f.querySelectorAll('input[name=disciplines]:checked')].map(x => x.value);
+      body.share_other = f.elements.share_other.checked;
       body.price_on_request = f.elements.price_on_request.checked;
       const done = f.querySelector('.form-done');
       try { await api('/api/admin/listings', { method: 'POST', body: { id, action: 'save', ...body } }); btnMsg(done, 'Saved.'); }
@@ -1738,8 +1737,6 @@
     drawAddThumbs();
   });
   $('fs-add-box').addEventListener('toggle', e => {
-    const box = $('fs-add').querySelector(`input[name=disciplines][value="${window.SITE.discipline}"]`);
-    if (e.target.open && box && !$('fs-add').querySelector('input[name=disciplines]:checked')) box.checked = true;
     const f = $('fs-add');
     if (e.target.open && !f.elements.fee.value && fsData && fsData.settings.listing_fee_cents !== null) f.elements.fee.value = fsData.settings.listing_fee_cents / 100;
   });

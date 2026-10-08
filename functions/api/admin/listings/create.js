@@ -5,7 +5,7 @@ import { json, bad } from '../../../../lib/http.js';
 import { withShared } from '../../../../lib/shared-http.js';
 import { siteFor } from '../../../../lib/sites.js';
 import { saveImage } from '../../../../lib/images.js';
-import { readListing, createListing, ownerAction, euro, MAX_PHOTOS } from '../../../../lib/listings.js';
+import { readListing, createListing, ownerAction, siteDisciplines, euro, MAX_PHOTOS } from '../../../../lib/listings.js';
 import { needsListingStorage, listingUrl } from '../../../../lib/listings-http.js';
 import { sendEmails, listingLiveEmail, listingApprovedEmail } from '../../../../lib/mail.js';
 
@@ -15,7 +15,7 @@ export const onRequestPost = ({ env, request }) => withShared(env, async db => {
   let form;
   try { form = await request.formData(); } catch { return bad('Something went wrong sending the form. Please try again.'); }
   const fields = Object.fromEntries([...form.entries()].filter(([, v]) => typeof v === 'string'));
-  fields.disciplines = form.getAll('disciplines');
+  fields.disciplines = siteDisciplines(siteFor(env).id, fields.share_other === 'on');
   const parsed = readListing(fields, { owner: 'create' });
   const photos = form.getAll('photos').filter(f => f && typeof f === 'object' && f.size);
   if (!photos.length) parsed.errors.push('Add at least one photo.');

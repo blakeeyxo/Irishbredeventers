@@ -3,5 +3,6 @@ window.SITE = {
   "id": "iber",
   "discipline": "eventing",
   "name": "IrishBredEventingResults",
-  "short": "IBER"
+  "short": "IBER",
+  "otherName": "IrishBredShowjumpingResults"
 };

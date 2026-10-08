@@ -779,8 +779,6 @@
   const sellForm = $('sell-form');
   let sellPhotos = [];
   function showSellForm() {
-    const box = sellForm.querySelector(`input[name=disciplines][value="${window.SITE.discipline}"]`);
-    if (box && !sellForm.querySelector('input[name=disciplines]:checked')) box.checked = true;
     mountTurnstile(sellForm);
   }
   async function shrinkPhoto(file) {

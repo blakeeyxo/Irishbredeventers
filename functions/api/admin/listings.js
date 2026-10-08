@@ -11,7 +11,7 @@ import { sendEmails, listingApprovedEmail, listingLiveEmail, listingRejectedEmai
 export const onRequestGet = ({ env, request }) => withShared(env, async db => {
   const u = new URL(request.url).searchParams;
   if (u.get('id') && u.get('enquiries')) return json({ enquiries: await enquiriesFor(db, Number(u.get('id'))) });
-  const [queue, settings] = await Promise.all([listForOwner(db, u.get('status') || 'draft'), getSettings(db)]);
+  const [queue, settings] = await Promise.all([listForOwner(db, u.get('status') || 'draft', siteFor(env).id), getSettings(db)]);
   return json({ ...queue, settings, mailReady: Boolean(env.MAIL_API_KEY && env.MAIL_FROM), photosReady: Boolean(env.LISTING_MEDIA) });
 });
 
