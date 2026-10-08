@@ -307,3 +307,7 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 @media (max-width: 720px) { .fs-adm-top { grid-template-columns: minmax(0, 1fr); } }
 #fs-add .fee { width: 110px !important; display: inline-block; margin-left: 6px; }
 #fs-add h4 { margin: 18px 0 4px; font-family: var(--serif); color: var(--navy); }
+#fs-add-box { margin: 6px 0 14px; }
+#fs-add-box > summary { display: inline-block; list-style: none; cursor: pointer; }
+#fs-add-box > summary::-webkit-details-marker { display: none; }
+#fs-add-box[open] > summary { margin-bottom: 12px; }
