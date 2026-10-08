@@ -118,3 +118,20 @@ test('rejecting tells the seller why; the owner can edit an ad and its sites', a
   assert.equal((await getPublic(db, id, 'eventing')).title, 'Edited');
   assert.equal((await getPublic(db, id, 'showjumping')).title, 'Edited');
 });
+
+test('the owner can put an ad up for a seller who phoned, with only a phone number', async () => {
+  const db = fresh();
+  const noContact = readListing({ ...AD, seller_email: '', seller_phone: '' }, { owner: 'create' });
+  assert.match(noContact.errors.join(' '), /email or phone/);
+  const parsed = readListing({ ...AD, seller_email: '', seller_phone: '086 555 1234' }, { owner: 'create' });
+  assert.deepEqual(parsed.errors, []);
+  const a = await createListing(db, parsed, { photoKeys: ['listings/c.jpg'], site: 'iber' });
+  const b = await createListing(db, readListing({ ...AD, title: 'Other', seller_name: 'Someone Else', seller_email: '', seller_phone: '085 1' }, { owner: 'create' }), { photoKeys: ['listings/d.jpg'], site: 'iber' });
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM party WHERE email IS NULL').first()).n, 2, 'sellers without email are not merged');
+  await ownerAction(db, a, 'publish');
+  assert.equal((await getPublic(db, a, 'showjumping')).status, 'live');
+  const saved = await addEnquiry(db, a, 'showjumping', { name: 'Buyer', email: 'b@b.ie', message: 'Hi' });
+  assert.equal(saved.listing.seller_email, null);
+  assert.equal(saved.listing.seller_phone, '086 555 1234');
+  assert.ok(b);
+});

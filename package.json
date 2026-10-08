@@ -15,7 +15,7 @@
     "db:migrate:local:ibsr": "wrangler d1 migrations apply irishbredshowjumpers --local --env ibsr",
     "db:migrate:shared:local": "wrangler d1 migrations apply irishbredhorses --local --env=\"\"",
     "db:migrate:shared:remote": "wrangler d1 migrations apply irishbredhorses --remote --env=\"\"",
-    "deploy:ibsr": "npm run build:ibsr && wrangler d1 migrations apply irishbredhorses --remote --env ibsr && wrangler d1 migrations apply irishbredshowjumpers --remote --env ibsr && wrangler deploy --env ibsr",
+    "deploy:ibsr": "npm run build:ibsr && (wrangler d1 migrations apply irishbredhorses --remote --env ibsr || (sleep 45 && wrangler d1 migrations apply irishbredhorses --remote --env ibsr)) && wrangler d1 migrations apply irishbredshowjumpers --remote --env ibsr && wrangler deploy --env ibsr",
     "db:reset:local": "rm -rf .wrangler/state/v3/d1 && wrangler d1 migrations apply irishbredeventers --local",
     "import:local": "node scripts/import-file.mjs",
     "ads:local": "node scripts/load-example-ads.mjs",

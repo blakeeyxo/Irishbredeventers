@@ -16,6 +16,8 @@ export const onRequestPost = ({ env, request, waitUntil }) => withShared(env, as
   const site = siteFor(env);
   const saved = await addEnquiry(db, Number(b.id), site.discipline, enquiry);
   if (!saved) return bad('This ad is no longer taking enquiries.', 404);
+  // A seller Charlie added with only a phone number has no email: the enquiry waits in the owner area for him to pass on.
+  if (!saved.listing.seller_email) return json({ ok: true });
   const url = listingUrl(env, request, saved.listing.id, [site.discipline]);
   waitUntil(sendEmails(env, [listingEnquiryEmail(site, saved.listing.seller_email, saved.listing, enquiry, url)])
     .then(r => r.sent && db.prepare('UPDATE listing_enquiry SET emailed = 1 WHERE id = ?').bind(saved.enquiryId).run())
