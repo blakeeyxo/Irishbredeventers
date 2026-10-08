@@ -28,12 +28,11 @@ test('IBSR has its own name, look and wording, with no eventing branding left', 
     assert.match(out[p], /IrishBredShowjumpingResults|IBSR/, p);
   }
   assert.doesNotMatch(out['index.html'], /eventing result|Thoresby|cross-country fence/i);
-  assert.match(out['css/site.css'], /--navy: #16233F;/);
-  assert.match(out['css/site.css'], /--navy-deep: #0D1526;/);
-  assert.match(out['css/site.css'], /--navy-soft: #2A3957;/);
-  assert.match(out['css/site.css'], /--gold-bright: #3A8DDE;/);
-  assert.match(out['img/favicon.svg'], /fill="#16233F"/);
-  assert.match(out['index.html'], /<meta name="theme-color" data-site-attr="content=themeColor" content="#16233F">/);
+  // Same green as IBER: identical stylesheet, favicon and browser colour.
+  const iber = build(SITES.iber);
+  assert.equal(out['css/site.css'], asText(iber['css/site.css']));
+  assert.equal(out['img/favicon.svg'], iber['img/favicon.svg']);
+  assert.match(out['index.html'], /<meta name="theme-color" data-site-attr="content=themeColor" content="#0F6741">/);
 });
 
 test('every site config has the same text keys and theme tokens as IBER', () => {
@@ -77,6 +76,6 @@ test('emails carry each site\'s name, subject and colours', () => {
   const ibsr = resultsEmail(SITES.ibsr, 'a@b.ie', 'https://x/results', 'https://x/u', '3 new results');
   assert.equal(ibsr.subject, 'New Irish-bred showjumping results are up');
   assert.match(ibsr.html, />IrishBredShowjumpingResults</);
-  assert.match(ibsr.html, /background:#16233F;/);
-  assert.doesNotMatch(ibsr.html, /Eventing|#0F6741/);
+  assert.match(ibsr.html, /background:#0F6741;/);
+  assert.doesNotMatch(ibsr.html, /Eventing/);
 });
