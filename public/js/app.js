@@ -1,8 +1,9 @@
-/* IrishBredEventingResults (IBER) public site. */
+/* Public site for IrishBredEventingResults (IBER) and its sister sites; names come from js/site.js. */
 (function () {
   const { esc, api, ordinal, niceDate, turnstileReady, mountTurnstile, turnstileToken, resetTurnstile } = window.IBE;
   const $ = id => document.getElementById(id);
-  const SITE = 'IrishBredEventingResults';
+  const SITE = window.SITE.name;
+  const SHORT = window.SITE.short;
   const HOME_ROWS = window.matchMedia('(max-width: 720px)').matches ? 8 : 20;
 
   const state = {
@@ -42,7 +43,7 @@
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
     const tab = view === 'horse' || view === 'search' ? null : view;
     document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
-    const names = { home: SITE + ' (IBER)', results: 'Results', search: 'Search', news: 'News', stallions: 'Stallions', about: 'About' };
+    const names = { home: `${SITE} (${SHORT})`, results: 'Results', search: 'Search', news: 'News', stallions: 'Stallions', about: 'About' };
     if (view !== 'horse') document.title = view === 'home' ? names.home : `${names[view]} · ${SITE}`;
   }
 
@@ -629,7 +630,7 @@
      Every number on these pages covers the same rolling 12 months (the API works it out from today's date)
      and counts every appearance in the results, not only wins. */
   const fmt = n => Number(n || 0).toLocaleString('en-IE');
-  const stallionPhoto = s => s.image_key ? `<img src="${imgUrl(s.image_key)}" alt="${esc(s.name)}" loading="lazy">` : '<span class="card-fallback" aria-hidden="true">IBER</span>';
+  const stallionPhoto = s => s.image_key ? `<img src="${imgUrl(s.image_key)}" alt="${esc(s.name)}" loading="lazy">` : `<span class="card-fallback" aria-hidden="true">${esc(SHORT)}</span>`;
   async function renderStallions(slot) {
     $('stallions-list').hidden = !!slot;
     $('stallion-detail').hidden = !slot;
@@ -750,7 +751,7 @@
           <td class="c-score" data-label="Best">${esc(h.best ? ordinal(h.best) : '–')}</td>
           <td data-label="Latest">${esc(h.event_name)}<span class="sub">${esc(h.class_name)} · ${esc(niceDate(h.start_date))}</span></td></tr>`).join('')}</tbody>
       </table></div>
-      <p class="note">Counted from every IBER result for horses by ${esc(s.name)} at events starting ${esc(niceDate(win.start))} to ${esc(niceDate(win.end))}. A mention is any placing, not only a win.</p>`
+      <p class="note">Counted from every ${esc(SHORT)} result for horses by ${esc(s.name)} at events starting ${esc(niceDate(win.start))} to ${esc(niceDate(win.end))}. A mention is any placing, not only a win.</p>`
       : `<div class="empty-state">No progeny in the results in the ${esc(win.label.replace(/^Last/, 'last'))}.</div>`}`;
   }
 

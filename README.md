@@ -146,6 +146,30 @@ Until `MAIL_API_KEY` is set, sign-ups are stored but no email is sent (the owner
 
 ---
 
+## Sister site: IrishBredShowjumpingResults (IBSR)
+
+One codebase, two Workers. Each site's name, wording, colours, favicon and email look live in `sites/<id>.js`:
+
+- `sites/iber.js` holds exactly what `public/` already serves. `npm test` builds IBER from it and checks the result
+  matches `public/` byte for byte, so the eventing site can't change by accident.
+- `sites/ibsr.js` is showjumping: navy `#16233F` / `#0D1526` / `#2A3957` from the original demo, highlight blue `#3A8DDE`.
+- In the HTML, site-specific spots are marked `data-site="key"` (inner HTML) or `data-site-attr="attr=key"`.
+  `npm run build:ibsr` copies `public/` into `dist/ibsr` with IBSR's values (`lib/build-site.js`).
+- The Worker knows which site it is from `SITE_ID` (`lib/sites.js`; IBER when unset).
+
+IBSR is `env.ibsr` in `wrangler.jsonc`: Worker `irishbredshowjumping`, its own D1 database `irishbredshowjumping`
+(migrations in `migrations-ibsr/`, never IBER's), and its own R2 bucket `irishbredshowjumping-media`.
+
+```bash
+npm run dev:ibsr                 # build dist/ibsr, then run it locally
+npm run db:migrate:local:ibsr    # IBSR's LOCAL database only
+npm run deploy:ibsr              # build, apply IBSR migrations to the live IBSR database, deploy the IBSR Worker
+```
+
+To put it live: in Cloudflare, add a second Worker named `irishbredshowjumping` connected to this repo, with deploy
+command `npm run deploy:ibsr`, and set its own Access, Turnstile and email settings (step 3 to 5 above, on the IBSR
+Worker). Not live yet: the IBSR database tables wait for `schema.sql`, and the FEI import waits for FEI's terms.
+
 ## 2026 results from Horse Sport Ireland
 
 Charlie's 2026 season so far (37 weekly articles, 12 January to 28 September 2026) comes from the
