@@ -828,7 +828,7 @@
       sellPhotos.forEach(p => URL.revokeObjectURL(p.url));
       sellPhotos = [];
       drawSellThumbs();
-      done.textContent = "Thanks, your ad has been sent. We'll check it and email you the listing fee and how to pay. It goes live once that's done.";
+      done.textContent = "Thanks, your ad has been sent. We'll check it and let you know the listing fee; payment is by phone to Charlie. It goes live once it's paid.";
     } catch (err) {
       done.textContent = err.message;
     } finally {

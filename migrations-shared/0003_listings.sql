@@ -86,7 +86,7 @@ CREATE TABLE setting (
   key    TEXT PRIMARY KEY,
   value  TEXT NOT NULL
 );
-INSERT INTO setting (key, value) VALUES ('listing_days', '60'), ('listing_fee_cents', ''), ('payment_instructions', '');
+INSERT INTO setting (key, value) VALUES ('listing_days', '60'), ('listing_fee_cents', ''), ('payment_instructions', 'Payment is by phone: please call Charlie on +353 87 216 5442 and quote your ad number.');
 
 -- Sellers are people who sent in an ad themselves.
 INSERT INTO source (slug, name, kind, licence_status, can_store, can_display, can_republish_commercially, notes)
