@@ -54,6 +54,7 @@ import * as listingSubmit from '../functions/api/listings/submit.js';
 import * as listingEnquire from '../functions/api/listings/enquire.js';
 import * as listingMedia from '../functions/listing-media/[[path]].js';
 import * as adminListings from '../functions/api/admin/listings.js';
+import * as adminListingCreate from '../functions/api/admin/listings/create.js';
 
 const ROUTES = {
   '/api/config': config,
@@ -94,7 +95,8 @@ const ROUTES = {
   '/api/listings': listings,
   '/api/listings/submit': listingSubmit,
   '/api/listings/enquire': listingEnquire,
-  '/api/admin/listings': adminListings
+  '/api/admin/listings': adminListings,
+  '/api/admin/listings/create': adminListingCreate
 };
 
 const METHOD_EXPORT = { GET: 'onRequestGet', HEAD: 'onRequestGet', POST: 'onRequestPost', DELETE: 'onRequestDelete' };

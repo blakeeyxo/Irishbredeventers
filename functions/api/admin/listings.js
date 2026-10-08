@@ -29,7 +29,7 @@ export const onRequestPost = ({ env, request }) => withShared(env, async db => {
   if (out.email === 'live') message = listingLiveEmail(site, l.seller_email, l, listingUrl(env, request, l.id, disciplines));
   if (out.email === 'rejected') message = listingRejectedEmail(site, l.seller_email, l, l.reject_reason);
   let emailed = null;
-  if (message) {
+  if (message && l.seller_email) {
     try { const r = await sendEmails(env, [message]); emailed = r.skipped ? 'not-set-up' : r.sent > 0; } catch (e) { console.error('listing email failed', e); emailed = false; }
   }
   return json({ ok: true, status: l.status, emailed });

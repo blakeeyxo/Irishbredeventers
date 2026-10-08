@@ -1623,7 +1623,7 @@
           <h4>${esc(l.title)} <span class="meta">· Ad ${l.id}</span></h4>
           <p><b>${esc(price)}</b> · ${esc(facts)}${breeding ? ` · ${esc(breeding)}` : ''}</p>
           <p class="meta">${esc(l.level || '')}${l.level ? ' · ' : ''}${esc([l.county, l.country].filter(Boolean).join(', '))} · For ${esc(l.disciplines.join(' and ') || 'no discipline')} · Sent in on ${esc((l.submitted_site || '').toUpperCase())}</p>
-          <p class="meta"><b>Seller:</b> ${esc(l.seller_name)} (${esc(l.seller_type)}) · <a href="mailto:${esc(l.seller_email)}">${esc(l.seller_email)}</a>${l.seller_phone ? ` · <a href="tel:${esc(l.seller_phone)}">${esc(l.seller_phone)}</a>` : ''}</p>
+          <p class="meta"><b>Seller:</b> ${esc(l.seller_name)} (${esc(l.seller_type)})${l.seller_email ? ` · <a href="mailto:${esc(l.seller_email)}">${esc(l.seller_email)}</a>` : ' · no email: pass buyers\' messages on by phone'}${l.seller_phone ? ` · <a href="tel:${esc(l.seller_phone)}">${esc(l.seller_phone)}</a>` : ''}</p>
           <p class="meta">${esc(dates)}${l.horse_link_name ? ` · Linked to the horse record <b>${esc(l.horse_link_name)}</b> <button class="btn-quiet" type="button" data-act="unlink">Unlink</button>` : ''}</p>
           ${l.reject_reason && st === 'rejected' ? `<p class="meta">Rejected: ${esc(l.reject_reason)}</p>` : ''}
           <div class="adm-actions">${actions}</div>
@@ -1710,6 +1710,59 @@
       catch (err) { btnMsg(done, err.message); }
     });
   }
+
+  // "Add a horse for sale": the owner puts an ad up for a seller who phoned in. Photos are made smaller first.
+  let addPhotos = [];
+  async function shrinkForUpload(file) {
+    try {
+      const bmp = await createImageBitmap(file);
+      const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bmp.width * scale); canvas.height = Math.round(bmp.height * scale);
+      canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
+      return blob ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file;
+    } catch { return file; }
+  }
+  function drawAddThumbs() {
+    $('fs-add-thumbs').innerHTML = addPhotos.map((p, i) => `<figure><img src="${p.url}" alt=""><button class="btn-quiet" type="button" data-add-remove="${i}">${i ? 'Remove' : 'Main photo · Remove'}</button></figure>`).join('');
+    $('fs-add-thumbs').querySelectorAll('[data-add-remove]').forEach(b => b.addEventListener('click', () => {
+      URL.revokeObjectURL(addPhotos[b.dataset.addRemove].url);
+      addPhotos.splice(Number(b.dataset.addRemove), 1);
+      drawAddThumbs();
+    }));
+  }
+  $('fs-add-photos').addEventListener('change', async e => {
+    for (const f of [...e.target.files].slice(0, 8 - addPhotos.length)) { const small = await shrinkForUpload(f); addPhotos.push({ file: small, url: URL.createObjectURL(small) }); }
+    e.target.value = '';
+    drawAddThumbs();
+  });
+  $('fs-add-box').addEventListener('toggle', e => {
+    const box = $('fs-add').querySelector(`input[name=disciplines][value="${window.SITE.discipline}"]`);
+    if (e.target.open && box && !$('fs-add').querySelector('input[name=disciplines]:checked')) box.checked = true;
+    const f = $('fs-add');
+    if (e.target.open && !f.elements.fee.value && fsData && fsData.settings.listing_fee_cents !== null) f.elements.fee.value = fsData.settings.listing_fee_cents / 100;
+  });
+  $('fs-add').addEventListener('reset', () => { addPhotos.forEach(p => URL.revokeObjectURL(p.url)); addPhotos = []; setTimeout(drawAddThumbs, 0); });
+  $('fs-add').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, done = f.querySelector('.form-done'), btn = f.querySelector('button[type=submit]');
+    if (!addPhotos.length) { btnMsg(done, 'Add at least one photo.'); return; }
+    const form = new FormData(f);
+    addPhotos.forEach(p => form.append('photos', p.file));
+    btn.disabled = true;
+    btnMsg(done, 'Adding the ad…');
+    try {
+      const r = await api('/api/admin/listings/create', { method: 'POST', form });
+      const mail = r.emailed === true ? ' The seller has been emailed.' : r.emailed === 'not-set-up' ? ' Email is not set up yet, so tell the seller yourself.' : r.emailed === false ? ' The email to the seller could not be sent.' : '';
+      btnMsg(done, r.warning || `${r.status === 'live' ? `Ad ${r.id} is live.` : `Ad ${r.id} is waiting for payment.`}${mail}`);
+      f.reset();
+      fsStatus = r.status;
+      loadForSale();
+      refreshForSaleCount();
+    } catch (err) { btnMsg(done, err.message); }
+    finally { btn.disabled = false; }
+  });
 
   $('fs-settings').addEventListener('submit', async e => {
     e.preventDefault();

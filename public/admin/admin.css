@@ -305,3 +305,5 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 .fs-adm-card .fee { width: 110px; display: inline-block; padding: 9px 10px; border: 1px solid var(--rule-strong); font: 14px var(--sans); margin-left: 4px; }
 .fs-adm-card label:has(.fee) { display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--navy); }
 @media (max-width: 720px) { .fs-adm-top { grid-template-columns: minmax(0, 1fr); } }
+#fs-add .fee { width: 110px !important; display: inline-block; margin-left: 6px; }
+#fs-add h4 { margin: 18px 0 4px; font-family: var(--serif); color: var(--navy); }
