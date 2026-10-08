@@ -5,7 +5,7 @@
 
   /* ---------- Tabs ---------- */
   let countryList = [];
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), shared: () => loadShared(), analytics: () => loadAnalytics(), comments: loadComments, corrections: loadCorrections, enquiries: loadEnquiries };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), shared: () => loadShared(), forsale: () => loadForSale(), analytics: () => loadAnalytics(), messages: () => { loadComments(); loadCorrections(); loadEnquiries(); } };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -22,6 +22,9 @@
       el.textContent = s[k];
       el.hidden = !s[k];
     }
+    const waiting = s.comments + s.corrections + s.enquiries;
+    $('n-messages').textContent = waiting;
+    $('n-messages').hidden = !waiting;
     if (!$('adm-country').options.length) {
       $('adm-country').innerHTML = s.countries.map(c => `<option>${esc(c)}</option>`).join('');
       countryList = s.countries;
@@ -30,7 +33,15 @@
     return s;
   }
   let summary = null;
-  const refreshSummary = () => loadSummary().then(s => { summary = s; }).catch(showLoginError);
+  const refreshSummary = () => loadSummary().then(s => { summary = s; refreshForSaleCount(); }).catch(showLoginError);
+  // Ads waiting for review, from the shared database (the tab shows nothing if it isn't set up yet).
+  function refreshForSaleCount() {
+    api('/api/admin/listings?status=draft').then(d => {
+      const n = d.counts.draft || 0;
+      $('n-forsale').textContent = n;
+      $('n-forsale').hidden = !n;
+    }).catch(() => {});
+  }
 
   // The owner API answers "Not found" once the login has run out (it never says why to strangers).
   function showLoginError(e) {
@@ -1362,7 +1373,7 @@
   }
 
   /* ---------- Analytics (private): visits, page views, ad clicks ---------- */
-  const PAGE_NAMES = { home: 'Home', results: 'Results', news: 'News', article: 'News articles', stallions: 'Stallions', stallion: 'Stallion pages', about: 'About', search: 'Search', horse: 'Horse pages' };
+  const PAGE_NAMES = { home: 'Home', results: 'Results', news: 'News', article: 'News articles', stallions: 'Stallions', stallion: 'Stallion pages', forsale: 'For sale', listing: 'For sale ads', sell: 'I want to sell', about: 'About', search: 'Search', horse: 'Horse pages' };
   async function loadAnalytics(range) {
     const f = $('an-range').elements;
     if (range) { f.from.value = range.from; f.to.value = range.to; }
@@ -1553,6 +1564,158 @@
     const msg = f.querySelector('.form-done');
     try { await api('/api/admin/shared/sources', { method: 'POST', body }); btnMsg(msg, 'Saved.'); f.reset(); f.elements.id.value = ''; loadShared(); }
     catch (err) { btnMsg(msg, err.message); }
+  });
+
+  /* ---------- For sale ---------- */
+  const FS_STATUS = [['draft', 'Waiting for review'], ['pending_payment', 'Awaiting payment'], ['live', 'Live'], ['sold', 'Sold'],
+    ['expired', 'Expired'], ['removed', 'Removed'], ['rejected', 'Rejected']];
+  const FS_EDIT = [['title', 'Ad title'], ['horse_name', "Horse's name"], ['sex', 'Sex'], ['foaled_year', 'Year of birth'], ['height_hh', 'Height (hh)'],
+    ['colour', 'Colour'], ['studbook', 'Studbook'], ['sire', 'Sire'], ['dam', 'Dam'], ['dam_sire', "Dam's sire"], ['level', 'Level or experience'],
+    ['price', 'Price (€)'], ['county', 'County'], ['country', 'Country'], ['video_url', 'Video link'], ['seller_type', 'Selling as']];
+  let fsStatus = 'draft', fsData = null;
+  const fsEuro = c => (c === null || c === undefined ? '' : `€${(c / 100).toLocaleString('en-IE', { maximumFractionDigits: 2 })}`);
+
+  async function loadForSale() {
+    let d;
+    try { d = await api(`/api/admin/listings?status=${fsStatus}`); } catch (e) { $('fs-adm-list').innerHTML = `<p class="meta">${esc(e.message)}</p>`; return; }
+    fsData = d;
+    $('fs-adm-warn').innerHTML = [!d.mailReady ? 'Email is not set up yet, so sellers are not emailed: contact them yourself (their details are on each ad).' : '',
+      !d.photosReady ? 'Photo storage for For Sale is not connected yet, so sellers cannot send ads.' : ''].filter(Boolean).map(esc).join('<br>');
+    $('fs-adm-status').innerHTML = FS_STATUS.map(([k, label]) => `<button class="chip${k === fsStatus ? ' active' : ''}" data-fs-status="${k}">${label}${d.counts[k] ? ` <span class="count">${d.counts[k]}</span>` : ''}</button>`).join('');
+    $('fs-adm-status').querySelectorAll('[data-fs-status]').forEach(b => b.addEventListener('click', () => { fsStatus = b.dataset.fsStatus; loadForSale(); }));
+    const f = $('fs-settings');
+    f.elements.listing_fee.value = d.settings.listing_fee_cents === null ? '' : d.settings.listing_fee_cents / 100;
+    f.elements.listing_days.value = d.settings.listing_days;
+    f.elements.payment_instructions.value = d.settings.payment_instructions;
+    $('fs-adm-list').innerHTML = d.listings.length ? d.listings.map(fsCard).join('') : `<p class="meta">No ads here.</p>`;
+    $('fs-adm-list').querySelectorAll('[data-fs-id]').forEach(wireFsCard);
+  }
+
+  function fsCard(l) {
+    const price = l.price_on_request ? 'Price on request' : fsEuro(l.price_cents);
+    const facts = [l.sex, l.foaled_year && `born ${l.foaled_year}`, l.height_hh && `${l.height_hh}hh`, l.studbook].filter(Boolean).join(' · ');
+    const breeding = [l.sire && `by ${l.sire}`, l.dam && `out of ${l.dam}`, l.dam_sire && `(by ${l.dam_sire})`].filter(Boolean).join(' ');
+    const dates = [`Sent in ${niceDate(l.created_at)}`, l.approved_at && `approved ${niceDate(l.approved_at)}`, l.published_at && `live ${niceDate(l.published_at)}`,
+      l.expires_at && `ends ${niceDate(l.expires_at)}`, l.sold_at && `sold ${niceDate(l.sold_at)}`].filter(Boolean).join(' · ');
+    const st = l.status === 'live' && l.expires_at && new Date(l.expires_at.replace(' ', 'T') + 'Z') < new Date() ? 'expired' : l.status;
+    const fee = fsData.settings.listing_fee_cents === null ? '' : fsData.settings.listing_fee_cents / 100;
+    const actions = {
+      draft: `<label>Fee (€) <input class="fee" type="text" data-fee value="${esc(l.listing_fee_cents !== null ? l.listing_fee_cents / 100 : fee)}"></label>
+        <button class="btn" type="button" data-act="approve">Approve and request payment</button>
+        <button class="btn alt" type="button" data-act="reject">Reject…</button>`,
+      pending_payment: `<span class="meta">Fee ${esc(fsEuro(l.listing_fee_cents))} requested.</span>
+        <button class="btn" type="button" data-act="publish">Mark paid and publish</button>
+        <button class="btn alt" type="button" data-act="approve">Send the payment request again</button>
+        <button class="btn alt" type="button" data-act="reject">Reject…</button>`,
+      live: `<a class="btn alt" href="/for-sale/${l.id}" target="_blank" rel="noopener">View on site</a>
+        <button class="btn" type="button" data-act="sold">Mark sold</button>
+        <button class="btn alt" type="button" data-act="extend">Extend by ${fsData.settings.listing_days} days</button>
+        <button class="btn alt" type="button" data-act="remove">Remove</button>`,
+      sold: `<button class="btn alt" type="button" data-act="publish">Back to live (not sold)</button><button class="btn alt" type="button" data-act="remove">Remove</button>`,
+      expired: `<button class="btn" type="button" data-act="publish">Renew for ${fsData.settings.listing_days} days</button><button class="btn alt" type="button" data-act="remove">Remove</button>`,
+      removed: `<button class="btn alt" type="button" data-act="publish">Put back live</button>`,
+      rejected: `<button class="btn alt" type="button" data-act="approve">Approve after all and request payment</button>`
+    }[st] || '';
+    return `<div class="fs-adm-card" data-fs-id="${l.id}">
+      <div class="fs-adm-top">
+        ${l.photos[0] ? `<img src="/listing-media/${esc(l.photos[0].key)}" alt="">` : '<span></span>'}
+        <div>
+          <h4>${esc(l.title)} <span class="meta">· Ad ${l.id}</span></h4>
+          <p><b>${esc(price)}</b> · ${esc(facts)}${breeding ? ` · ${esc(breeding)}` : ''}</p>
+          <p class="meta">${esc(l.level || '')}${l.level ? ' · ' : ''}${esc([l.county, l.country].filter(Boolean).join(', '))} · For ${esc(l.disciplines.join(' and ') || 'no discipline')} · Sent in on ${esc((l.submitted_site || '').toUpperCase())}</p>
+          <p class="meta"><b>Seller:</b> ${esc(l.seller_name)} (${esc(l.seller_type)}) · <a href="mailto:${esc(l.seller_email)}">${esc(l.seller_email)}</a>${l.seller_phone ? ` · <a href="tel:${esc(l.seller_phone)}">${esc(l.seller_phone)}</a>` : ''}</p>
+          <p class="meta">${esc(dates)}${l.horse_link_name ? ` · Linked to the horse record <b>${esc(l.horse_link_name)}</b> <button class="btn-quiet" type="button" data-act="unlink">Unlink</button>` : ''}</p>
+          ${l.reject_reason && st === 'rejected' ? `<p class="meta">Rejected: ${esc(l.reject_reason)}</p>` : ''}
+          <div class="adm-actions">${actions}</div>
+          <div class="form-done" role="status"></div>
+        </div>
+      </div>
+      <div class="fs-adm-more">
+      ${l.description ? `<details><summary>Description</summary><p style="white-space:pre-wrap;">${esc(l.description)}</p></details>` : ''}
+      <details><summary>Photos (${l.photos.length})</summary><div class="fs-adm-photos">${l.photos.map(p => `<figure><a href="/listing-media/${esc(p.key)}" target="_blank" rel="noopener"><img src="/listing-media/${esc(p.key)}" alt=""></a>
+        <button class="btn-quiet" type="button" data-photo-del="${p.id}">Delete photo</button></figure>`).join('')}</div></details>
+      <details data-enq><summary>Buyer enquiries (${l.enquiries})</summary><div class="fs-enq">${l.enquiries ? '<p class="meta">Loading…</p>' : '<p class="meta">None yet.</p>'}</div></details>
+      <details><summary>Edit the ad</summary>
+        <form class="form fs-edit" style="max-width:none;">
+          <div class="form-row">${FS_EDIT.map(([k, label]) => k === 'sex' ? `<label>${label}<select name="sex">${['mare', 'gelding', 'stallion', 'colt', 'filly'].map(x => `<option${l.sex === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>`
+            : k === 'seller_type' ? `<label>${label}<select name="seller_type">${['private', 'breeder', 'dealer'].map(x => `<option${l.seller_type === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>`
+            : `<label>${label}<input type="text" name="${k}" value="${esc(k === 'price' ? (l.price_cents ? l.price_cents / 100 : '') : l[k] ?? '')}"></label>`).join('')}</div>
+          <label class="chk"><input type="checkbox" name="price_on_request" ${l.price_on_request ? 'checked' : ''}> Price on request</label>
+          <label class="chk"><input type="checkbox" name="disciplines" value="eventing" ${l.disciplines.includes('eventing') ? 'checked' : ''}> Eventing</label>
+          <label class="chk"><input type="checkbox" name="disciplines" value="showjumping" ${l.disciplines.includes('showjumping') ? 'checked' : ''}> Showjumping</label>
+          <label>Description<textarea name="description" style="min-height:140px;">${esc(l.description || '')}</textarea></label>
+          <div class="adm-actions"><button class="btn" type="submit">Save changes</button></div>
+          <div class="form-done" role="status"></div>
+        </form>
+      </details>
+      <details><summary>Private note</summary>
+        <form class="form fs-note"><textarea name="note" placeholder="Only you see this, e.g. paid by Revolut 12 Oct">${esc(l.owner_note || '')}</textarea>
+        <div class="adm-actions"><button class="btn alt" type="submit">Save note</button></div><div class="form-done" role="status"></div></form>
+      </details>
+      <button class="btn-quiet" type="button" data-act="delete">Delete this ad for good</button>
+      </div>
+    </div>`;
+  }
+
+  function wireFsCard(card) {
+    const id = Number(card.dataset.fsId), msg = card.querySelector('.form-done');
+    const act = async (action, extra = {}) => {
+      btnMsg(msg, 'Saving…');
+      try {
+        const r = await api('/api/admin/listings', { method: 'POST', body: { id, action, ...extra } });
+        const mailNote = r.emailed === true ? ' The seller has been emailed.' : r.emailed === false ? ' The email to the seller could not be sent: contact them yourself.'
+          : r.emailed === 'not-set-up' ? ' Email is not set up yet, so tell the seller yourself.' : '';
+        btnMsg(msg, `Done.${mailNote}`);
+        setTimeout(() => { loadForSale(); refreshForSaleCount(); }, mailNote ? 1800 : 400);
+      } catch (e) { btnMsg(msg, e.message); }
+    };
+    card.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', async () => {
+      const a = b.dataset.act;
+      if (a === 'approve') return act('approve', { fee: (card.querySelector('[data-fee]') || {}).value || '' });
+      if (a === 'reject') { const reason = prompt('Why is this ad not accepted? (sent to the seller; leave empty to say nothing more)'); if (reason !== null) act('reject', { reason }); return; }
+      if (a === 'delete') {
+        if (!confirm('Delete this ad, its photos and enquiries for good? This cannot be undone.')) return;
+        await api(`/api/admin/listings?id=${id}`, { method: 'DELETE' }).catch(e => btnMsg(msg, e.message));
+        return loadForSale();
+      }
+      act(a);
+    }));
+    card.querySelectorAll('[data-photo-del]').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('Delete this photo?')) return;
+      await api(`/api/admin/listings?photo=${b.dataset.photoDel}`, { method: 'DELETE' });
+      loadForSale();
+    }));
+    card.querySelector('[data-enq]').addEventListener('toggle', async e => {
+      if (!e.target.open || e.target.dataset.loaded) return;
+      e.target.dataset.loaded = '1';
+      const box = e.target.querySelector('.fs-enq');
+      const d = await api(`/api/admin/listings?id=${id}&enquiries=1`).catch(() => ({ enquiries: [] }));
+      box.innerHTML = d.enquiries.length ? d.enquiries.map(q => `<div class="cm-queue" style="margin:6px 0;"><b>${esc(q.name)}</b> · <a href="mailto:${esc(q.email)}">${esc(q.email)}</a>${q.phone ? ` · ${esc(q.phone)}` : ''}
+        <span class="meta"> · ${esc(niceDate(q.created_at))}${q.emailed ? ' · emailed to the seller' : ' · not emailed'}</span><p style="white-space:pre-wrap;margin:6px 0 0;">${esc(q.message)}</p></div>`).join('')
+        : '<p class="meta">None yet.</p>';
+    });
+    card.querySelector('.fs-edit').addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = e.target, body = Object.fromEntries(new FormData(f));
+      body.disciplines = [...f.querySelectorAll('input[name=disciplines]:checked')].map(x => x.value);
+      body.price_on_request = f.elements.price_on_request.checked;
+      const done = f.querySelector('.form-done');
+      try { await api('/api/admin/listings', { method: 'POST', body: { id, action: 'save', ...body } }); btnMsg(done, 'Saved.'); }
+      catch (err) { btnMsg(done, err.message); }
+    });
+    card.querySelector('.fs-note').addEventListener('submit', async e => {
+      e.preventDefault();
+      const done = e.target.querySelector('.form-done');
+      try { await api('/api/admin/listings', { method: 'POST', body: { id, action: 'note', note: e.target.elements.note.value } }); btnMsg(done, 'Saved.'); }
+      catch (err) { btnMsg(done, err.message); }
+    });
+  }
+
+  $('fs-settings').addEventListener('submit', async e => {
+    e.preventDefault();
+    const done = e.target.querySelector('.form-done');
+    try { await api('/api/admin/listings', { method: 'POST', body: { action: 'settings', ...Object.fromEntries(new FormData(e.target)) } }); btnMsg(done, 'Saved.'); loadForSale(); }
+    catch (err) { btnMsg(done, err.message); }
   });
 
   refreshSummary().then(loadBatches);

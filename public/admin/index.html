@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/site.css?v=4">
-<link rel="stylesheet" href="/admin/admin.css?v=17">
+<link rel="stylesheet" href="/admin/admin.css?v=20">
 </head>
 <body>
 
@@ -37,10 +37,9 @@
     <button class="chip" data-a="stallions">Stallions</button>
     <button class="chip" data-a="breeding">Breeding records</button>
     <button class="chip" data-a="shared">Shared stallions</button>
+    <button class="chip" data-a="forsale">For sale <span class="count" id="n-forsale" hidden></span></button>
     <button class="chip" data-a="analytics">Analytics</button>
-    <button class="chip" data-a="comments">Comments <span class="count" id="n-comments" hidden></span></button>
-    <button class="chip" data-a="corrections">Corrections <span class="count" id="n-corrections" hidden></span></button>
-    <button class="chip" data-a="enquiries">Ad enquiries <span class="count" id="n-enquiries" hidden></span></button>
+    <button class="chip" data-a="messages">Messages <span class="count" id="n-messages" hidden></span></button>
   </div>
 
   <!-- RESULTS -->
@@ -283,25 +282,45 @@
     <datalist id="sire-names"></datalist>
   </div>
 
-  <!-- COMMENTS -->
-  <div class="adm-pane" id="adm-comments">
-    <h3>Comments</h3>
-    <p class="intro">Comments are posted on the News page. Nothing appears on the site until you approve it.</p>
-    <div id="cm-list"></div>
+  <!-- FOR SALE -->
+  <div class="adm-pane" id="adm-forsale">
+    <h3>For sale</h3>
+    <p class="intro">Sellers send their ads in with <b>I want to sell</b>, and the ads are shared by every site (each shows the ads for its discipline). Each ad goes through four steps: <b>1.</b> it waits for you to review it, <b>2.</b> <b>Approve and request payment</b> emails the seller the fee and how to pay, <b>3.</b> once they've paid, <b>Mark paid and publish</b> puts it live for the number of days set below, <b>4.</b> mark it <b>Sold</b> (it stays up with a SOLD badge until it runs out) or <b>Remove</b> it. Buyers' questions are emailed to the seller and listed under each ad.</p>
+    <p class="meta" id="fs-adm-warn"></p>
+    <div class="adm-tabs fs-adm-status" id="fs-adm-status"></div>
+    <div id="fs-adm-list"><p class="meta">Loading…</p></div>
+    <details class="block">
+      <summary><b>For sale settings</b>: fee, how long ads run, how to pay</summary>
+      <form class="form" id="fs-settings">
+        <div class="form-row">
+          <label>Default listing fee (€)<input type="text" name="listing_fee" inputmode="decimal" maxlength="10" placeholder="e.g. 25"></label>
+          <label>Days an ad stays live<input type="number" name="listing_days" min="7" max="365"></label>
+        </div>
+        <label>How to pay (included in the payment request email)<textarea name="payment_instructions" maxlength="2000" placeholder="e.g. Pay by Revolut to 087 … or by bank transfer to IBAN IE… quoting your ad number."></textarea></label>
+        <div class="adm-actions"><button class="btn" type="submit">Save settings</button></div>
+        <div class="form-done" role="status"></div>
+      </form>
+    </details>
   </div>
 
-  <!-- CORRECTIONS -->
-  <div class="adm-pane" id="adm-corrections">
-    <h3>Corrections and additions</h3>
-    <p class="intro">Sent in from the Results page. Mark each one done once it's sorted.</p>
-    <div id="corr-list"></div>
-  </div>
-
-  <!-- ENQUIRIES -->
-  <div class="adm-pane" id="adm-enquiries">
-    <h3>Advertising enquiries</h3>
-    <p class="intro">Sent in from the Advertise section of the About page.</p>
-    <div id="enq-list"></div>
+  <!-- MESSAGES: comments, corrections and advertising enquiries in one place -->
+  <div class="adm-pane" id="adm-messages">
+    <p class="intro">Everything people send in from the site, in one place: <a href="#msg-comments">comments</a>, <a href="#msg-corrections">corrections</a> and <a href="#msg-enquiries">advertising enquiries</a>.</p>
+    <section id="msg-comments">
+      <h3>Comments <span class="count" id="n-comments" hidden></span></h3>
+      <p class="intro">Comments are posted on the News page. Nothing appears on the site until you approve it.</p>
+      <div id="cm-list"></div>
+    </section>
+    <section id="msg-corrections" class="block">
+      <h3>Corrections and additions <span class="count" id="n-corrections" hidden></span></h3>
+      <p class="intro">Sent in from the Results page. Mark each one done once it's sorted.</p>
+      <div id="corr-list"></div>
+    </section>
+    <section id="msg-enquiries" class="block">
+      <h3>Advertising enquiries <span class="count" id="n-enquiries" hidden></span></h3>
+      <p class="intro">Sent in from the Advertise section of the About page.</p>
+      <div id="enq-list"></div>
+    </section>
   </div>
 </main>
 
@@ -313,6 +332,6 @@
 </footer>
 
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=19"></script>
+<script src="/admin/admin.js?v=22"></script>
 </body>
 </html>

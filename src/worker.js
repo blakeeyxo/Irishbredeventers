@@ -48,6 +48,12 @@ import * as sharedStallions from '../functions/api/shared/stallions.js';
 import * as sharedHorse from '../functions/api/shared/horse/[id].js';
 import * as adminSharedSources from '../functions/api/admin/shared/sources.js';
 import * as adminSharedUpload from '../functions/api/admin/shared/upload.js';
+import * as listings from '../functions/api/listings.js';
+import * as listing from '../functions/api/listings/[id].js';
+import * as listingSubmit from '../functions/api/listings/submit.js';
+import * as listingEnquire from '../functions/api/listings/enquire.js';
+import * as listingMedia from '../functions/listing-media/[[path]].js';
+import * as adminListings from '../functions/api/admin/listings.js';
 
 const ROUTES = {
   '/api/config': config,
@@ -83,7 +89,12 @@ const ROUTES = {
   // Shared horse database (both sites): stallions, horses, pedigree, breeders.
   '/api/shared/stallions': sharedStallions,
   '/api/admin/shared/sources': adminSharedSources,
-  '/api/admin/shared/upload': adminSharedUpload
+  '/api/admin/shared/upload': adminSharedUpload,
+  // For Sale (ads in the shared database, shown on each site by discipline).
+  '/api/listings': listings,
+  '/api/listings/submit': listingSubmit,
+  '/api/listings/enquire': listingEnquire,
+  '/api/admin/listings': adminListings
 };
 
 const METHOD_EXPORT = { GET: 'onRequestGet', HEAD: 'onRequestGet', POST: 'onRequestPost', DELETE: 'onRequestDelete' };
@@ -95,6 +106,9 @@ function match(pathname) {
   if (h) return { mod: horse, params: { id: decodeURIComponent(h[1]) } };
   const sh = path.match(/^\/api\/shared\/horse\/(\d+)$/);
   if (sh) return { mod: sharedHorse, params: { id: sh[1] } };
+  const li = path.match(/^\/api\/listings\/(\d+)$/);
+  if (li) return { mod: listing, params: { id: li[1] } };
+  if (path.startsWith('/listing-media/')) return { mod: listingMedia, params: { path: path.slice(15).split('/') } };
   const st = path.match(/^\/api\/stallions\/(\d)$/);
   if (st) return { mod: stallion, params: { slot: st[1] } };
   if (path.startsWith('/media/')) return { mod: media, params: { path: path.slice(7).split('/') } };
@@ -106,12 +120,12 @@ const SIGN_IN = /^\/signin(\/|$)/;
 const OWNER_PAGES = /^\/admin(\/|$)/;
 const OWNER_API = /^\/api\/admin(\/|$)/;
 
-const CACHEABLE = /^\/api\/(home|results|search|news|links|ads|config|stallions(\/\d)?|horse\/[^/]+|shared\/stallions|shared\/horse\/\d+)$/;
+const CACHEABLE = /^\/api\/(home|results|search|news|links|ads|config|stallions(\/\d)?|horse\/[^/]+|shared\/stallions|shared\/horse\/\d+|listings|listings\/\d+)$/;
 const EDGE_SECONDS = 300;
 // The pages the public site loads first; anything else expires by itself within EDGE_SECONDS.
 async function clearPublicCache(origin) {
   const year = new Date().getFullYear();
-  const paths = ['/api/home', '/api/news', '/api/links', '/api/ads', '/api/config', '/api/stallions', '/api/results', '/api/shared/stallions',
+  const paths = ['/api/home', '/api/news', '/api/links', '/api/ads', '/api/config', '/api/stallions', '/api/results', '/api/shared/stallions', '/api/listings',
     `/api/results?season=${year}`, `/api/results?season=${year - 1}`, ...[1, 2, 3, 4, 5, 6].map(n => `/api/stallions/${n}`)];
   await Promise.all(paths.map(p => caches.default.delete(new Request(origin + p)).catch(() => {})));
 }

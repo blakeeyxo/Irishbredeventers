@@ -2,7 +2,7 @@
 // total per page or advert is kept: no cookies, IP addresses or anything that identifies a person.
 import { json } from '../../lib/http.js';
 
-const PAGES = ['home', 'results', 'news', 'article', 'stallions', 'stallion', 'about', 'search', 'horse'];
+const PAGES = ['home', 'results', 'news', 'article', 'stallions', 'stallion', 'forsale', 'listing', 'sell', 'about', 'search', 'horse'];
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|headless|lighthouse/i;
 
 export async function onRequestPost({ env, request }) {

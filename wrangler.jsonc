@@ -10,7 +10,7 @@
     "directory": "./public",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/media/*", "/admin", "/admin/*", "/signin", "/signin/*"]
+    "run_worker_first": ["/api/*", "/media/*", "/listing-media/*", "/admin", "/admin/*", "/signin", "/signin/*"]
   },
   // D1 database. With no database_id, the first deploy creates it and later deploys reuse it.
   // Create the tables once after that: npm run db:migrate:remote
@@ -33,6 +33,11 @@
     {
       "binding": "MEDIA",
       "bucket_name": "irishbredeventers-media"
+    },
+    {
+      // For Sale photos, shared by every site (the same bucket name in both Workers).
+      "binding": "LISTING_MEDIA",
+      "bucket_name": "irishbredhorses-media"
     }
   ],
   // Keep the variables set in the Cloudflare dashboard (Worker → Settings → Variables and Secrets)
@@ -67,7 +72,7 @@
         "directory": "./dist/ibsr",
         "binding": "ASSETS",
         "not_found_handling": "single-page-application",
-        "run_worker_first": ["/api/*", "/media/*", "/admin", "/admin/*", "/signin", "/signin/*"]
+        "run_worker_first": ["/api/*", "/media/*", "/listing-media/*", "/admin", "/admin/*", "/signin", "/signin/*"]
       },
       "d1_databases": [
         {
@@ -86,6 +91,10 @@
         {
           "binding": "MEDIA",
           "bucket_name": "irishbredshowjumpers-media"
+        },
+        {
+          "binding": "LISTING_MEDIA",
+          "bucket_name": "irishbredhorses-media"
         }
       ],
       // keep_vars (top level) applies here too: dashboard values on the IBSR Worker survive deploys.

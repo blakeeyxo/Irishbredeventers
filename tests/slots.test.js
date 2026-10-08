@@ -4,10 +4,10 @@ import { PLACEMENTS, isPlacement, placementTier, placementName } from '../lib/sl
 import { sireKeys, summary } from '../lib/stallions.js';
 
 test('every page has a top banner and six side boxes', () => {
-  assert.equal(PLACEMENTS.length, 42); // 5 pages × 7, plus 7 kept on every page
+  assert.equal(PLACEMENTS.length, 49); // 6 pages × 7, plus 7 kept on every page
   assert.ok(isPlacement('all:left1'));
   assert.equal(placementName('all:right2'), 'Every page – Right 2');
-  for (const page of ['home', 'results', 'news', 'stallions', 'about']) {
+  for (const page of ['home', 'results', 'news', 'stallions', 'forsale', 'about']) {
     for (const pos of ['top', 'left1', 'left2', 'left3', 'right1', 'right2', 'right3']) assert.ok(isPlacement(`${page}:${pos}`));
   }
   assert.ok(!isPlacement('home:left4'));

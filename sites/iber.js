@@ -8,6 +8,8 @@ export default {
   discipline: 'eventing',
   name: 'IrishBredEventingResults',
   short: 'IBER',
+  // Public address, used in emails that link to this site from the other one.
+  publicUrl: 'https://www.iber.ie',
 
   // CSS tokens in public/css/site.css (:root). Only values change between sites, never the names.
   theme: {
