@@ -62,7 +62,7 @@
   // The dashboard settings above (Access, Turnstile, emails) are set again on the IBSR Worker, with its own values.
   "env": {
     "ibsr": {
-      "name": "irishbredshowjumping",
+      "name": "irishbredshowjumpers",
       "assets": {
         "directory": "./dist/ibsr",
         "binding": "ASSETS",
@@ -72,7 +72,8 @@
       "d1_databases": [
         {
           "binding": "DB",
-          "database_name": "irishbredshowjumping",
+          "database_name": "irishbredshowjumpers",
+          "database_id": "c7ebabb0-0bac-4d8d-80e6-3b4a13e6b3ea",
           "migrations_dir": "migrations-ibsr"
         },
         {
@@ -84,13 +85,13 @@
       "r2_buckets": [
         {
           "binding": "MEDIA",
-          "bucket_name": "irishbredshowjumping-media"
+          "bucket_name": "irishbredshowjumpers-media"
         }
       ],
       // keep_vars (top level) applies here too: dashboard values on the IBSR Worker survive deploys.
       "vars": {
         "SITE_ID": "ibsr",
-        "SITE_URL": "https://irishbredshowjumping.emerblakeey.workers.dev",
+        "SITE_URL": "https://irishbredshowjumpers.emerblakeey.workers.dev",
         "MAIL_PROVIDER": "resend",
         "MAIL_FROM": "IrishBredShowjumpingResults <info@iber.ie>"
       },

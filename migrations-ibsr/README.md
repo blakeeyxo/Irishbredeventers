@@ -1,6 +1,6 @@
 # IBSR site database migrations
 
-The showjumping site (IrishBredShowjumpingResults) has its own D1 database, `irishbredshowjumping`, for the things
+The showjumping site (IrishBredShowjumpingResults) has its own D1 database, `irishbredshowjumpers`, for the things
 that belong to that site only (news, ads, comments, subscribers). Its migrations go here and never run against
 IBER's database (`migrations/`). None yet.
 

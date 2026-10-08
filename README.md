@@ -157,8 +157,8 @@ One codebase, two Workers. Each site's name, wording, colours, favicon and email
   `npm run build:ibsr` copies `public/` into `dist/ibsr` with IBSR's values (`lib/build-site.js`).
 - The Worker knows which site it is from `SITE_ID` (`lib/sites.js`; IBER when unset).
 
-IBSR is `env.ibsr` in `wrangler.jsonc`: Worker `irishbredshowjumping`, its own D1 database `irishbredshowjumping`
-(migrations in `migrations-ibsr/`, never IBER's), and its own R2 bucket `irishbredshowjumping-media`.
+IBSR is `env.ibsr` in `wrangler.jsonc`: Worker `irishbredshowjumpers`, its own D1 database `irishbredshowjumpers`
+(migrations in `migrations-ibsr/`, never IBER's), and its own R2 bucket `irishbredshowjumpers-media`.
 
 ```bash
 npm run dev:ibsr                 # build dist/ibsr, then run it locally
@@ -166,7 +166,7 @@ npm run db:migrate:local:ibsr    # IBSR's LOCAL database only
 npm run deploy:ibsr              # build, apply shared + IBSR migrations to their live databases, deploy the IBSR Worker
 ```
 
-To put it live: in Cloudflare, add a second Worker named `irishbredshowjumping` connected to this repo, with deploy
+To put it live: in Cloudflare, add a second Worker named `irishbredshowjumpers` connected to this repo, with deploy
 command `npm run deploy:ibsr`, and set its own Access, Turnstile and email settings (step 3 to 5 above, on the IBSR
 Worker). The FEI import waits for FEI's terms.
 
@@ -186,8 +186,9 @@ IBER's own database and its Stallions page are unchanged.
 - **Read:** `GET /api/shared/stallions?q=` and `GET /api/shared/horse/<id>` on either site.
 
 Set up once (in this order):
-1. Cloudflare → **Storage & databases → D1** → **Create**, name `irishbredhorses` (and `irishbredshowjumping` for IBSR).
-2. `npm run db:migrate:shared:remote` creates the shared tables. (`npm run deploy:ibsr` also applies them on every IBSR deploy.)
+1. Cloudflare → **Storage & databases → D1** → **Create**, name `irishbredhorses` (`irishbredshowjumpers` for IBSR is already made).
+2. The IBSR Worker's deploy (`npm run deploy:ibsr`) creates the shared tables and applies any new ones on every deploy.
+   Until the IBSR Worker has deployed once, IBER's Shared stallions tab says the tables aren't there yet.
 3. Locally: `npm run db:migrate:shared:local`.
 
 ## 2026 results from Horse Sport Ireland
