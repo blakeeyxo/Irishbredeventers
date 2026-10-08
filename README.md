@@ -194,8 +194,9 @@ Set up once (in this order):
 ## For sale (both sites)
 
 Horse ads live in the shared database (`migrations-shared/0003_listings.sql`, `lib/listings.js`) and their photos in
-the shared R2 bucket `irishbredhorses-media` (binding `LISTING_MEDIA`, served at `/listing-media/…`). Each ad is
-tagged eventing, showjumping or both, and each site shows the ads for its own discipline.
+the shared R2 bucket `irishbredhorses-media` (binding `LISTING_MEDIA`, served at `/listing-media/…`). Each ad belongs
+to the site it was sent in on (or added on): it shows there and is managed in that site's owner area only. Ticking
+**Also show on** (the sister site) shares it there too.
 
 1. A seller presses **I want to sell** (`/for-sale/sell`): details, 1 to 8 photos (made smaller in the browser),
    their contact details. The ad waits in the owner area → **For sale → Waiting for review**.

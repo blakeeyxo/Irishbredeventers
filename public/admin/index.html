@@ -285,7 +285,7 @@
   <!-- FOR SALE -->
   <div class="adm-pane" id="adm-forsale">
     <h3>For sale</h3>
-    <p class="intro"><b>Two ways an ad gets on the site:</b> you add one yourself with <b>+ Add a horse for sale</b> (for a seller who phoned you), or a seller sends one in with <b>I want to sell</b> and you approve it below. Ads are shared by every site (each shows the ads for its discipline). Each ad goes through four steps: <b>1.</b> it waits for you to review it, <b>2.</b> <b>Approve and request payment</b> emails the seller the fee and how to pay (by phone to Charlie, from the settings below), <b>3.</b> once they've paid, <b>Mark paid and publish</b> puts it live for the number of days set below, <b>4.</b> mark it <b>Sold</b> (it stays up with a SOLD badge until it runs out) or <b>Remove</b> it. Buyers' questions are emailed to the seller and listed under each ad.</p>
+    <p class="intro"><b>Two ways an ad gets on the site:</b> you add one yourself with <b>+ Add a horse for sale</b> (for a seller who phoned you), or a seller sends one in with <b>I want to sell</b> and you approve it below. Each site keeps its own ads: an ad shows on the site it was sent in on (or added on) and is managed here, and only appears on the other site if <b>Also show on</b> is ticked. Each ad goes through four steps: <b>1.</b> it waits for you to review it, <b>2.</b> <b>Approve and request payment</b> emails the seller the fee and how to pay (by phone to Charlie, from the settings below), <b>3.</b> once they've paid, <b>Mark paid and publish</b> puts it live for the number of days set below, <b>4.</b> mark it <b>Sold</b> (it stays up with a SOLD badge until it runs out) or <b>Remove</b> it. Buyers' questions are emailed to the seller and listed under each ad.</p>
     <p class="meta" id="fs-adm-warn"></p>
     <details class="block fs-add" id="fs-add-box">
       <summary class="btn">+ Add a horse for sale</summary>
@@ -309,10 +309,7 @@
           <label>Country<input type="text" name="country" maxlength="40" value="Ireland"></label>
           <label>Video link<input type="url" name="video_url" maxlength="300"></label>
         </div>
-        <fieldset class="fs-checks" style="border:0;padding:0;"><legend><b>Show on</b></legend>
-          <label class="chk"><input type="checkbox" name="disciplines" value="eventing"> Eventing site</label>
-          <label class="chk"><input type="checkbox" name="disciplines" value="showjumping"> Showjumping site</label>
-        </fieldset>
+        <label class="chk"><input type="checkbox" name="share_other"> Also show on <span data-site="otherSiteName">IrishBredShowjumpingResults (showjumping)</span></label>
         <label>Description<textarea name="description" maxlength="5000" style="min-height:140px;"></textarea></label>
         <label>Photos (1 to 8, the first is the main photo)<input type="file" id="fs-add-photos" accept="image/jpeg,image/png,image/webp" multiple></label>
         <div class="fs-adm-photos" id="fs-add-thumbs"></div>
@@ -377,6 +374,6 @@
 
 <script src="/js/site.js?v=1"></script>
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=23"></script>
+<script src="/admin/admin.js?v=24"></script>
 </body>
 </html>

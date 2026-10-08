@@ -59,7 +59,8 @@ export default {
     footTagline: 'Every Irish-bred eventing result, worldwide.',
     copyright: 'IrishBredEventingResults (IBER)',
     adminTitle: 'Owner area · IrishBredEventingResults',
-    adminFoot: 'IrishBredEventingResults (IBER) · Owner area'
+    adminFoot: 'IrishBredEventingResults (IBER) · Owner area',
+    otherSiteName: 'IrishBredShowjumpingResults (showjumping)'
   },
 
   // Favicon: a rounded square in the header colour with the highlight stripe along the bottom.
