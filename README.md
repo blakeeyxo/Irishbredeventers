@@ -188,6 +188,7 @@ IBER's own database and its Stallions page are unchanged.
 Set up once (in this order):
 1. Cloudflare → **Storage & databases → D1** → **Create**, name `irishbredhorses` (`irishbredshowjumpers` for IBSR is already made).
 2. Both deploys (`npm run deploy` for IBER, `npm run deploy:ibsr`) create the shared tables and apply any new ones.
+   Both run at once after a merge, so the IBSR deploy waits 45 seconds and tries again if IBER's got there first.
 3. Locally: `npm run db:migrate:shared:local`.
 
 ## For sale (both sites)
