@@ -5,6 +5,8 @@
  *
  * To confirm with Emer: contact details (IBER's for now), the About text, and an About photo.
  */
+import iber from './iber.js';
+
 export default {
   id: 'ibsr',
   discipline: 'showjumping',
@@ -12,31 +14,13 @@ export default {
   short: 'IBSR',
   publicUrl: 'https://irishbredshowjumpers.emerblakeey.workers.dev',
 
-  // Navy values from the original demo (reference/irishbredeventers-mockup-v2.html), plus a brighter blue
-  // for stripes, underlines and focus rings (4.5:1 on the navy header, 3.5:1 on white).
-  theme: {
-    '--navy': '#16233F',
-    '--navy-deep': '#0D1526',
-    '--navy-soft': '#2A3957',
-    '--gold': '#2A3957',
-    '--gold-bright': '#3A8DDE',
-    '--gold-bright-rgb': '58, 141, 222',
-    '--gold-pale': '#FFFFFF',
-    '--cream': '#FFFFFF',
-    '--cream-2': '#F2F4F8',
-    '--paper': '#FFFFFF',
-    '--ink': '#1C1B17',
-    '--ink-soft': '#46443C',
-    '--ink-faint': '#6E6A5C',
-    '--rule': '#E1E5EC',
-    '--rule-strong': '#C9CEDA',
-    '--alert': '#9E1B2F',
-    '--chip-empty-active': '#E3EEFB'
-  },
+  // Same colours as IBER (green, white and orange), taken from sites/iber.js so the two always match.
+  // (The earlier navy and blue theme was #16233F / #0D1526 / #2A3957 with #3A8DDE, if it's ever wanted again.)
+  theme: { ...iber.theme },
 
   text: {
     title: 'IrishBredShowjumpingResults (IBSR)',
-    themeColor: '#16233F',
+    themeColor: iber.text.themeColor,
     description: 'IrishBredShowjumpingResults (IBSR): every Irish-bred showjumping result worldwide, searchable by horse, sire, dam, dam sire and breeder.',
     ogDescription: 'Every Irish-bred showjumping result worldwide, with breeding and breeder.',
     homeLabel: 'IrishBredShowjumpingResults home',
@@ -63,13 +47,13 @@ export default {
     otherSiteName: 'IrishBredEventingResults (eventing)'
   },
 
-  favicon: { background: '#16233F', stripe: '#3A8DDE' },
+  favicon: { ...iber.favicon },
 
   mail: {
-    pageBackground: '#F2F4F8',
-    topBorder: '#3A8DDE',
-    heading: '#16233F',
-    button: '#16233F',
+    pageBackground: iber.mail.pageBackground,
+    topBorder: iber.mail.topBorder,
+    heading: iber.mail.heading,
+    button: iber.mail.button,
     confirmSubject: 'Confirm your IrishBredShowjumpingResults emails',
     resultsSubject: 'New Irish-bred showjumping results are up'
   }
