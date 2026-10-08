@@ -9,7 +9,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply irishbredeventers --remote",
     "parse": "node scripts/parse-file.mjs",
     "test": "node --test tests/*.test.js",
-    "deploy": "wrangler d1 migrations apply irishbredeventers --remote && wrangler deploy",
+    "deploy": "wrangler d1 migrations apply irishbredeventers --remote && wrangler d1 migrations apply irishbredhorses --remote && wrangler deploy",
     "build:ibsr": "node scripts/build-site.mjs ibsr",
     "dev:ibsr": "npm run build:ibsr && wrangler dev --env ibsr",
     "db:migrate:local:ibsr": "wrangler d1 migrations apply irishbredshowjumpers --local --env ibsr",

@@ -187,8 +187,7 @@ IBER's own database and its Stallions page are unchanged.
 
 Set up once (in this order):
 1. Cloudflare → **Storage & databases → D1** → **Create**, name `irishbredhorses` (`irishbredshowjumpers` for IBSR is already made).
-2. The IBSR Worker's deploy (`npm run deploy:ibsr`) creates the shared tables and applies any new ones on every deploy.
-   Until the IBSR Worker has deployed once, IBER's Shared stallions tab says the tables aren't there yet.
+2. Both deploys (`npm run deploy` for IBER, `npm run deploy:ibsr`) create the shared tables and apply any new ones.
 3. Locally: `npm run db:migrate:shared:local`.
 
 ## 2026 results from Horse Sport Ireland
