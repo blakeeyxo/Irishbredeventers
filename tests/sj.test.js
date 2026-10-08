@@ -3,13 +3,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { memoryD1 } from './d1-shim.js';
 import { readFeiPaste, jumpingScore, feiName } from '../lib/fei.js';
-import { runFeiImport, sjSeason, sjWeekWinners, sjSearch, sjHorse } from '../lib/sj.js';
+import { runFeiImport, sjSeason, sjWeekWinners, sjSearch, sjHorse, runFeiList, listChecklist, setChecklistStatus } from '../lib/sj.js';
 import { runUpload } from '../lib/shared.js';
 
 const fresh = () => memoryD1(new URL('../migrations-shared/', import.meta.url));
 const JUMPING = readFileSync(new URL('./fixtures/fei-jumping.txt', import.meta.url), 'utf8');
 const EVENTING = readFileSync(new URL('./fixtures/fei-eventing.txt', import.meta.url), 'utf8');
 const showFei = db => db.raw.exec("UPDATE source SET can_display = 1, can_store = 1 WHERE slug = 'fei'");
+const hideFei = db => db.raw.exec("UPDATE source SET can_display = 0 WHERE slug = 'fei'");
+const LIST = readFileSync(new URL('./fixtures/fei-list.txt', import.meta.url), 'utf8');
 const noStudbook = JUMPING.replace('ABC MAYFLOWER', 'NO BOOK HORSE').replace('109WK62', '100XX01').replace('ISH - Irish Sport Horse Studbook (ISH)', '');
 
 test('reads an FEI jumping page: horse details, each result, faults and time', () => {
@@ -62,7 +64,8 @@ test('FEI results reach the site only when the FEI source may show; then results
   const iber = (await db.prepare("SELECT id FROM source WHERE slug = 'iber'").first()).id;
   await runUpload(db, 'Name,Year,Sire,Dam,Dam sire,Breeder\nAbc Mayflower,2021,Cruising (ISH),Abc Lady,Clover Hill,Mary Brennan', { sourceId: iber, save: true });
   await runFeiImport(db, JUMPING, { year: 2026, save: true });
-  assert.equal((await sjSeason(db, 2026)).rows.length, 0, 'hidden while the FEI terms are unconfirmed');
+  hideFei(db);
+  assert.equal((await sjSeason(db, 2026)).rows.length, 0, 'a source not allowed to show stays hidden');
   showFei(db);
   const season = await sjSeason(db, 2026);
   assert.equal(season.rows.length, 3);
@@ -79,4 +82,29 @@ test('FEI results reach the site only when the FEI source may show; then results
   assert.equal((await sjSearch(db, 'phelan', 'all')).total, 0, 'riders are not searched');
   const page = await sjHorse(db, top.id);
   assert.equal(page.runs.length, 3);
+});
+
+test('FEI permission is on record: the FEI source may store and show', async () => {
+  const db = fresh();
+  const fei = await db.prepare("SELECT licence_status, can_store, can_display FROM source WHERE slug = 'fei'").first();
+  assert.deepEqual([fei.licence_status, fei.can_store, fei.can_display], ['agreed_in_writing', 1, 1]);
+});
+
+test('checklist: a pasted FEI horse list keeps Irish-bred and unclear horses; pasting results ticks them off', async () => {
+  const db = fresh();
+  const check = await runFeiList(db, LIST);
+  assert.deepEqual([check.total, check.irish, check.unclear, check.notIrish, check.added], [50, 26, 6, 18, 32]);
+  assert.equal(check.saved, false);
+  await runFeiList(db, LIST, { save: true });
+  assert.equal((await runFeiList(db, LIST, { save: true })).added, 0, 'pasting the same page twice adds nothing');
+  let list = await listChecklist(db);
+  assert.deepEqual([list.counts.to_check, list.counts.never, list.counts.done, list.counts.unclear], [26, 26, 0, 6]);
+  await runFeiImport(db, JUMPING, { year: 2026, save: true });
+  list = await listChecklist(db, { view: 'done' });
+  assert.deepEqual(list.horses.map(h => [h.name, h.results_found]), [['Abc Mayflower', 3]]);
+  assert.equal((await listChecklist(db)).counts.never, 25);
+  // An unclear horse the owner knows is Irish-bred moves onto the list to check.
+  await setChecklistStatus(db, '106AH67', 'to_check');
+  assert.equal((await listChecklist(db)).counts.to_check, 27);
+  assert.equal((await listChecklist(db, { q: 'alonsa' })).horses[0].fei_id, '106AH67');
 });
