@@ -286,7 +286,12 @@
   <!-- FEI RESULTS (showjumping site) -->
   <div class="adm-pane" id="adm-fei">
     <h3>FEI results</h3>
-    <p class="intro">Showjumping results from the FEI database. Open a horse's page on the FEI database, select everything (Ctrl+A), copy (Ctrl+C) and paste it below. You can paste several horses one after another. Press <b>Check</b> to see what will be added, then <b>Save</b>. Pasting the same horse again only adds what's new.</p>
+    <p class="intro">Showjumping results from the <a href="https://data.fei.org/Horse/Search.aspx" target="_blank" rel="noopener">FEI database</a> (FEI has agreed to their reuse). Two kinds of page can be pasted below, and the box knows which is which:</p>
+    <ul class="intro">
+      <li><b>A horse list</b> (the search results, e.g. "1195 Horse(s) / 24 Page(s)"): its Irish-bred horses go on the <b>checklist</b> below, so you can see who to look up. Paste every page of the list once.</li>
+      <li><b>A horse's results page</b> ("Horse Performance"): select everything (Ctrl+A), copy (Ctrl+C) and paste it. You can paste several horses one after another. Its results are added, and the horse is ticked off the checklist.</li>
+    </ul>
+    <p class="intro">Press <b>Check</b> to see what will be added, then <b>Save</b>. Pasting the same page again only adds what's new.</p>
     <p class="intro">Only Irish-bred horses are kept: those in an Irish studbook (ISH, Irish Draught, Connemara). A horse with no studbook on its FEI page is listed so you can tick it in if you know it's Irish-bred. Horses are matched to the shared horse records by FEI ID, then name and year, so any breeding you've uploaded under <b>Shared stallions</b> shows with their results.</p>
     <p class="meta" id="fei-visible"></p>
     <form class="form" id="fei-form" style="max-width:none;">
@@ -299,6 +304,14 @@
       <div class="form-done" role="status"></div>
     </form>
     <div id="fei-preview"></div>
+
+    <section class="block" id="fei-checklist">
+      <h3>Checklist: horses to look up</h3>
+      <p class="meta">Irish-bred horses from the pasted FEI lists. Copy a horse's FEI ID, find it on the <a href="https://data.fei.org/Horse/Search.aspx" target="_blank" rel="noopener">FEI database</a>, and paste its results page above. Horses looked up longest ago come first, so you can work down the list again through the season.</p>
+      <div class="adm-tabs" id="fei-views"></div>
+      <form class="form breed-search" id="fei-find" style="max-width:420px;"><label>Find a horse<input type="search" name="q" placeholder="Name or FEI ID"></label></form>
+      <div id="fei-list"><p class="meta">Loading…</p></div>
+    </section>
   </div>
 
   <!-- FOR SALE -->
@@ -393,6 +406,6 @@
 
 <script src="/js/site.js?v=1"></script>
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=25"></script>
+<script src="/admin/admin.js?v=26"></script>
 </body>
 </html>

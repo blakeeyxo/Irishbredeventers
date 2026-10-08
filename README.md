@@ -204,8 +204,11 @@ IBER's, so the pages work unchanged. Results come from FEI "Horse Performance" p
   stallions** (with an `FEI ID` column, ideally) shows with the results.
 - One event per show, country and week; a class per competition and day; one result per horse per class. Pasting a
   horse again only adds what's new, and a changed placing is updated.
-- Everything is saved under the **FEI** source, which is **hidden from visitors** until its terms are confirmed:
-  tick "Can show on the sites" for FEI under Shared stallions → Sources to switch it on.
+- Everything is saved under the **FEI** source. FEI agreed by email (October 2026) to the reuse of these results,
+  so the source is allowed to show (`migrations-shared/0006_fei_permission_checklist.sql`). FEI has no data feed.
+- **Checklist:** paste the pages of an FEI horse search list into the same box. Its Irish-bred horses (and those with
+  no studbook, for you to decide) go on a checklist of horses to look up; pasting a horse's results page ticks it
+  off. Horses looked up longest ago come first.
 
 ## For sale (both sites)
 

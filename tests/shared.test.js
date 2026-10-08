@@ -141,6 +141,7 @@ test('sites read stallions and horse pages; hidden sources stay hidden', async (
   assert.equal(h.breeder, 'Fernhill Sport Horses');
 
   const fei = (await db.prepare("SELECT id FROM source WHERE slug = 'fei'").first()).id;
+  db.raw.exec("UPDATE source SET can_store = 0, can_display = 0 WHERE slug = 'fei'"); // a source not allowed to store or show
   const r = await runUpload(db, 'Name,Year,Sire\nHidden Horse,2019,Cruising', { sourceId: fei, save: true });
   assert.ok(r.warnings.some(w => /not marked as allowed to store/.test(w)));
   const hidden = (await db.prepare("SELECT id FROM horse WHERE name = 'Hidden Horse'").first()).id;

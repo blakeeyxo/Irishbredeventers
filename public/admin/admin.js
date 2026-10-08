@@ -1771,21 +1771,26 @@
       const d = await api('/api/admin/shared/sources');
       const fei = d.sources.find(s => s.slug === 'fei');
       $('fei-visible').innerHTML = fei && fei.can_display
-        ? 'FEI results are <b>shown</b> on the site.'
+        ? 'FEI results are <b>shown</b> on the site (FEI agreed to their reuse).'
         : 'FEI results are saved but <b>hidden from visitors</b> until the FEI terms are confirmed. When they are, tick "Can show on the sites" for the FEI source under <b>Shared stallions → Sources</b>.';
     } catch (e) { $('fei-visible').textContent = e.message; }
+    loadChecklist();
   }
   async function feiSend(save) {
     const f = $('fei-form'), done = f.querySelector('.form-done');
     btnMsg(done, save ? 'Saving…' : 'Checking…');
     try {
       const r = await api('/api/admin/fei', { method: 'POST', body: { text: f.elements.text.value, year: f.elements.year.value, label: f.elements.label.value, include_unclear: feiTicked, save } });
-      btnMsg(done, save ? (r.saved ? `Saved: ${r.counts.results} results added, ${r.counts.updated} updated.` : r.message) : '');
+      const msg = !save ? '' : r.kind === 'list'
+        ? (r.saved ? `Added ${r.added} horses to the checklist.` : 'Nothing new to add: these horses are already on the checklist.')
+        : (r.saved ? `Saved: ${r.counts.results} results added, ${r.counts.updated} updated.` : r.message);
+      btnMsg(done, msg);
       renderFei(r, save && r.saved);
       if (save) loadFei();
     } catch (e) { btnMsg(done, e.message); }
   }
   function renderFei(r, saved) {
+    if (r.kind === 'list') return renderFeiList(r, saved);
     const c = r.counts;
     const OUT = { new: 'New', updated: 'Updated', same: 'Already on file' };
     $('fei-preview').innerHTML = `<div class="summary-box">
@@ -1808,6 +1813,46 @@
     const save = $('fei-save');
     if (save) save.addEventListener('click', () => feiSend(true));
   }
+  function renderFeiList(r, saved) {
+    $('fei-preview').innerHTML = `<div class="summary-box">
+      <p><b>An FEI horse list: ${r.total} horses.</b> ${r.irish} Irish-bred (Irish studbook), ${r.unclear} with no studbook, ${r.notIrish} bred elsewhere (left out).</p>
+      <p>${r.added} new to the checklist${r.already ? `, ${r.already} already on it` : ''}.${r.unclear ? ` The ${r.unclear} with no studbook go under <b>No studbook</b> for you to decide: ${esc(r.unclearNames.join(', '))}.` : ''}</p>
+      ${r.problems.map(p => `<p class="meta">${esc(p.message)}</p>`).join('')}
+      ${saved ? '' : `<div class="adm-actions"><button class="btn" type="button" id="fei-save" ${r.added ? '' : 'disabled'}>Add to the checklist</button></div>`}
+    </div>`;
+    const save = $('fei-save');
+    if (save) save.addEventListener('click', () => feiSend(true));
+  }
+
+  let feiView = 'never';
+  const FEI_VIEWS = [['never', 'Not looked up yet'], ['done', 'Looked up'], ['unclear', 'No studbook'], ['skip', 'Left out']];
+  async function loadChecklist() {
+    let d;
+    try { d = await api(`/api/admin/fei?view=${feiView}&q=${encodeURIComponent($('fei-find').elements.q.value)}`); }
+    catch (e) { $('fei-list').innerHTML = `<p class="meta">${esc(e.message)}</p>`; return; }
+    $('fei-views').innerHTML = FEI_VIEWS.map(([k, label]) => `<button class="chip${k === feiView ? ' active' : ''}" type="button" data-fei-view="${k}">${label} <span class="meta">${d.counts[k] || 0}</span></button>`).join('');
+    $('fei-views').querySelectorAll('[data-fei-view]').forEach(b => b.addEventListener('click', () => { feiView = b.dataset.feiView; loadChecklist(); }));
+    const age = y => (y ? `${new Date().getFullYear() - Number(y.slice(0, 4))} yrs` : '');
+    $('fei-list').innerHTML = d.horses.length ? `<div class="table-scroll"><table class="adm-table stack"><tr><th>FEI ID</th><th>Horse</th><th>Studbook</th><th></th><th>Looked up</th><th></th></tr>
+      ${d.horses.map(h => `<tr><td><b>${esc(h.fei_id)}</b> <button class="btn-quiet" type="button" data-copy="${esc(h.fei_id)}">Copy</button></td>
+        <td>${esc(h.name)}</td><td>${esc(h.studbook || '–')}</td><td class="meta">${esc([h.sex, age(h.foaled), h.nf].filter(Boolean).join(' · '))}</td>
+        <td>${h.last_pasted_at ? `${esc(niceDate(h.last_pasted_at))} · ${h.results_found} result${h.results_found === 1 ? '' : 's'}` : '<span class="meta">Not yet</span>'}</td>
+        <td>${h.status === 'unclear' ? `<button class="btn alt" type="button" data-fei-status="to_check" data-fei="${esc(h.fei_id)}">It's Irish-bred</button> <button class="btn-quiet" type="button" data-fei-status="skip" data-fei="${esc(h.fei_id)}">Leave out</button>`
+          : h.status === 'to_check' ? `<button class="btn-quiet" type="button" data-fei-status="skip" data-fei="${esc(h.fei_id)}">Leave out</button>`
+          : `<button class="btn-quiet" type="button" data-fei-status="to_check" data-fei="${esc(h.fei_id)}">Put back</button>`}</td></tr>`).join('')}</table></div>
+      ${d.horses.length >= 200 ? '<p class="meta">Showing the first 200. Use Find to look for a horse.</p>' : ''}` : '<p class="meta">None here.</p>';
+    $('fei-list').querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; } catch { b.textContent = b.dataset.copy; }
+      setTimeout(() => { b.textContent = 'Copy'; }, 1500);
+    }));
+    $('fei-list').querySelectorAll('[data-fei-status]').forEach(b => b.addEventListener('click', async () => {
+      await api('/api/admin/fei', { method: 'POST', body: { action: 'status', fei_id: b.dataset.fei, status: b.dataset.feiStatus } });
+      loadChecklist();
+    }));
+  }
+  let feiFindTimer = null;
+  $('fei-find').addEventListener('input', () => { clearTimeout(feiFindTimer); feiFindTimer = setTimeout(loadChecklist, 300); });
+  $('fei-find').addEventListener('submit', e => { e.preventDefault(); loadChecklist(); });
   $('fei-form').addEventListener('submit', e => { e.preventDefault(); feiTicked = []; feiSend(false); });
   $('fei-form').addEventListener('reset', () => { feiTicked = []; $('fei-preview').innerHTML = ''; });
 
