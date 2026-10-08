@@ -19,6 +19,13 @@
       "binding": "DB",
       "database_name": "irishbredeventers",
       "migrations_dir": "migrations"
+    },
+    {
+      // Shared horse database: stallions, horses, pedigree and breeders read by every site (lib/shared.js).
+      // The same database_name in both Workers connects them to the one database.
+      "binding": "SHARED",
+      "database_name": "irishbredhorses",
+      "migrations_dir": "migrations-shared"
     }
   ],
   // R2 bucket for news photos and ad images (created on first deploy if missing).
@@ -67,6 +74,11 @@
           "binding": "DB",
           "database_name": "irishbredshowjumping",
           "migrations_dir": "migrations-ibsr"
+        },
+        {
+          "binding": "SHARED",
+          "database_name": "irishbredhorses",
+          "migrations_dir": "migrations-shared"
         }
       ],
       "r2_buckets": [

@@ -36,6 +36,7 @@
     <button class="chip" data-a="ads">Ads</button>
     <button class="chip" data-a="stallions">Stallions</button>
     <button class="chip" data-a="breeding">Breeding records</button>
+    <button class="chip" data-a="shared">Shared stallions</button>
     <button class="chip" data-a="analytics">Analytics</button>
     <button class="chip" data-a="comments">Comments <span class="count" id="n-comments" hidden></span></button>
     <button class="chip" data-a="corrections">Corrections <span class="count" id="n-corrections" hidden></span></button>
@@ -215,6 +216,64 @@
     <div id="breed-list"></div>
   </div>
 
+  <!-- SHARED STALLIONS & BREEDING -->
+  <div class="adm-pane" id="adm-shared">
+    <h3>Shared stallions and breeding</h3>
+    <p class="intro">The shared horse database is one set of horses, stallions, pedigrees and breeders that every site reads (eventing, showjumping, and later the black type pages). Upload a spreadsheet saved as CSV, one horse per row, with the column headings in the first row (<a href="/admin/shared-template.csv" download>download the template</a>). Only <b>Name</b> is required; add whatever else you have: Sex, Year, Colour, Studbook, UELN, FEI ID, Sire, Dam, Dam sire, Breeder, County, Irish bred, Aliases. Names can carry their studbook, e.g. <i>Cruising (ISH)</i>.</p>
+    <p class="intro">Horses are found by UELN or FEI ID first, then by name and year. Sires and dams named in a row are linked to the horse already on file, or added. Nothing is merged on a guess: a row that could be two horses, or that disagrees with what's on file, is left out and listed so you can fix the file and upload it again. Uploading the same file twice adds nothing. Nothing is saved until you press Save.</p>
+    <p class="meta" id="sh-totals"></p>
+    <form class="form" id="sh-form" style="max-width:none;">
+      <div class="form-row">
+        <label>Where this data comes from<select name="source_id" id="sh-source" required></select></label>
+        <label>Name for this upload (optional)<input type="text" name="label" maxlength="120" placeholder="e.g. Stallion list October 2026"></label>
+      </div>
+      <label>CSV file<input type="file" id="sh-file" accept=".csv,.txt,.tsv,text/csv,text/plain"></label>
+      <label>Or paste the rows here (from Excel or Google Sheets, headings first)<textarea id="sh-text" style="min-height:140px;" placeholder="Name,Sex,Year,Studbook,Sire,Dam,Dam sire,Breeder&#10;Sligo Candy Boy,Stallion,2002,ISH,Candy Boy (KWPN),Sligo Lady,Cruising (ISH),Seamus Gorevan (Sligo)"></textarea></label>
+      <label class="chk"><input type="checkbox" id="sh-overwrite"> Replace what's on file with this file's values (only tick this for corrections)</label>
+      <div class="adm-actions">
+        <button class="btn" type="submit">Check</button>
+        <button class="btn alt" type="button" id="sh-clear">Clear</button>
+      </div>
+      <div class="form-done" id="sh-msg" role="status"></div>
+    </form>
+    <div id="sh-preview"></div>
+
+    <details class="block" id="sh-sources-box">
+      <summary><b>Sources</b>: where shared data comes from, and what each one allows</summary>
+      <p class="meta">Every horse records its source. A source not ticked "Can show" keeps its horses hidden from visitors. FEI stays unticked until its terms are confirmed.</p>
+      <div id="sh-sources"></div>
+      <form class="form" id="sh-source-form">
+        <input type="hidden" name="id">
+        <div class="form-row">
+          <label>Name<input type="text" name="name" required maxlength="120" placeholder="e.g. Goresbridge Go For Gold sale"></label>
+          <label>Kind<select name="kind"><option value="studbook">Studbook</option><option value="federation">Federation</option><option value="sales_company">Sales company</option><option value="publisher">Publisher</option><option value="other">Other</option></select></label>
+        </div>
+        <div class="form-row">
+          <label>Licence<select name="licence_status"><option value="unknown">Unknown</option><option value="requested">Requested</option><option value="agreed_in_writing">Agreed in writing</option><option value="refused">Refused</option></select></label>
+          <label>Terms or website<input type="url" name="terms_url" maxlength="500"></label>
+        </div>
+        <label class="chk"><input type="checkbox" name="can_store" checked> Can store</label>
+        <label class="chk"><input type="checkbox" name="can_display" checked> Can show on the sites</label>
+        <label class="chk"><input type="checkbox" name="can_republish_commercially"> Can use in paid products (black type pages)</label>
+        <label>Contact<input type="text" name="contact" maxlength="300"></label>
+        <label>Notes<textarea name="notes" maxlength="2000"></textarea></label>
+        <div class="adm-actions"><button class="btn" type="submit">Save source</button><button class="btn alt" type="reset">New source</button></div>
+        <div class="form-done" role="status"></div>
+      </form>
+    </details>
+
+    <details class="block" id="sh-dupes-box">
+      <summary><b>Possible duplicates</b> <span class="count" id="sh-ndupes" hidden></span></summary>
+      <p class="meta">New horses whose name is very close to one already on file. They were saved separately. Mark a pair <b>Different</b> to clear it from this list; <b>Same</b> records your answer (joining the two records comes next).</p>
+      <div id="sh-dupes"></div>
+    </details>
+
+    <details class="block">
+      <summary><b>Recent uploads</b></summary>
+      <div id="sh-uploads"></div>
+    </details>
+  </div>
+
   <!-- STALLIONS -->
   <div class="adm-pane" id="adm-stallions">
     <h3>Stallions</h3>
@@ -254,6 +313,6 @@
 </footer>
 
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=18"></script>
+<script src="/admin/admin.js?v=19"></script>
 </body>
 </html>

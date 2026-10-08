@@ -163,12 +163,32 @@ IBSR is `env.ibsr` in `wrangler.jsonc`: Worker `irishbredshowjumping`, its own D
 ```bash
 npm run dev:ibsr                 # build dist/ibsr, then run it locally
 npm run db:migrate:local:ibsr    # IBSR's LOCAL database only
-npm run deploy:ibsr              # build, apply IBSR migrations to the live IBSR database, deploy the IBSR Worker
+npm run deploy:ibsr              # build, apply shared + IBSR migrations to their live databases, deploy the IBSR Worker
 ```
 
 To put it live: in Cloudflare, add a second Worker named `irishbredshowjumping` connected to this repo, with deploy
 command `npm run deploy:ibsr`, and set its own Access, Turnstile and email settings (step 3 to 5 above, on the IBSR
-Worker). Not live yet: the IBSR database tables wait for `schema.sql`, and the FEI import waits for FEI's terms.
+Worker). The FEI import waits for FEI's terms.
+
+## Shared horse database (both sites)
+
+One D1 database, `irishbredhorses` (binding `SHARED`, tables in `migrations-shared/`), holds the horses, stallions,
+pedigrees and breeders that every site reads: IBER, IBSR, and later the black type pages. It follows `schema.sql`
+(sections 1 to 4). Both Workers list it by the same name in `wrangler.jsonc`, so they connect to the one database.
+IBER's own database and its Stallions page are unchanged.
+
+- **Upload:** owner area → **Shared stallions**. Choose the source, then a CSV (or paste from Excel), press **Check**,
+  then **Save**. Template: `/admin/shared-template.csv`. Matching rules are at the top of `lib/shared.js`.
+  Every horse, breeder and alias records its source; every value an upload sets is logged in `upload_change`
+  with the old value.
+- **Sources:** each has licence fields. A source not ticked "Can show" keeps its horses hidden from visitors.
+  `fei` starts hidden (terms not confirmed); `iber` is ours.
+- **Read:** `GET /api/shared/stallions?q=` and `GET /api/shared/horse/<id>` on either site.
+
+Set up once (in this order):
+1. Cloudflare → **Storage & databases → D1** → **Create**, name `irishbredhorses` (and `irishbredshowjumping` for IBSR).
+2. `npm run db:migrate:shared:remote` creates the shared tables. (`npm run deploy:ibsr` also applies them on every IBSR deploy.)
+3. Locally: `npm run db:migrate:shared:local`.
 
 ## 2026 results from Horse Sport Ireland
 

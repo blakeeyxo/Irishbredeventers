@@ -1,4 +1,5 @@
--- IrishBredShowjumpingResults (IBSR): first tables.
+-- Shared horse database (irishbredhorses): stallions, horses, pedigree and breeders, read by IBER and IBSR,
+-- and later the BlackType database. Showjumping results live here too, next to the horses they belong to.
 -- From schema.sql (Irish Bred Horse Results shared database, v0.1 draft), sections 1 to 4 only:
 -- source, party, horse (+ aliases, match candidates), discipline, competition_event, competition_class, result.
 -- Sales, listings, black type, the fee ledger and the cross-site views are out of scope for now and not created.
@@ -9,7 +10,7 @@
 --     competition_event, competition_class and result (party and competition_class gain the column).
 --   * result is unique on (class_id, horse_id): with rider_id empty, SQLite would let the same horse in
 --     the same class be saved twice.
---   * competition_event keeps discipline_code; this database only ever holds 'showjumping' events.
+--   * The kind and licence_status lists were cut off in the PDF copy of schema.sql; completed here.
 
 PRAGMA foreign_keys = ON;
 
