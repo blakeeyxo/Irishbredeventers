@@ -4,7 +4,6 @@ import { json, bad, readJson } from '../../../lib/http.js';
 import { findHorses, gapCount, saveBreeding, findSires, saveSire, findStallions } from '../../../lib/breeding.js';
 import { sjBreedingList, sjSaveBreeding, sjBreedingSheet } from '../../../lib/sj.js';
 import { siteFor } from '../../../lib/sites.js';
-import { importShdPages } from '../../../lib/auto.js';
 
 // On the showjumping site the horses live in the shared database (env.SHARED), so its breeding is edited there.
 const shared = env => siteFor(env).discipline === 'showjumping';
@@ -30,12 +29,6 @@ export async function onRequestGet({ env, request }) {
 
 export async function onRequestPost({ env, request, data }) {
   const b = await readJson(request);
-  // Saved SporthorseData horse pages (IBSR): { action: 'shd', pages: [html…], save }
-  if (shared(env) && b && b.action === 'shd') {
-    const pages = Array.isArray(b.pages) ? b.pages.map(String).slice(0, 60) : [];
-    try { return json({ ok: true, ...(await importShdPages(env.SHARED, pages, { save: Boolean(b.save), user: data && data.user ? data.user.email : '' })) }); }
-    catch (e) { return bad(e.message); }
-  }
   const id = Number(b && b.id);
   if (!Number.isInteger(id)) return bad('Choose a horse.');
   try {

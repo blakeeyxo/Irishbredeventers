@@ -149,13 +149,12 @@ async function ownerLogin(request, env, why) {
 }
 
 export default {
-  // The cron trigger (IBSR only, see wrangler.jsonc): the automatic FEI and SporthorseData readers, each within its
-  // daily limit and only when the owner has switched it on (lib/auto.js).
+  // The cron trigger (IBSR only, see wrangler.jsonc): the automatic FEI reader, within its daily limit and only when
+  // the owner has switched it on (lib/auto.js).
   async scheduled(event, env, ctx) {
     if (!env.SHARED || siteFor(env).discipline !== 'showjumping') return;
     ctx.waitUntil(runReaders(env.SHARED).then(r => {
-      const n = r.fei.length + r.shd.length;
-      if (n) console.log(`Automatic readers: ${r.fei.length} FEI, ${r.shd.length} SporthorseData`);
+      if (r.fei.length) console.log(`Automatic FEI reader: ${r.fei.length} horses`);
     }).catch(e => console.error('automatic readers failed', e && e.stack || e)));
   },
 
