@@ -1795,7 +1795,7 @@
         : (r.saved ? `Saved: ${r.counts.results} results added, ${r.counts.updated} updated.` : r.message);
       btnMsg(done, msg);
       renderFei(r, save && r.saved);
-      if (save) { loadFei(); if (r.saved && feiSaved) { feiSaved = ''; $('fei-files').value = ''; } }
+      if (save) { loadFei(); if (r.saved && feiSaved) { feiSaved = ''; $('fei-perf-files').value = ''; } }
     } catch (e) { btnMsg(done, e.message); }
   }
   function renderFei(r, saved) {
@@ -1833,8 +1833,8 @@
     if (save) save.addEventListener('click', () => feiSend(true));
   }
 
-  let feiView = 'never';
-  const FEI_VIEWS = [['never', 'Not looked up yet'], ['done', 'Looked up'], ['unclear', 'No studbook'], ['skip', 'Left out']];
+  let feiView = 'to_check';
+  const FEI_VIEWS = [['to_check', 'Following'], ['never', 'Not read yet'], ['unclear', 'No studbook'], ['skip', 'Left out']];
   async function loadChecklist() {
     let d;
     try { d = await api(`/api/admin/fei?view=${feiView}&q=${encodeURIComponent($('fei-find').elements.q.value)}`); }
@@ -1866,27 +1866,30 @@
   $('fei-form').addEventListener('reset', () => { feiTicked = []; feiSaved = ''; $('fei-preview').innerHTML = ''; });
   // Saved FEI list pages: only their horse rows are sent (a saved page is mostly scripts and styles).
   let feiSaved = '';
-  $('fei-form').elements.text.addEventListener('input', () => { if (feiSaved) { feiSaved = ''; $('fei-files').value = ''; $('fei-files-note').textContent = 'Using the pasted text instead of the saved pages.'; } });
+  $('fei-form').elements.text.addEventListener('input', () => { if (feiSaved) { feiSaved = ''; $('fei-perf-files').value = ''; } });
   // Saved FEI pages. A saved page is mostly scripts and styles, so only what's read is sent: a horse list's rows, or a
   // horse results page's tables.
   const stripPage = t => t.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<select[\s\S]*?<\/select>|<!--[\s\S]*?-->|<link[^>]*>|<img[^>]*>/gi, '');
+  // Step 1: saved FEI list pages are added straight away (only their horse rows are sent).
   $('fei-files').addEventListener('change', async e => {
-    const files = [...e.target.files];
+    const files = [...e.target.files], note = $('fei-files-note');
+    if (!files.length) return;
     const pages = await Promise.all(files.map(f => f.text()));
-    const lists = pages.filter(t => /_lblResID_\d/.test(t)), perf = pages.filter(t => !/_lblResID_\d/.test(t) && /Horse Performance/.test(t));
-    const note = $('fei-files-note');
-    feiSaved = '';
-    if (!files.length) { note.textContent = ''; return; }
-    if (lists.length && perf.length) { note.textContent = 'Those are horse lists and horse results pages together: choose one kind at a time.'; return; }
-    if (lists.length) {
-      const rows = lists.flatMap(t => t.match(/<tr[^>]*>[\s\S]*?<\/tr>/g) || []).filter(t => /_lblResID_\d/.test(t));
-      feiSaved = `<table>${rows.join('\n')}</table>`;
-      note.textContent = `${lists.length} saved list page${lists.length === 1 ? '' : 's'} chosen: ${rows.length} horses. Press Check.`;
-    } else if (perf.length) {
-      feiSaved = perf.map(t => { const x = stripPage(t); const i = x.indexOf('Horse Performance'); return `<table><tr><td>${i < 0 ? x : x.slice(i)}</td></tr></table>`; }).join('\n');
-      note.textContent = `${perf.length} saved horse results page${perf.length === 1 ? '' : 's'} chosen. Press Check.`;
-    } else note.textContent = 'No FEI horse list or horse results page found in those files. Save the FEI page as "Webpage, HTML only".';
-    if (files.length > (lists.length + perf.length) && feiSaved) note.textContent += ` (${files.length - lists.length - perf.length} other file${files.length - lists.length - perf.length === 1 ? '' : 's'} left out.)`;
+    const rows = pages.flatMap(t => t.match(/<tr[^>]*>[\s\S]*?<\/tr>/g) || []).filter(t => /_lblResID_\d/.test(t));
+    e.target.value = '';
+    if (!rows.length) { note.textContent = 'No FEI horse list in those files. On the FEI horse search results, press Ctrl+S and save as "Webpage, HTML only".'; return; }
+    note.textContent = `Adding ${rows.length} horses…`;
+    try {
+      const r = await api('/api/admin/fei', { method: 'POST', body: { text: `<table>${rows.join('\n')}</table>`, save: true } });
+      note.textContent = `Done: ${r.added} new horse${r.added === 1 ? '' : 's'} followed${r.already ? `, ${r.already} already followed` : ''}${r.notIrish ? `, ${r.notIrish} not Irish-bred left out` : ''}.`;
+      loadFei();
+    } catch (err) { note.textContent = err.message; }
+  });
+  // "Add results by hand": saved FEI horse results pages for the form under More options.
+  $('fei-perf-files').addEventListener('change', async e => {
+    const pages = (await Promise.all([...e.target.files].map(f => f.text()))).filter(t => /Horse Performance/.test(t));
+    feiSaved = pages.map(t => { const x = stripPage(t); const i = x.indexOf('Horse Performance'); return `<table><tr><td>${i < 0 ? x : x.slice(i)}</td></tr></table>`; }).join('\n');
+    btnMsg($('fei-form').querySelector('.form-done'), pages.length ? `${pages.length} saved results page${pages.length === 1 ? '' : 's'} chosen. Press Check.` : 'No FEI horse results page in those files.');
   });
 
   /* ---------- Automatic readers (FEI results, SporthorseData breeding) ---------- */
@@ -1908,17 +1911,39 @@
           <td><b>${esc(OUTCOME[x.outcome] || x.outcome)}</b> <span class="meta">${esc(x.detail)}</span></td><td class="meta">${esc(x.read_at)}</td></tr>`).join('')}</table></div></details>` : ''}
     </form>`).join('');
   }
-  async function loadAuto() {
-    try { renderReaders((await api('/api/admin/auto')).readers); }
-    catch (e) { $('auto-readers').innerHTML = `<p class="meta">${esc(e.message)}</p>`; }
+  function renderStatus(d) {
+    const fei = d.readers.find(r => r.slug === 'fei') || {}, shd = d.readers.find(r => r.slug === 'sporthorse-data') || {};
+    const on = fei.enabled && shd.enabled, f = d.followed;
+    const held = d.readers.flatMap(r => r.recent.filter(x => x.outcome === 'held'));
+    $('auto-followed').textContent = f.total ? `${f.total} Irish-bred horses followed${f.never ? `, ${f.never} not read yet` : ''}.` : 'No horses followed yet.';
+    $('auto-status').innerHTML = `<p><b>${on ? 'On' : fei.enabled || shd.enabled ? 'Partly on' : 'Off'}.</b> ${on ? 'The site is reading results and breeding by itself.' : 'Switch on and the site reads results and breeding by itself.'}</p>
+      <ul class="intro">
+        <li>Results: ${fei.outcomes && fei.outcomes.saved || 0} horse${(fei.outcomes && fei.outcomes.saved) === 1 ? '' : 's'} with new results today (${fei.today || 0} read).</li>
+        <li>Breeding: ${shd.outcomes && shd.outcomes.saved || 0} horse${(shd.outcomes && shd.outcomes.saved) === 1 ? '' : 's'} filled in today (${shd.today || 0} looked up).</li>
+        ${held.length ? `<li><b>Needs you:</b> ${held.map(x => `${esc(x.horse)}: ${esc(x.detail)}`).join('; ')}</li>` : ''}
+      </ul>`;
+    $('auto-switch').textContent = on ? 'Switch off' : 'Switch on';
+    $('auto-switch').dataset.on = on ? '1' : '';
+    renderReaders(d.readers);
   }
+  async function loadAuto() {
+    try { renderStatus(await api('/api/admin/auto')); }
+    catch (e) { $('auto-status').innerHTML = `<p class="meta">${esc(e.message)}</p>`; }
+  }
+  $('auto-switch').addEventListener('click', async () => {
+    const b = $('auto-switch');
+    b.disabled = true;
+    try { renderStatus(await api('/api/admin/auto', { method: 'POST', body: { action: 'switch', enabled: !b.dataset.on } })); }
+    catch (err) { $('auto-run-msg').textContent = err.message; }
+    finally { b.disabled = false; }
+  });
   $('auto-readers').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target, done = f.querySelector('.form-done');
     btnMsg(done, 'Saving…');
     try {
       const r = await api('/api/admin/auto', { method: 'POST', body: { slug: f.dataset.slug, enabled: f.elements.enabled.checked, daily_limit: f.elements.daily_limit.value } });
-      renderReaders(r.readers);
+      renderStatus(r);
     } catch (err) { btnMsg(done, err.message); }
   });
   $('auto-run').addEventListener('click', async () => {
@@ -1927,8 +1952,8 @@
     try {
       const r = await api('/api/admin/auto', { method: 'POST', body: { action: 'run' } });
       const n = r.fei.length + r.shd.length;
-      msg.textContent = n ? `Read ${r.fei.length} FEI horse${r.fei.length === 1 ? '' : 's'} and ${r.shd.length} on SporthorseData. See "Latest horses read".` : 'Nothing to read just now (no checklist horses with an FEI link due, and no horses missing breeding).';
-      renderReaders(r.readers);
+      msg.textContent = n ? `Read ${r.fei.length} horse${r.fei.length === 1 ? '' : 's'} on FEI and ${r.shd.length} on SporthorseData.` : 'Nothing due just now: every followed horse was read in the last 6 days, and no horse is missing breeding.';
+      renderStatus(r);
       loadChecklist();
     } catch (err) { msg.textContent = err.message; }
     finally { b.disabled = false; }
