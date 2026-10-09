@@ -139,3 +139,19 @@ test('with no year chosen, every year on the FEI page is kept', async () => {
   assert.deepEqual((await sjSeason(db, 2026)).seasons.sort(), [2025, 2026]);
   assert.equal((await sjSeason(db, 2025)).rows.length, 1);
 });
+
+test('breeding spreadsheet: download the gaps, fill them in, upload back through the shared upload by FEI ID', async () => {
+  const { sjBreedingSheet, sjBreedingList } = await import('../lib/sj.js');
+  const db = fresh();
+  await runFeiImport(db, JUMPING, { save: true });
+  const sheet = await sjBreedingSheet(db);
+  const [head, row] = sheet.trim().split('\r\n');
+  assert.equal(head, 'Name,FEI ID,Year,Sex,Studbook,Sire,Dam,Dam sire,Breeder,Irish bred');
+  assert.match(row, /^Abc Mayflower,109WK62,2021,Mare,ISH,,,,,yes$/);
+  const filled = sheet.replace(',,,,,yes', ',Cruising (ISH),Abc Lady,Clover Hill,Mary Brennan (Cork),yes');
+  const iber = (await db.prepare("SELECT id FROM source WHERE slug = 'iber'").first()).id;
+  const up = await runUpload(db, filled, { sourceId: iber, save: true });
+  assert.deepEqual([up.counts.updated, up.counts.new, up.counts.held], [1, 0, 0]);
+  assert.equal((await sjBreedingList(db, { gaps: true })).total, 0);
+  assert.equal((await sjBreedingSheet(db)).trim().split('\r\n').length, 1, 'nothing left missing');
+});

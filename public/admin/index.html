@@ -211,6 +211,14 @@
       <label class="chk"><input type="checkbox" name="gaps" value="1"> Only horses with part of their breeding missing <span id="breed-gaps"></span></label>
       <div class="adm-actions"><button class="btn" type="submit">Find</button></div>
     </form>
+    <div class="panel sj-only" id="breed-sheet" hidden>
+      <p><b>Lots of horses to do?</b> Fill them in as a spreadsheet instead of one by one.</p>
+      <ol>
+        <li><a href="/api/admin/breeding?format=csv&amp;gaps=1" download>Download the horses missing breeding</a> (or <a href="/api/admin/breeding?format=csv" download>every horse</a>). It opens in Excel or Google Sheets, with what's already on file filled in.</li>
+        <li>Fill in Sire, Dam, Dam sire and Breeder. Write a sire's studbook if you know it, e.g. <i>Cruising (ISH)</i>, and the breeder's county in brackets, e.g. <i>Mary Brennan (Cork)</i>. A stallion already in the shared file is linked to automatically, pedigree and all, so just type his name. Leave a box empty if it isn't known. Don't change the FEI ID column: that's how each row finds its horse.</li>
+        <li>Save it as CSV and upload it under <b>Shared stallions</b>. Press Check first: it lists anything it couldn't match before anything is saved.</li>
+      </ol>
+    </div>
     <datalist id="breed-sires"></datalist>
     <p class="meta" id="breed-count"></p>
     <div id="breed-list"></div>
@@ -406,6 +414,6 @@
 
 <script src="/js/site.js?v=1"></script>
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=28"></script>
+<script src="/admin/admin.js?v=29"></script>
 </body>
 </html>
