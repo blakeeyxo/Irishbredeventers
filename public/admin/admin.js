@@ -1788,13 +1788,13 @@
     const f = $('fei-form'), done = f.querySelector('.form-done');
     btnMsg(done, save ? 'Saving…' : 'Checking…');
     try {
-      const r = await api('/api/admin/fei', { method: 'POST', body: { text: f.elements.text.value, year: f.elements.year.value, label: f.elements.label.value, include_unclear: feiTicked, save } });
+      const r = await api('/api/admin/fei', { method: 'POST', body: { text: feiSaved || f.elements.text.value, year: f.elements.year.value, label: f.elements.label.value, include_unclear: feiTicked, save } });
       const msg = !save ? '' : r.kind === 'list'
-        ? (r.saved ? `Added ${r.added} horses to the checklist.` : 'Nothing new to add: these horses are already on the checklist.')
+        ? (r.saved ? `Added ${r.added} horses to the checklist${r.linked ? `; ${r.linked} with their FEI link` : ''}.` : 'Nothing new to add: these horses are already on the checklist.')
         : (r.saved ? `Saved: ${r.counts.results} results added, ${r.counts.updated} updated.` : r.message);
       btnMsg(done, msg);
       renderFei(r, save && r.saved);
-      if (save) loadFei();
+      if (save) { loadFei(); if (r.saved && feiSaved) { feiSaved = ''; $('fei-files').value = ''; } }
     } catch (e) { btnMsg(done, e.message); }
   }
   function renderFei(r, saved) {
@@ -1843,7 +1843,7 @@
     const age = y => (y ? `${new Date().getFullYear() - Number(y.slice(0, 4))} yrs` : '');
     $('fei-list').innerHTML = d.horses.length ? `<div class="table-scroll"><table class="adm-table stack"><tr><th>FEI ID</th><th>Horse</th><th>Studbook</th><th></th><th>Looked up</th><th></th></tr>
       ${d.horses.map(h => `<tr><td><b>${esc(h.fei_id)}</b> <button class="btn-quiet" type="button" data-copy="${esc(h.fei_id)}">Copy</button></td>
-        <td>${esc(h.name)}</td><td>${esc(h.studbook || '–')}</td><td class="meta">${esc([h.sex, age(h.foaled), h.nf].filter(Boolean).join(' · '))}</td>
+        <td>${h.fei_url ? `<a href="${esc(h.fei_url)}" target="_blank" rel="noopener">${esc(h.name)} ↗</a>` : esc(h.name)}</td><td>${esc(h.studbook || '–')}</td><td class="meta">${esc([h.sex, age(h.foaled), h.nf].filter(Boolean).join(' · '))}</td>
         <td>${h.last_pasted_at ? `${esc(niceDate(h.last_pasted_at))} · ${h.results_found} result${h.results_found === 1 ? '' : 's'}` : '<span class="meta">Not yet</span>'}</td>
         <td>${h.status === 'unclear' ? `<button class="btn alt" type="button" data-fei-status="to_check" data-fei="${esc(h.fei_id)}">It's Irish-bred</button> <button class="btn-quiet" type="button" data-fei-status="skip" data-fei="${esc(h.fei_id)}">Leave out</button>`
           : h.status === 'to_check' ? `<button class="btn-quiet" type="button" data-fei-status="skip" data-fei="${esc(h.fei_id)}">Leave out</button>`
@@ -1862,7 +1862,19 @@
   $('fei-find').addEventListener('input', () => { clearTimeout(feiFindTimer); feiFindTimer = setTimeout(loadChecklist, 300); });
   $('fei-find').addEventListener('submit', e => { e.preventDefault(); loadChecklist(); });
   $('fei-form').addEventListener('submit', e => { e.preventDefault(); feiTicked = []; feiSend(false); });
-  $('fei-form').addEventListener('reset', () => { feiTicked = []; $('fei-preview').innerHTML = ''; });
+  $('fei-form').addEventListener('reset', () => { feiTicked = []; feiSaved = ''; $('fei-preview').innerHTML = ''; });
+  // Saved FEI list pages: only their horse rows are sent (a saved page is mostly scripts and styles).
+  let feiSaved = '';
+  $('fei-form').elements.text.addEventListener('input', () => { if (feiSaved) { feiSaved = ''; $('fei-files').value = ''; $('fei-files-note').textContent = 'Using the pasted text instead of the saved pages.'; } });
+  $('fei-files').addEventListener('change', async e => {
+    const files = [...e.target.files];
+    const pages = await Promise.all(files.map(f => f.text()));
+    const rows = pages.flatMap(t => t.match(/<tr[^>]*>[\s\S]*?<\/tr>/g) || []).filter(t => /_lblResID_\d/.test(t));
+    feiSaved = rows.length ? `<table>${rows.join('\n')}</table>` : '';
+    $('fei-files-note').textContent = !files.length ? '' : rows.length
+      ? `${files.length} saved page${files.length === 1 ? '' : 's'} chosen: ${rows.length} horses. Press Check.`
+      : 'No FEI horse list found in those files. Save the FEI horse search results page as "Webpage, HTML only".';
+  });
 
   $('fs-settings').addEventListener('submit', async e => {
     e.preventDefault();

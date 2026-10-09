@@ -155,3 +155,22 @@ test('breeding spreadsheet: download the gaps, fill them in, upload back through
   assert.equal((await sjBreedingList(db, { gaps: true })).total, 0);
   assert.equal((await sjBreedingSheet(db)).trim().split('\r\n').length, 1, 'nothing left missing');
 });
+
+test('a saved FEI horse list page puts horses on the checklist with a link to each one\'s FEI results page', async () => {
+  const { readFeiListHtml, isFeiListHtml } = await import('../lib/fei.js');
+  const html = readFileSync(new URL('./fixtures/fei-list-saved.html', import.meta.url), 'utf8');
+  assert.ok(isFeiListHtml(html));
+  const { horses } = readFeiListHtml(html);
+  assert.equal(horses.length, 6);
+  assert.deepEqual([horses[0].fei_id, horses[0].name, horses[0].studbook, horses[0].sex, horses[0].foaled, horses[0].nf],
+    ['109UB95', 'Abbeylands Red', 'ISH', 'gelding', '2016-07-08', 'GBR']);
+  assert.match(horses[0].url, /^https:\/\/data\.fei\.org\/Horse\/Performance\.aspx\?p=9F081BB6ABBE9B2BE73CD7732ECC3825$/);
+  const db = fresh();
+  await runFeiList(db, LIST, { save: true }); // the copied list first: no links
+  const r = await runFeiList(db, html, { save: true });
+  assert.equal(r.saved, true);
+  const may = await db.prepare("SELECT fei_url FROM fei_checklist WHERE fei_id = '109WK62'").first();
+  assert.match(may.fei_url, /Performance\.aspx\?p=1DEA5FE0B05B086DD09A4C158614BAE7$/, 'a horse already listed picks up its link');
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM fei_checklist WHERE fei_url IS NOT NULL').first()).n, 6);
+  assert.equal((await runFeiList(db, html, { save: true })).saved, false, 'the same page again changes nothing');
+});
