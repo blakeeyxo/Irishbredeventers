@@ -126,3 +126,16 @@ test('owner area breeding on IBSR: lists FEI horses with gaps and saves breeding
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM horse WHERE name_key = ?').bind('abc mayflower').first()).n, 1, 'the same horse, not a new one');
   assert.ok((await db.prepare("SELECT COUNT(*) AS n FROM upload_change WHERE field = 'sire_id'").first()).n >= 1, 'the change is logged');
 });
+
+test('with no year chosen, every year on the FEI page is kept', async () => {
+  const db = fresh();
+  const mixed = JUMPING.replace('20/09/2026', '20/09/2025');
+  const all = await runFeiImport(db, mixed, {});
+  assert.equal(all.counts.results, 3);
+  const only = await runFeiImport(db, mixed, { year: 2026 });
+  assert.equal(only.counts.results, 2);
+  await runFeiImport(db, mixed, { save: true });
+  showFei(db);
+  assert.deepEqual((await sjSeason(db, 2026)).seasons.sort(), [2025, 2026]);
+  assert.equal((await sjSeason(db, 2025)).rows.length, 1);
+});
