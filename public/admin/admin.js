@@ -1764,7 +1764,13 @@
   });
 
   /* ---------- FEI results (showjumping site): FEI horse pages pasted in → shared database ---------- */
-  if (window.SITE && window.SITE.discipline === 'showjumping') document.querySelector('#adm-tabs [data-a="fei"]').hidden = false;
+  // On the showjumping site results come only from FEI pages, so the eventing Results and Unverified tabs step aside
+  // and the owner area opens on FEI results.
+  if (window.SITE && window.SITE.discipline === 'showjumping') {
+    for (const k of ['results', 'unverified']) document.querySelector(`#adm-tabs [data-a="${k}"]`).hidden = true;
+    const fei = document.querySelector('#adm-tabs [data-a="fei"]');
+    fei.hidden = false;
+  }
   let feiTicked = [];
   async function loadFei() {
     const f = $('fei-form');
@@ -1866,4 +1872,5 @@
   });
 
   refreshSummary().then(loadBatches);
+  if (window.SITE && window.SITE.discipline === 'showjumping') document.querySelector('#adm-tabs [data-a="fei"]').click();
 })();
