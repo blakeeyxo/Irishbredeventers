@@ -155,3 +155,12 @@ test('a table pasted from a spreadsheet with an "FEI Code" column keeps the FEI 
   assert.deepEqual(ignored, ['DNA', 'Progeny']);
   assert.deepEqual([rows[0].fei_id, rows[0].sex, rows[0].foaled_year, rows[1].foaled_year, rows[1].dam_sire.name], ['106OV63', 'gelding', 2011, 2008, 'Some Dam Sire']);
 });
+
+test('sex and year of birth in each other\'s columns are read the right way round, and said so', () => {
+  const heads = 'Name\tSex\tDOB\tColour\tStudbook\tSire\tDam\tDam Sire\tBreeder\tDNA\tProgeny\tNotes';
+  const { rows, problems, ignored } = readUpload(`${heads}\nAbc Mayflower\t2021\tMare\t\tISH\nAltivo\tGelding\t12-05-2011\tChestnut\tISH\nBwe Vain Hero\t\tMare\t\tISH`);
+  assert.deepEqual(rows.map(r => [r.sex, r.foaled_year]), [['mare', 2021], ['gelding', 2011], ['mare', null]]);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0].message, /each other's columns/);
+  assert.deepEqual(ignored, ['DNA', 'Progeny', 'Notes']);
+});
