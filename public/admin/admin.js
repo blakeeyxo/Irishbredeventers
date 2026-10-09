@@ -1257,7 +1257,10 @@
       </div>
       <div class="adm-actions"><button class="btn sm" type="submit">${stallion ? 'Save stallion' : 'Save breeding'}</button>
         ${stallion ? `<a href="#" data-sire-progeny="${esc(h.name)}">Edit his progeny →</a>` : ''}
-        ${!stallion && h.breeding_updated_at ? `<span class="meta">Last updated ${esc(niceDate(h.breeding_updated_at))}</span>` : ''}</div>
+        ${!stallion && h.breeding_updated_at ? `<span class="meta">Last updated ${esc(niceDate(h.breeding_updated_at))}</span>` : ''}
+        ${stallion ? '' : `<button class="btn sm alt" type="button" data-horse-results="${h.id}">Results (${h.runs || 0})</button>
+          <button class="btn sm alt" type="button" data-horse-delete="${h.id}" data-name="${esc(h.name)}" data-runs="${h.runs || 0}">Delete horse</button>`}</div>
+      ${stallion ? '' : '<div class="breed-results" hidden></div>'}
       <div class="form-done" role="status"></div>
     </form>`;
   }
@@ -1285,6 +1288,40 @@
   // Typing a name looks for that name, so the "missing breeding" filter steps aside.
   $('breed-search').addEventListener('input', e => {
     if ((e.target.name === 'q' || e.target.name === 'sire') && e.target.value.trim()) $('breed-search').elements.gaps.checked = false;
+  });
+  // A horse's results (each can be deleted), and deleting the horse with all its results.
+  async function showHorseResults(card, id) {
+    const box = card.querySelector('.breed-results');
+    box.hidden = false; box.innerHTML = '<p class="meta">Loading…</p>';
+    try {
+      const { results } = await api(`/api/admin/breeding?results=${id}`);
+      box.innerHTML = results.length ? `<div class="table-scroll"><table class="adm-table stack"><tr><th>Date</th><th>Show</th><th>Class</th><th>Pl</th><th>Score</th><th>Rider</th><th></th></tr>
+        ${results.map(r => `<tr><td>${esc(niceDate(r.class_date || r.start_date) || r.date_text || '')}</td><td>${esc([r.event, r.country].filter(Boolean).join(', '))}</td>
+          <td>${esc([r.level_label, r.class_name].filter(Boolean).join(' · '))}</td><td>${r.placing ?? ''}</td><td>${esc(r.score_text ?? (r.total ?? ''))}</td><td>${esc(r.rider_name || '')}</td>
+          <td><button class="btn-quiet" type="button" data-result-delete="${r.id}">Delete</button></td></tr>`).join('')}</table></div>`
+        : '<p class="meta">No results for this horse.</p>';
+    } catch (err) { box.innerHTML = `<p class="meta">${esc(err.message)}</p>`; }
+  }
+  $('breed-list').addEventListener('click', async e => {
+    const res = e.target.closest('[data-horse-results]'), del = e.target.closest('[data-horse-delete]'), rd = e.target.closest('[data-result-delete]');
+    if (!res && !del && !rd) return;
+    e.preventDefault();
+    const card = e.target.closest('.breed-card'), done = card.querySelector('.form-done');
+    if (res) { const box = card.querySelector('.breed-results'); if (!box.hidden) { box.hidden = true; return; } return showHorseResults(card, res.dataset.horseResults); }
+    if (rd) {
+      if (!confirm('Delete this result? It comes off the site straight away.')) return;
+      rd.disabled = true;
+      try { await api('/api/admin/breeding', { method: 'POST', body: { action: 'delete_result', result_id: Number(rd.dataset.resultDelete) } }); showHorseResults(card, card.dataset.id); btnMsg(done, 'Result deleted.'); }
+      catch (err) { rd.disabled = false; btnMsg(done, err.message); }
+      return;
+    }
+    const runs = Number(del.dataset.runs);
+    if (!confirm(`Delete ${del.dataset.name}${runs ? ` and all ${runs} of its result${runs === 1 ? '' : 's'}` : ''}? This can't be undone.`)) return;
+    del.disabled = true;
+    try {
+      const r = await api('/api/admin/breeding', { method: 'POST', body: { action: 'delete_horse', id: Number(card.dataset.id) } });
+      card.outerHTML = `<div class="adm-card"><b>${esc(r.name)}</b> deleted${r.results ? `, with ${r.results} result${r.results === 1 ? '' : 's'}` : ''}.</div>`;
+    } catch (err) { del.disabled = false; btnMsg(done, err.message); }
   });
   $('breed-list').addEventListener('click', e => {
     const a = e.target.closest('[data-sire-progeny]');

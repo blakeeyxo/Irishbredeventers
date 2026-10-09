@@ -174,3 +174,23 @@ test('a saved FEI horse list page puts horses on the checklist with a link to ea
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM fei_checklist WHERE fei_url IS NOT NULL').first()).n, 6);
   assert.equal((await runFeiList(db, html, { save: true })).saved, false, 'the same page again changes nothing');
 });
+
+test('owner area (IBSR): delete one result, then the horse with the rest; the FEI reader leaves it out after', async () => {
+  const { sjHorseResults, sjDeleteResult, sjDeleteHorse } = await import('../lib/sj.js');
+  const db = fresh();
+  await runFeiImport(db, JUMPING, { save: true });
+  db.raw.exec("INSERT INTO fei_checklist (fei_id, name, status) VALUES ('109WK62', 'Abc Mayflower', 'to_check') ON CONFLICT(fei_id) DO UPDATE SET status = 'to_check'");
+  const id = (await db.prepare("SELECT id FROM horse WHERE fei_id = '109WK62'").first()).id;
+  let rs = await sjHorseResults(db, id);
+  assert.equal(rs.length, 3);
+  await sjDeleteResult(db, rs[0].id);
+  rs = await sjHorseResults(db, id);
+  assert.equal(rs.length, 2);
+  await assert.rejects(sjDeleteResult(db, 99999), /no longer there/);
+  const r = await sjDeleteHorse(db, id);
+  assert.deepEqual([r.name, r.results], ['Abc Mayflower', 2]);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM horse WHERE id = ?').bind(id).first()).n, 0);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM result').first()).n, 0);
+  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM competition_event WHERE discipline_code = 'showjumping'").first()).n, 0, 'empty shows tidied away');
+  assert.equal((await db.prepare("SELECT status FROM fei_checklist WHERE fei_id = '109WK62'").first()).status, 'skip');
+});
