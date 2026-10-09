@@ -5,7 +5,7 @@
 
   /* ---------- Tabs ---------- */
   let countryList = [];
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), shared: () => loadShared(), fei: () => loadFei(), forsale: () => loadForSale(), analytics: () => loadAnalytics(), messages: () => { loadComments(); loadCorrections(); loadEnquiries(); } };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), shared: () => loadShared(), fei: () => loadFei(), forsale: () => loadForSale(), analytics: () => loadAnalytics(), messages: () => { loadSubmissions(); loadComments(); loadCorrections(); loadEnquiries(); } };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -22,7 +22,7 @@
       el.textContent = s[k];
       el.hidden = !s[k];
     }
-    const waiting = s.comments + s.corrections + s.enquiries;
+    const waiting = s.comments + s.corrections + s.enquiries + (s.submissions || 0);
     $('n-messages').textContent = waiting;
     $('n-messages').hidden = !waiting;
     if (!$('adm-country').options.length) {
@@ -1445,6 +1445,50 @@
     if (b.dataset.corr === 'delete' && !confirm('Delete this correction?')) return;
     await api('/api/admin/corrections', { method: 'POST', body: { id: Number(b.dataset.id), action: b.dataset.corr } });
     loadCorrections(); refreshSummary();
+  });
+
+  /* ---------- Results and breeding sent in (showjumping site) ---------- */
+  const SUB_KIND = { missing_result: 'Missing result', result_correction: 'Correction to a result', breeding: 'Breeding' };
+  let subView = 'pending';
+  async function loadSubmissions() {
+    if (!(window.SITE && window.SITE.discipline === 'showjumping')) return;
+    $('msg-submissions').hidden = false;
+    let d;
+    try { d = await api(`/api/admin/submissions?status=${subView}`); }
+    catch (e) { $('sub-list').innerHTML = `<p class="meta">${esc(e.message)}</p>`; return; }
+    const n = d.counts.pending || 0;
+    $('n-submissions').textContent = n; $('n-submissions').hidden = !n;
+    $('sub-views').innerHTML = [['pending', 'Waiting'], ['approved', 'Approved'], ['rejected', 'Turned down']]
+      .map(([k, l]) => `<button class="chip${k === subView ? ' active' : ''}" type="button" data-sub-view="${k}">${l} <span class="meta">${d.counts[k] || 0}</span></button>`).join('');
+    const row = (label, v) => (v || v === 0 ? `<div><span class="meta">${label}:</span> ${esc(String(v))}</div>` : '');
+    $('sub-list').innerHTML = d.submissions.length ? d.submissions.map(x => {
+      const r = x.result, b = x.breeding;
+      return `<div class="adm-card" data-sub="${x.id}">
+        <b>${esc(SUB_KIND[x.kind] || x.kind)}: ${esc(x.horse_name)}</b> <span class="meta">${x.fei_id ? `${esc(x.fei_id)} · ` : ''}${x.foaled_year ? `${x.foaled_year} · ` : ''}${esc(niceDate(x.created_at))}</span>
+        ${r ? `<div class="breed-grid" style="margin:8px 0;">${row('Date', r.date)}${row('Show', [r.show, r.country].filter(Boolean).join(', '))}${row('Class', [r.level, r.class_name, r.height_cm ? `${r.height_cm}cm` : ''].filter(Boolean).join(' · '))}
+          ${row('Placing', r.placing)}${row('Faults / time', [r.faults, r.time].filter(Boolean).join(' / '))}${row('Rider', [r.rider, r.rider_country].filter(Boolean).join(' '))}</div>` : ''}
+        ${b ? `<div class="breed-grid" style="margin:8px 0;">${row('Sire', b.sire)}${row('Dam', b.dam)}${row('Dam sire', b.dam_sire)}${row('Breeder', b.breeder)}</div>` : ''}
+        ${x.message ? `<p style="margin:6px 0;white-space:pre-wrap;">${esc(x.message)}</p>` : ''}
+        <div class="meta">From ${esc(x.contact_name)} (${esc(x.relation || 'other')}) · <a href="mailto:${esc(x.contact_email)}">${esc(x.contact_email)}</a></div>
+        ${x.status === 'pending' ? `<div class="adm-actions"><button class="btn sm" data-sub-act="approve">Approve: put it live</button><button class="btn sm alt" data-sub-act="reject">Turn down</button></div>`
+          : `<div class="meta">${x.status === 'approved' ? 'Approved' : 'Turned down'}${x.decided_by ? ` by ${esc(x.decided_by)}` : ''}${x.decision_note ? `: ${esc(x.decision_note)}` : ''}</div>`}
+        <div class="form-done" role="status"></div></div>`;
+    }).join('') : `<div class="empty-state">${subView === 'pending' ? 'Nothing waiting.' : 'None.'}</div>`;
+  }
+  $('sub-views').addEventListener('click', e => { const b = e.target.closest('[data-sub-view]'); if (b) { subView = b.dataset.subView; loadSubmissions(); } });
+  $('sub-list').addEventListener('click', async e => {
+    const b = e.target.closest('[data-sub-act]');
+    if (!b) return;
+    const card = b.closest('[data-sub]'), done = card.querySelector('.form-done'), action = b.dataset.subAct;
+    let note = '';
+    if (action === 'reject') { note = prompt('Turn this down? A short note for your records (optional):', ''); if (note === null) return; }
+    card.querySelectorAll('button').forEach(x => { x.disabled = true; });
+    btnMsg(done, action === 'approve' ? 'Putting it live…' : 'Turning it down…');
+    try {
+      const r = await api('/api/admin/submissions', { method: 'POST', body: { id: Number(card.dataset.sub), action, note } });
+      btnMsg(done, r.message || 'Done.');
+      setTimeout(() => { loadSubmissions(); refreshSummary(); }, 900);
+    } catch (err) { btnMsg(done, err.message); card.querySelectorAll('button').forEach(x => { x.disabled = false; }); }
   });
 
   /* ---------- Advertising enquiries ---------- */

@@ -403,6 +403,12 @@
   <!-- MESSAGES: comments, corrections and advertising enquiries in one place -->
   <div class="adm-pane" id="adm-messages">
     <p class="intro">Everything people send in from the site, in one place: <a href="#msg-comments">comments</a>, <a href="#msg-corrections">corrections</a> and <a href="#msg-enquiries">advertising enquiries</a>.</p>
+    <section id="msg-submissions" hidden>
+      <h3>Results and breeding sent in <span class="count" id="n-submissions" hidden></span></h3>
+      <p class="intro">Missing results, corrections and breeding sent in by owners, breeders and riders. Nothing is on the site until you press <b>Approve</b>; then it goes live straight away. Their contact details are never shown.</p>
+      <div class="adm-tabs" id="sub-views"></div>
+      <div id="sub-list"></div>
+    </section>
     <section id="msg-comments">
       <h3>Comments <span class="count" id="n-comments" hidden></span></h3>
       <p class="intro">Comments are posted on the News page. Nothing appears on the site until you approve it.</p>
@@ -430,6 +436,6 @@
 
 <script src="/js/site.js?v=1"></script>
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=33"></script>
+<script src="/admin/admin.js?v=34"></script>
 </body>
 </html>
