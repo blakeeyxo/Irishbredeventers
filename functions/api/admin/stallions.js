@@ -1,6 +1,6 @@
 // Owner area: the six stallion listings (Stallions – Listing 1 to 6). POST saves one; DELETE empties it.
 import { json, bad, str, text } from '../../../lib/http.js';
-import { saveImage } from '../../../lib/images.js';
+import { saveImage, savePhoneImage, phoneKeyOf } from '../../../lib/images.js';
 import { progeny, summary, rollingWindow, matchSires, topSires } from '../../../lib/stallions.js';
 
 export async function onRequestGet({ env }) {
@@ -30,11 +30,11 @@ export async function onRequestPost({ env, request }) {
   if (link) { try { new URL(link); } catch { return bad('That link does not look right.'); } }
   const existing = await env.DB.prepare('SELECT image_key FROM stallions WHERE slot = ?').bind(slot).first();
   let imageKey = null;
-  try { imageKey = await saveImage(env, form.get('image'), 'ads'); } catch (e) { return bad(e.message); }
+  try { imageKey = await saveImage(env, form.get('image'), 'ads'); await savePhoneImage(env, imageKey, form.get('image_phone')); } catch (e) { return bad(e.message); }
   await env.DB.prepare(`INSERT INTO stallions (slot, name, sire_names, blurb, link, image_key, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))
       ON CONFLICT(slot) DO UPDATE SET name = ?2, sire_names = ?3, blurb = ?4, link = ?5, image_key = IFNULL(?6, image_key), updated_at = datetime('now')`)
     .bind(slot, name, str(form.get('sire_names'), 300) || name, text(form.get('blurb'), 400), link, imageKey).run();
-  if (imageKey && existing && existing.image_key) await env.MEDIA.delete(existing.image_key);
+  if (imageKey && existing && existing.image_key) await env.MEDIA.delete([existing.image_key, phoneKeyOf(existing.image_key)]);
   // What was saved, so the owner area can say so plainly: the sires matched and how often they appear.
   const sireNames = str(form.get('sire_names'), 300) || name;
   const win = rollingWindow();
@@ -46,6 +46,6 @@ export async function onRequestPost({ env, request }) {
 export async function onRequestDelete({ env, request }) {
   const slot = Number(new URL(request.url).searchParams.get('slot'));
   const row = await env.DB.prepare('DELETE FROM stallions WHERE slot = ? RETURNING image_key').bind(slot).first();
-  if (row && row.image_key) await env.MEDIA.delete(row.image_key);
+  if (row && row.image_key) await env.MEDIA.delete([row.image_key, phoneKeyOf(row.image_key)]);
   return json({ ok: true });
 }

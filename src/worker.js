@@ -55,6 +55,7 @@ import * as listingEnquire from '../functions/api/listings/enquire.js';
 import * as listingMedia from '../functions/listing-media/[[path]].js';
 import * as adminListings from '../functions/api/admin/listings.js';
 import * as adminListingCreate from '../functions/api/admin/listings/create.js';
+import * as adminListingPhoto from '../functions/api/admin/listings/photo.js';
 import * as adminFei from '../functions/api/admin/fei.js';
 import * as adminAuto from '../functions/api/admin/auto.js';
 import * as submissions from '../functions/api/submissions.js';
@@ -103,6 +104,7 @@ const ROUTES = {
   '/api/listings/enquire': listingEnquire,
   '/api/admin/listings': adminListings,
   '/api/admin/listings/create': adminListingCreate,
+  '/api/admin/listings/photo': adminListingPhoto,
   '/api/admin/fei': adminFei,
   '/api/admin/auto': adminAuto,
   '/api/submissions': submissions,

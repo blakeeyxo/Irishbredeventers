@@ -1,6 +1,6 @@
 // News articles: add, edit, delete and re-order. The top article is the home page commentary.
 import { json, bad, str, text, readJson } from '../../../lib/http.js';
-import { saveImage } from '../../../lib/images.js';
+import { saveImage, savePhoneImage, phoneKeyOf } from '../../../lib/images.js';
 import { cleanUrl, cleanDate, snippetOf, saveOrder } from '../../../lib/content.js';
 import { NEWS_ORDER } from '../news.js';
 
@@ -28,7 +28,7 @@ export async function onRequestPost({ env, request }) {
   try { sourceUrl = cleanUrl(form.get('source_url'), false); date = cleanDate(form.get('date')); } catch (e) { return bad(e.message); }
   const sourceName = str(form.get('source_name'), 120);
   let imageKey = null;
-  try { imageKey = await saveImage(env, form.get('image'), 'news'); } catch (e) { return bad(e.message); }
+  try { imageKey = await saveImage(env, form.get('image'), 'news'); await savePhoneImage(env, imageKey, form.get('image_phone')); } catch (e) { return bad(e.message); }
   const publishedAt = date ? `${date} 12:00:00` : null;
 
   if (id) {
@@ -39,7 +39,7 @@ export async function onRequestPost({ env, request }) {
     await env.DB.prepare(`UPDATE news SET title = ?, body = ?, snippet = ?, image_key = ?, source_url = ?, source_name = ?,
         published_at = COALESCE(?, published_at) WHERE id = ?`)
       .bind(title, body, snippetOf(body), newKey, sourceUrl, sourceName, publishedAt, id).run();
-    if (old.image_key && old.image_key !== newKey) await env.MEDIA.delete(old.image_key);
+    if (old.image_key && old.image_key !== newKey) await env.MEDIA.delete([old.image_key, phoneKeyOf(old.image_key)]);
   } else {
     // New articles go to the top of the list.
     await env.DB.prepare(`INSERT INTO news (title, body, snippet, image_key, source_url, source_name, published_at, sort_order)
@@ -52,6 +52,6 @@ export async function onRequestPost({ env, request }) {
 export async function onRequestDelete({ env, request }) {
   const id = Number(new URL(request.url).searchParams.get('id'));
   const row = await env.DB.prepare('DELETE FROM news WHERE id = ? RETURNING image_key').bind(id).first();
-  if (row && row.image_key) await env.MEDIA.delete(row.image_key);
+  if (row && row.image_key) await env.MEDIA.delete([row.image_key, phoneKeyOf(row.image_key)]);
   return json({ ok: true });
 }

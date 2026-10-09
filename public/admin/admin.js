@@ -5,7 +5,7 @@
 
   /* ---------- Tabs ---------- */
   let countryList = [];
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, breeding: () => loadBreeding(), shared: () => loadShared(), fei: () => loadFei(), forsale: () => loadForSale(), analytics: () => loadAnalytics(), messages: () => { loadSubmissions(); loadComments(); loadCorrections(); loadEnquiries(); } };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, horses: () => { loadBreeding(); loadShared(); }, fei: () => loadFei(), forsale: () => loadForSale(), analytics: () => loadAnalytics(), messages: () => { loadSubmissions(); loadComments(); loadCorrections(); loadEnquiries(); } };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -489,97 +489,37 @@
   });
   $('adm-batches').addEventListener('click', rowAction);
 
-  /* ---------- Photo framing: fit a photo to the box the site shows it in ---------- */
-  // Opens a small window over the page: the photo moves and zooms under a box of the right shape (or is shown whole on
-  // a plain background). Gives back the framed picture as a file, or null if cancelled.
-  function framePhoto(src, ratio, title) {
-    return new Promise(resolve => {
-      const url = typeof src === 'string' ? src : URL.createObjectURL(src);
-      const ov = document.createElement('div');
-      ov.className = 'frame-overlay';
-      ov.innerHTML = `<div class="frame-box" role="dialog" aria-modal="true" aria-label="${esc(title)}">
-        <h4>${esc(title)}</h4>
-        <p class="meta">Drag the photo to move it and use the slider to zoom. What is inside the box is exactly what the site shows.</p>
-        <div class="frame-stage" style="aspect-ratio:${ratio}"><img alt="" draggable="false"></div>
-        <label class="frame-zoom">Zoom <input type="range" min="1" max="4" step="0.01" value="1"></label>
-        <div class="frame-whole"><label class="chk"><input type="checkbox"> Show the whole photo (no cropping)</label>
-          <label class="frame-bg" hidden>Background <input type="color" value="#ffffff"></label></div>
-        <div class="adm-actions"><button class="btn" type="button" data-fr="ok">Use this framing</button>
-          <button class="btn alt" type="button" data-fr="cancel">Cancel</button></div></div>`;
-      document.body.appendChild(ov);
-      const stage = ov.querySelector('.frame-stage'), img = stage.querySelector('img');
-      const zoom = ov.querySelector('input[type=range]'), whole = ov.querySelector('.frame-whole input'), bgBox = ov.querySelector('.frame-bg'), bg = bgBox.querySelector('input');
-      let nw = 0, nh = 0, sw = 0, sh = 0, z = 1, tx = 0, ty = 0;
-      const cover = () => Math.max(sw / nw, sh / nh), contain = () => Math.min(sw / nw, sh / nh);
-      const scale = () => (whole.checked ? contain() : cover() * z);
-      function clamp() {
-        const k = scale(), W = nw * k, H = nh * k;
-        if (whole.checked) { tx = (sw - W) / 2; ty = (sh - H) / 2; return; }
-        tx = Math.min(0, Math.max(sw - W, tx)); ty = Math.min(0, Math.max(sh - H, ty));
-      }
-      function draw() {
-        clamp();
-        const k = scale();
-        Object.assign(img.style, { width: `${nw * k}px`, height: `${nh * k}px`, transform: `translate(${tx}px, ${ty}px)` });
-        stage.style.background = whole.checked ? bg.value : '#ddd';
-        zoom.disabled = whole.checked; bgBox.hidden = !whole.checked;
-      }
-      const close = r => { document.removeEventListener('keydown', onKey); ov.remove(); if (typeof src !== 'string') URL.revokeObjectURL(url); resolve(r); };
-      const onKey = e => { if (e.key === 'Escape') close(null); };
-      document.addEventListener('keydown', onKey);
-      img.onload = () => {
-        nw = img.naturalWidth; nh = img.naturalHeight; sw = stage.clientWidth; sh = stage.clientHeight;
-        tx = (sw - nw * cover()) / 2; ty = (sh - nh * cover()) / 2; draw();
-      };
-      img.onerror = () => close(null);
-      img.src = url;
-      let drag = null;
-      stage.addEventListener('pointerdown', e => { if (whole.checked) return; drag = { x: e.clientX, y: e.clientY, tx, ty }; stage.setPointerCapture(e.pointerId); });
-      stage.addEventListener('pointermove', e => { if (!drag) return; tx = drag.tx + e.clientX - drag.x; ty = drag.ty + e.clientY - drag.y; draw(); });
-      ['pointerup', 'pointercancel'].forEach(t => stage.addEventListener(t, () => { drag = null; }));
-      zoom.addEventListener('input', () => {
-        const old = scale(); z = Number(zoom.value); const k = scale() / old;
-        tx = sw / 2 - (sw / 2 - tx) * k; ty = sh / 2 - (sh / 2 - ty) * k; draw();
-      });
-      whole.addEventListener('change', () => { if (!whole.checked) { z = Number(zoom.value); tx = (sw - nw * scale()) / 2; ty = (sh - nh * scale()) / 2; } draw(); });
-      bg.addEventListener('input', draw);
-      ov.addEventListener('click', async e => {
-        if (e.target === ov) return close(null);
-        const b = e.target.closest('button[data-fr]');
-        if (!b) return;
-        if (b.dataset.fr === 'cancel') return close(null);
-        const outW = 1200, outH = Math.round(outW * sh / sw), k = outW / sw, c = document.createElement('canvas');
-        c.width = outW; c.height = outH;
-        const g = c.getContext('2d');
-        g.fillStyle = bg.value; g.fillRect(0, 0, outW, outH);
-        g.imageSmoothingQuality = 'high';
-        g.drawImage(img, tx * k, ty * k, nw * scale() * k, nh * scale() * k);
-        c.toBlob(blob => close(blob ? new File([blob], 'photo.jpg', { type: 'image/jpeg' }) : null), 'image/jpeg', 0.88);
-      });
-    });
-  }
-  const ratioOf = t => { const [a, b] = String(t || '4/3').split('/').map(Number); return b ? a / b : a; };
+  /* ---------- Photo framing: a laptop and a phone crop of every photo (common.js framePhoto) ---------- */
+  const { framePhoto } = window.IBE;
   function setFile(input, file) { const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files; }
-  // Any photo box marked data-frame="4/3" opens the framing window as soon as a photo is chosen.
+  // The phone crop travels in a hidden file box next to the photo box ("image_phone").
+  function phoneBox(inp) {
+    let p = inp.form.querySelector('input[type=file][name="image_phone"]');
+    if (!p) { p = document.createElement('input'); p.type = 'file'; p.name = 'image_phone'; p.hidden = true; inp.after(p); }
+    return p;
+  }
+  const frameOpts = (inp, title) => ({ laptop: inp.dataset.frame, phone: inp.dataset.framePhone || inp.dataset.frame, title });
+  // Any photo box marked data-frame="4/3" (and data-frame-phone for a different phone shape) opens the framing window
+  // as soon as a photo is chosen.
   document.addEventListener('change', async e => {
     const inp = e.target;
     if (!(inp instanceof HTMLInputElement) || inp.type !== 'file' || !inp.dataset.frame || !inp.files[0]) return;
     const file = inp.files[0];
     if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) return;
-    const r = await framePhoto(file, inp.dataset.frame, 'Fit the photo to its box');
-    if (r) setFile(inp, r); else inp.value = '';
+    const r = await framePhoto(file, frameOpts(inp, 'Fit the photo to its box'));
+    if (r) { setFile(inp, r.laptop); setFile(phoneBox(inp), r.phone); } else inp.value = '';
   });
-  // Re-frame a photo that is already on the site: opens it in the same window; the framed copy replaces it on Save.
+  // Re-frame a photo that is already on the site: opens it in the same window; the framed copies replace it on Save.
   document.addEventListener('click', async e => {
     const b = e.target.closest('button[data-reframe]');
     if (!b) return;
     const form = b.closest('form'), inp = form && form.querySelector('input[type=file][data-frame]');
     if (!inp || !b.dataset.reframe) return;
     b.disabled = true;
-    const r = await framePhoto(b.dataset.reframe, inp.dataset.frame, 'Re-frame this photo');
+    const r = await framePhoto(b.dataset.reframe, frameOpts(inp, 'Re-frame this photo'));
     b.disabled = false;
     if (!r) return;
-    setFile(inp, r);
+    setFile(inp, r.laptop); setFile(phoneBox(inp), r.phone);
     if (b.hasAttribute('data-submit')) form.requestSubmit(); else { const d = form.querySelector('.form-done'); if (d) d.textContent = 'Photo re-framed. Press Save to put it on the site.'; }
   });
 
@@ -1190,7 +1130,7 @@
       <label>Sire name in the results <small>(commas between spellings; blank = the stallion name; breed codes, capitals and small typos don't matter)</small><input type="text" name="sire_names" maxlength="300" list="sire-names" value="${esc(s.sire_names || '')}"></label>
       <label>Short blurb (optional)<textarea name="blurb" maxlength="400" style="min-height:70px;">${esc(s.blurb || '')}</textarea></label>
       <label>Stud website (optional)<input type="text" name="link" placeholder="https://" inputmode="url" value="${esc(s.link || '')}"></label>
-      <label>Photo${s.image_key ? ' (leave empty to keep the current one)' : ''} <small>JPG, PNG, WebP or GIF</small><input type="file" name="image" data-frame="4/3" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+      <label>Photo${s.image_key ? ' (leave empty to keep the current one)' : ''} <small>JPG, PNG, WebP or GIF</small><input type="file" name="image" data-frame="4/3" data-frame-phone="4/3" accept="image/jpeg,image/png,image/webp,image/gif"></label>
       ${s.name ? `<p class="meta">${s.matched.length ? `Matches in the results: <b>${esc(s.matched.join(', '))}</b>. ${esc(d.window.label)}: <b>${s.totals.mentions}</b> mentions by ${s.totals.horses} horses, ${s.totals.wins} wins.` : '<b>No results found yet for this sire spelling.</b>'} <a href="/stallions/${s.slot}" target="_blank" rel="noopener">See the page ↗</a> · <a href="#" data-st-breeding="${esc(s.sire_names || s.name)}">Edit this stallion and his progeny →</a></p>` : ''}
       <div class="adm-actions"><button class="btn sm" type="submit">Save listing ${s.slot}</button>${s.name ? `<button class="btn sm alt" type="button" data-st-clear>Clear</button>` : ''}</div>
       <div class="form-done${stallionNote && stallionNote.slot === s.slot ? (stallionNote.ok ? ' ok' : ' err') : ''}" role="status">${stallionNote && stallionNote.slot === s.slot ? esc(stallionNote.text) : ''}</div>
@@ -1372,7 +1312,7 @@
   // From a stallion listing: straight to that stallion and his progeny.
   function openBreedingFor(sire) {
     breedQuery = { q: '', sire, gaps: false };
-    document.querySelector('#adm-tabs button[data-a="breeding"]').click();
+    document.querySelector('#adm-tabs button[data-a="horses"]').click();
   }
 
   /* ---------- Analytics (private): visits, page views, ad clicks ---------- */
@@ -1519,10 +1459,15 @@
     let d;
     try { d = await api('/api/admin/shared/sources'); } catch (e) { $('sh-totals').textContent = e.message; return; }
     $('sh-totals').textContent = `On file: ${d.totals.horses} horses, ${d.totals.sires} sires with progeny, ${d.totals.breeders} breeders.`;
-    const keep = $('sh-source').value;
-    $('sh-source').innerHTML = '<option value="">Choose a source…</option>' + d.sources.map(s =>
+    // A source recorded as refused can't be chosen.
+    const usable = d.sources.filter(s => s.licence_status !== 'refused');
+    const options = '<option value="">Choose a source…</option>' + usable.map(s =>
       `<option value="${s.id}">${esc(s.name)}${s.can_display ? '' : ' (hidden from visitors)'}</option>`).join('');
+    const keep = $('sh-source').value, keepAdd = $('hz-add-source').value;
+    $('sh-source').innerHTML = options; $('hz-add-source').innerHTML = options;
     if (keep) $('sh-source').value = keep;
+    const own = usable.find(s => s.slug === 'iber');
+    $('hz-add-source').value = keepAdd || (own ? String(own.id) : '');
     const yn = v => (v ? 'Yes' : 'No');
     $('sh-sources').innerHTML = `<div class="table-scroll"><table class="adm-table"><tr><th>Source</th><th>Licence</th><th>Store</th><th>Show</th><th>Paid use</th><th>Horses</th><th></th></tr>
       ${d.sources.map(s => `<tr><td><b>${esc(s.name)}</b>${s.terms_url ? `<br><a href="${esc(s.terms_url)}" target="_blank" rel="noopener">terms</a>` : ''}${s.notes ? `<br><span class="meta">${esc(s.notes)}</span>` : ''}</td>
@@ -1604,6 +1549,32 @@
   $('sh-file').addEventListener('change', () => { if ($('sh-file').files[0]) $('sh-form').requestSubmit(); });
   $('sh-overwrite').addEventListener('change', () => { if (shUpload) $('sh-form').requestSubmit(); });
   $('sh-clear').addEventListener('click', () => { $('sh-form').reset(); shUpload = null; $('sh-preview').innerHTML = ''; btnMsg($('sh-msg'), ''); });
+  // Horses: one part at a time (breeding missing, add one horse, paste or upload many).
+  const showHorsesPart = id => {
+    document.querySelectorAll('#hz-tabs [data-hz]').forEach(b => b.classList.toggle('active', b.dataset.hz === id));
+    ['hz-missing', 'hz-add', 'hz-many'].forEach(x => { $(x).hidden = x !== id; });
+  };
+  $('hz-tabs').addEventListener('click', e => { const b = e.target.closest('[data-hz]'); if (b) showHorsesPart(b.dataset.hz); });
+  // Add one horse: the form becomes a one-row upload, checked and saved the same way (preview under "Paste or upload many").
+  $('hz-add-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const f = e.target, done = f.querySelector('.form-done');
+    const fields = [...new FormData(f)].filter(([k, v]) => k !== 'source_id' && String(v).trim());
+    if (!f.elements.source_id.value) { btnMsg(done, 'Choose where this comes from.'); return; }
+    // The county goes with the breeder, as the upload reads it: "Mary Brennan (Cork)".
+    const county = fields.find(([k]) => k === 'County');
+    const rows = fields.filter(([k]) => k !== 'County').map(([k, v]) => [k, k === 'Breeder' && county ? `${v.trim()} (${county[1].trim()})` : v.trim()]);
+    const cell = v => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+    $('sh-file').value = '';
+    $('sh-source').value = f.elements.source_id.value;
+    $('sh-text').value = `${rows.map(([k]) => cell(k)).join(',')}\n${rows.map(([, v]) => cell(v)).join(',')}`;
+    $('sh-form').requestSubmit();
+    btnMsg(done, '');
+    showHorsesPart('hz-many'); // the check and the Save button are shown there
+    setTimeout(() => $('sh-preview').scrollIntoView({ behavior: 'smooth', block: 'start' }), 400);
+  });
+  $('hz-add-form').addEventListener('reset', () => setTimeout(() => btnMsg($('hz-add-form').querySelector('.form-done'), '')));
+
   $('sh-source-form').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target, body = Object.fromEntries(new FormData(f));
@@ -1680,6 +1651,7 @@
       <div class="fs-adm-more">
       ${l.description ? `<details><summary>Description</summary><p style="white-space:pre-wrap;">${esc(l.description)}</p></details>` : ''}
       <details><summary>Photos (${l.photos.length})</summary><div class="fs-adm-photos">${l.photos.map(p => `<figure><a href="/listing-media/${esc(p.key)}" target="_blank" rel="noopener"><img src="/listing-media/${esc(p.key)}" alt=""></a>
+        <button class="btn-quiet" type="button" data-photo-crop="${p.id}" data-key="${esc(p.key)}">Re-crop</button>
         <button class="btn-quiet" type="button" data-photo-del="${p.id}">Delete photo</button></figure>`).join('')}</div></details>
       <details data-enq><summary>Buyer enquiries (${l.enquiries})</summary><div class="fs-enq">${l.enquiries ? '<p class="meta">Loading…</p>' : '<p class="meta">None yet.</p>'}</div></details>
       <details><summary>Edit the ad</summary>
@@ -1726,6 +1698,16 @@
       }
       act(a);
     }));
+    // Re-crop a photo already on the ad: the framed copies (laptop and phone) replace it straight away.
+    card.querySelectorAll('[data-photo-crop]').forEach(b => b.addEventListener('click', async () => {
+      const r = await framePhoto(`/listing-media/${b.dataset.key}`, { laptop: '4/3', phone: '4/3', title: 'Re-crop this photo' });
+      if (!r) return;
+      const form = new FormData();
+      form.append('photo_id', b.dataset.photoCrop); form.append('image', r.laptop); form.append('image_phone', r.phone);
+      b.disabled = true; b.textContent = 'Saving…';
+      try { await api('/api/admin/listings/photo', { method: 'POST', form }); loadForSale(); }
+      catch (err) { b.disabled = false; b.textContent = err.message; }
+    }));
     card.querySelectorAll('[data-photo-del]').forEach(b => b.addEventListener('click', async () => {
       if (!confirm('Delete this photo?')) return;
       await api(`/api/admin/listings?photo=${b.dataset.photoDel}`, { method: 'DELETE' });
@@ -1771,7 +1753,15 @@
     } catch { return file; }
   }
   function drawAddThumbs() {
-    $('fs-add-thumbs').innerHTML = addPhotos.map((p, i) => `<figure><img src="${p.url}" alt=""><button class="btn-quiet" type="button" data-add-remove="${i}">${i ? 'Remove' : 'Main photo · Remove'}</button></figure>`).join('');
+    $('fs-add-thumbs').innerHTML = addPhotos.map((p, i) => `<figure><img src="${p.url}" alt=""><button class="btn-quiet" type="button" data-add-crop="${i}">${p.phone ? 'Cropped ✓ · Crop again' : 'Crop for laptop & phone'}</button><button class="btn-quiet" type="button" data-add-remove="${i}">${i ? 'Remove' : 'Main photo · Remove'}</button></figure>`).join('');
+    $('fs-add-thumbs').querySelectorAll('[data-add-crop]').forEach(b => b.addEventListener('click', async () => {
+      const p = addPhotos[b.dataset.addCrop];
+      const r = await framePhoto(p.original || p.file, { laptop: '4/3', phone: '4/3', title: 'Crop this photo' });
+      if (!r) return;
+      URL.revokeObjectURL(p.url);
+      Object.assign(p, { original: p.original || p.file, file: r.laptop, phone: r.phone, url: URL.createObjectURL(r.laptop) });
+      drawAddThumbs();
+    }));
     $('fs-add-thumbs').querySelectorAll('[data-add-remove]').forEach(b => b.addEventListener('click', () => {
       URL.revokeObjectURL(addPhotos[b.dataset.addRemove].url);
       addPhotos.splice(Number(b.dataset.addRemove), 1);
@@ -1793,7 +1783,7 @@
     const f = e.target, done = f.querySelector('.form-done'), btn = f.querySelector('button[type=submit]');
     if (!addPhotos.length) { btnMsg(done, 'Add at least one photo.'); return; }
     const form = new FormData(f);
-    addPhotos.forEach(p => form.append('photos', p.file));
+    addPhotos.forEach(p => { form.append('photos', p.file); form.append('photos_phone', p.phone || new File([], 'none')); });
     btn.disabled = true;
     btnMsg(done, 'Adding the ad…');
     try {
@@ -1825,7 +1815,7 @@
       const fei = d.sources.find(s => s.slug === 'fei');
       $('fei-visible').innerHTML = fei && fei.can_display
         ? 'FEI results are <b>shown</b> on the site (FEI agreed to their reuse).'
-        : 'FEI results are saved but <b>hidden from visitors</b> until the FEI terms are confirmed. When they are, tick "Can show on the sites" for the FEI source under <b>Shared stallions → Sources</b>.';
+        : 'FEI results are saved but <b>hidden from visitors</b> until the FEI terms are confirmed. When they are, tick "Can show on the sites" for the FEI source under <b>Horses → Sources</b>.';
     } catch (e) { $('fei-visible').textContent = e.message; }
     loadChecklist();
   }

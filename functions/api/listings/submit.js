@@ -3,7 +3,7 @@
 import { json, bad, verifyTurnstile } from '../../../lib/http.js';
 import { withShared } from '../../../lib/shared-http.js';
 import { siteFor } from '../../../lib/sites.js';
-import { saveImage } from '../../../lib/images.js';
+import { saveImage, savePhoneImage } from '../../../lib/images.js';
 import { readListing, createListing, siteDisciplines, MAX_PHOTOS } from '../../../lib/listings.js';
 import { needsListingStorage } from '../../../lib/listings-http.js';
 import { sendEmails, listingReceivedEmail } from '../../../lib/mail.js';
@@ -26,7 +26,11 @@ export const onRequestPost = ({ env, request, waitUntil }) => withShared(env, as
   if (parsed.errors.length) return bad(parsed.errors.join(' '));
   const keys = [];
   try {
-    for (const p of photos) keys.push(await saveImage(env, p, 'listings', env.LISTING_MEDIA));
+    const phones = form.getAll('photos_phone'); // in the same order as the photos; empty where there is no phone crop
+    for (const [i, p] of photos.entries()) {
+      keys.push(await saveImage(env, p, 'listings', env.LISTING_MEDIA));
+      await savePhoneImage(env, keys[i], phones[i], env.LISTING_MEDIA);
+    }
   } catch (e) {
     await Promise.all(keys.map(k => env.LISTING_MEDIA.delete(k)));
     return bad(e.message);
