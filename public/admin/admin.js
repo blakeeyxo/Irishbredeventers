@@ -1288,7 +1288,7 @@
   // The same fields for a horse and for a stallion (a stallion has no sex to choose, and can be joined into another spelling).
   // The showjumping site keeps its horses in the shared database: no TIH flag there.
   const SJ = window.SITE && window.SITE.discipline === 'showjumping';
-  if (SJ) { $('breed-sheet').hidden = false; $('breed-shd').hidden = false; }
+  if (SJ) $('breed-sheet').hidden = false;
   function breedCard(h, stallion = false) {
     const v = stallion
       ? { sire: h.ped_sire, dam: h.ped_dam, dam_sire: h.ped_dam_sire, breeder: h.ped_breeder }
@@ -1892,8 +1892,8 @@
     btnMsg($('fei-form').querySelector('.form-done'), pages.length ? `${pages.length} saved results page${pages.length === 1 ? '' : 's'} chosen. Press Check.` : 'No FEI horse results page in those files.');
   });
 
-  /* ---------- Automatic readers (FEI results, SporthorseData breeding) ---------- */
-  const READER_NAMES = { fei: 'FEI results', 'sporthorse-data': 'SporthorseData breeding' };
+  /* ---------- Automatic FEI reader ---------- */
+  const READER_NAMES = { fei: 'FEI results' };
   const OUTCOME = { saved: 'Saved', nothing_new: 'Nothing new', not_found: 'Not found', failed: 'Failed', held: 'Needs you' };
   function renderReaders(readers) {
     $('auto-readers').innerHTML = readers.map(r => `<form class="form auto-reader" data-slug="${esc(r.slug)}">
@@ -1912,14 +1912,13 @@
     </form>`).join('');
   }
   function renderStatus(d) {
-    const fei = d.readers.find(r => r.slug === 'fei') || {}, shd = d.readers.find(r => r.slug === 'sporthorse-data') || {};
-    const on = fei.enabled && shd.enabled, f = d.followed;
+    const fei = d.readers.find(r => r.slug === 'fei') || {};
+    const on = Boolean(fei.enabled), f = d.followed;
     const held = d.readers.flatMap(r => r.recent.filter(x => x.outcome === 'held'));
     $('auto-followed').textContent = f.total ? `${f.total} Irish-bred horses followed${f.never ? `, ${f.never} not read yet` : ''}.` : 'No horses followed yet.';
-    $('auto-status').innerHTML = `<p><b>${on ? 'On' : fei.enabled || shd.enabled ? 'Partly on' : 'Off'}.</b> ${on ? 'The site is reading results and breeding by itself.' : 'Switch on and the site reads results and breeding by itself.'}</p>
+    $('auto-status').innerHTML = `<p><b>${on ? 'On' : 'Off'}.</b> ${on ? 'The site is reading the results by itself.' : 'Switch on and the site reads the results by itself.'}</p>
       <ul class="intro">
         <li>Results: ${fei.outcomes && fei.outcomes.saved || 0} horse${(fei.outcomes && fei.outcomes.saved) === 1 ? '' : 's'} with new results today (${fei.today || 0} read).</li>
-        <li>Breeding: ${shd.outcomes && shd.outcomes.saved || 0} horse${(shd.outcomes && shd.outcomes.saved) === 1 ? '' : 's'} filled in today (${shd.today || 0} looked up).</li>
         ${held.length ? `<li><b>Needs you:</b> ${held.map(x => `${esc(x.horse)}: ${esc(x.detail)}`).join('; ')}</li>` : ''}
       </ul>`;
     $('auto-switch').textContent = on ? 'Switch off' : 'Switch on';
@@ -1951,45 +1950,13 @@
     b.disabled = true; msg.textContent = 'Reading…';
     try {
       const r = await api('/api/admin/auto', { method: 'POST', body: { action: 'run' } });
-      const n = r.fei.length + r.shd.length;
-      msg.textContent = n ? `Read ${r.fei.length} horse${r.fei.length === 1 ? '' : 's'} on FEI and ${r.shd.length} on SporthorseData.` : 'Nothing due just now: every followed horse was read in the last 6 days, and no horse is missing breeding.';
+      msg.textContent = r.fei.length ? `Read ${r.fei.length} horse${r.fei.length === 1 ? '' : 's'} on FEI.` : 'Nothing due just now: every followed horse was read in the last 6 days.';
       renderStatus(r);
       loadChecklist();
     } catch (err) { msg.textContent = err.message; }
     finally { b.disabled = false; }
   });
 
-  /* ---------- Breeding from saved SporthorseData pages (IBSR) ---------- */
-  let shdPages = [];
-  const trimShd = t => {
-    const head = (t.match(/<title>[\s\S]*?<\/title>/) || [''])[0] + (t.match(/<link rel="canonical"[^>]*>/) || [''])[0];
-    const x = t.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<!--[\s\S]*?-->/gi, ''), a = x.indexOf('Horse Breeding and Performance Results'), c = x.indexOf('class="pedigreetable"');
-    const b = c < 0 ? -1 : x.indexOf('</table>', c);
-    return a < 0 || b < 0 ? '' : `<html><head>${head}</head><body><h2>${x.slice(a, b + 8)}</body></html>`;
-  };
-  async function shdSend(save) {
-    const f = $('shd-form'), done = f.querySelector('.form-done');
-    if (!shdPages.length) { btnMsg(done, 'Choose one or more saved SporthorseData pages.'); return; }
-    btnMsg(done, save ? 'Saving…' : 'Checking…');
-    try {
-      const r = await api('/api/admin/breeding', { method: 'POST', body: { action: 'shd', pages: shdPages, save } });
-      const c = r.counts;
-      btnMsg(done, save ? (r.saved ? `Saved: ${c.updated} horse${c.updated === 1 ? '' : 's'} filled in, ${c.new} added.` : r.message || 'Nothing new to save.') : '');
-      $('shd-preview').innerHTML = `<div class="table-scroll"><table class="adm-table stack"><tr><th>Horse</th><th>Sire</th><th>Dam</th><th>Dam sire</th><th>Breeder</th><th></th></tr>
-        ${r.pages.map((p, i) => { const row = r.rows[i] || {}; return `<tr><td><b>${esc(p.name)}</b> <span class="meta">${esc(p.fei_id || '')}</span></td><td>${esc(p.sire)}</td><td>${esc(p.dam)}</td><td>${esc(p.dam_sire)}</td><td>${esc(p.breeder)}</td>
-          <td>${row.outcome === 'held' ? `<span class="iss">Not saved: ${esc((row.notes || []).join(' '))}</span>` : `<span class="meta">${esc({ new: 'New horse', updated: 'Fills in breeding', same: 'Already on file' }[row.outcome] || row.outcome || '')}</span>`}</td></tr>`; }).join('')}</table></div>
-        ${r.unread ? `<p class="meta">${r.unread} file${r.unread === 1 ? " wasn't a SporthorseData horse page" : "s weren't SporthorseData horse pages"}: left out.</p>` : ''}
-        ${save ? '' : `<div class="adm-actions"><button class="btn" type="button" id="shd-save" ${c.new + c.updated ? '' : 'disabled'}>Save</button></div>`}`;
-      if (!save && $('shd-save')) $('shd-save').addEventListener('click', () => shdSend(true));
-      if (save && r.saved) loadBreeding();
-    } catch (err) { btnMsg(done, err.message); }
-  }
-  $('shd-files').addEventListener('change', async e => {
-    const texts = await Promise.all([...e.target.files].map(f => f.text()));
-    shdPages = texts.map(trimShd).filter(Boolean);
-    btnMsg($('shd-form').querySelector('.form-done'), texts.length ? `${shdPages.length} of ${texts.length} file${texts.length === 1 ? ' is a' : 's are'} SporthorseData horse page${shdPages.length === 1 ? '' : 's'}. Press Check.` : '');
-  });
-  $('shd-form').addEventListener('submit', e => { e.preventDefault(); shdSend(false); });
 
 
   $('fs-settings').addEventListener('submit', async e => {

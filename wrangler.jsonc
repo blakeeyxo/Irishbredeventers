@@ -104,8 +104,8 @@
         "MAIL_PROVIDER": "resend",
         "MAIL_FROM": "IrishBredShowjumpingResults <info@iber.ie>"
       },
-      // Every 5 minutes: the automatic FEI and SporthorseData readers (they do nothing until switched on in the
-      // owner area, and stop at each day's limit).
+      // Every 5 minutes: the automatic FEI reader (it does nothing until switched on in the owner area, and stops at
+      // each day's limit).
       "triggers": { "crons": ["*/5 * * * *"] },
       "observability": { "enabled": true }
     }

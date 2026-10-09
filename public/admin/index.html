@@ -211,15 +211,6 @@
       <label class="chk"><input type="checkbox" name="gaps" value="1"> Only horses with part of their breeding missing <span id="breed-gaps"></span></label>
       <div class="adm-actions"><button class="btn" type="submit">Find</button></div>
     </form>
-    <div class="panel sj-only" id="breed-shd" hidden>
-      <p><b>From SporthorseData pages.</b> Open a horse on <a href="https://sporthorse-data.com/" target="_blank" rel="noopener">SporthorseData</a>, press Ctrl+S and save it as "Webpage, HTML only". Choose one or many here: their sire, dam, dam sire and breeder are filled in for the horse with the same FEI ID (or UELN, or name and year). Nothing already on file is changed without asking. (The automatic SporthorseData reader under <b>FEI results</b> does this by itself once switched on.)</p>
-      <form class="form" id="shd-form" style="max-width:none;">
-        <label>Saved SporthorseData pages<input type="file" id="shd-files" accept=".html,.htm,text/html" multiple></label>
-        <div class="adm-actions"><button class="btn" type="submit">Check</button></div>
-        <div class="form-done" role="status"></div>
-      </form>
-      <div id="shd-preview"></div>
-    </div>
     <div class="panel sj-only" id="breed-sheet" hidden>
       <p><b>Lots of horses to do?</b> Fill them in as a spreadsheet instead of one by one.</p>
       <ol>
@@ -303,7 +294,7 @@
   <!-- FEI RESULTS (showjumping site) -->
   <div class="adm-pane" id="adm-fei">
     <h3>Showjumping results</h3>
-    <p class="intro">Two steps, then the site does the rest by itself: it reads each horse's results on the FEI database and fills in its breeding from SporthorseData, a few horses every few minutes (FEI and SporthorseData agreed, at most 1000 horses a day each).</p>
+    <p class="intro">Two steps, then the site does the rest by itself: it reads each horse's results on the FEI database, a few horses every few minutes (FEI agreed, at most 1000 horses a day). Breeding is added under <b>Breeding records</b> and <b>Shared stallions</b>.</p>
 
     <section class="panel">
       <h3>1. Horses to follow</h3>
@@ -439,6 +430,6 @@
 
 <script src="/js/site.js?v=1"></script>
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=32"></script>
+<script src="/admin/admin.js?v=33"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
-// Owner area (IBSR): the automatic readers (FEI results, SporthorseData breeding).
+// Owner area (IBSR): the automatic FEI results reader.
 //   GET                                   each reader: on/off, daily limit, horses read today, the latest horses read
 //   POST { slug, enabled, daily_limit }   switch a reader on or off, or change its daily limit (never above what was agreed)
-//   POST { action: 'switch', enabled }   both readers on or off
+//   POST { action: 'switch', enabled }   on or off
 //   POST { action: 'run' }                read a few horses now, even with the readers off (to try them out)
 import { json, bad, readJson } from '../../../lib/http.js';
 import { withShared } from '../../../lib/shared-http.js';
@@ -19,7 +19,7 @@ export const onRequestPost = ({ env, request, data }) => withShared(env, async d
   const b = await readJson(request) || {};
   try {
     if (b.action === 'run') return json({ ok: true, ...(await runReaders(db, { force: true })), ...(await status(db)) });
-    // One switch for both readers (their daily limits stay as they are).
+    // On or off (the daily limit stays as it is).
     if (b.action === 'switch') {
       for (const r of await readerStatus(db)) await setReader(db, r.slug, { enabled: Boolean(b.enabled), daily_limit: r.daily_limit }, data.user ? data.user.email : '');
       return json({ ok: true, ...(await status(db)) });
