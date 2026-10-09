@@ -11,3 +11,6 @@
 
 /js/*
   Cache-Control: no-cache
+
+/admin/*
+  Cache-Control: no-cache
