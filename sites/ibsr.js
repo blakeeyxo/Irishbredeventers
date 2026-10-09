@@ -3,7 +3,7 @@
  * Same code as IBER, built into dist/ibsr by scripts/build-site.mjs and deployed as its own Worker
  * (wrangler.jsonc, env "ibsr") with its own database and image bucket.
  *
- * To confirm with Emer: contact details (IBER's for now) and the About text.
+ * To confirm with Emer: contact details (IBER's for now).
  */
 import iber from './iber.js';
 
@@ -34,8 +34,10 @@ export default {
     aboutPhotoHtml: '<img src="/img/carling-hill.jpg" alt="Carling Hill, an Irish-bred showjumper, clearing a fence" style="object-position: center 18%;">',
     aboutTitle: 'About IrishBred<wbr>Showjumping<wbr>Results',
     aboutHtml: `
-      <p>IrishBredShowjumpingResults (IBSR) is the showjumping sister site to IrishBredEventingResults. It lists Irish-bred horses placed in international showjumping, with their breeding and breeder.</p>
-      <p>Results are free for breeders and owners to use, and every result traces back to the horse's sire, dam and breeder.</p>
+      <p>IrishBredShowjumpingResults (IBSR) is the showjumping sister site to IrishBredEventingResults, which has tracked the performance of Irish-bred horses across the world's eventing circuits for close to twenty years.</p>
+      <p>IBSR brings that same weekly results service to showjumping: every Irish-bred horse placed in international showjumping, in one permanent, searchable home. It stays independent, stays free for breeders and owners to use, and stays in the same voice as its sister site.</p>
+      <p>Every result traces back to the horse's breeding, so a mare sold as a foal is just as easy to find as this week's Grand Prix winner.</p>
+      <p>IrishBredShowjumpingResults is run by Charlie, because he truly loves Irish horses and wants to show the world just how special they are.</p>
     `,
     emailLinkHtml: '<a href="mailto:info@iber.ie">info@iber.ie</a>',
     phoneLinkHtml: '<a href="tel:+353872165442">+353 87 216 5442</a>',
