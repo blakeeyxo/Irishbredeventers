@@ -48,6 +48,7 @@ import * as sharedStallions from '../functions/api/shared/stallions.js';
 import * as sharedHorse from '../functions/api/shared/horse/[id].js';
 import * as adminSharedSources from '../functions/api/admin/shared/sources.js';
 import * as adminSharedUpload from '../functions/api/admin/shared/upload.js';
+import * as adminSharedHorses from '../functions/api/admin/shared/horses.js';
 import * as listings from '../functions/api/listings.js';
 import * as listing from '../functions/api/listings/[id].js';
 import * as listingSubmit from '../functions/api/listings/submit.js';
@@ -98,6 +99,7 @@ const ROUTES = {
   '/api/shared/stallions': sharedStallions,
   '/api/admin/shared/sources': adminSharedSources,
   '/api/admin/shared/upload': adminSharedUpload,
+  '/api/admin/shared/horses': adminSharedHorses,
   // For Sale (ads in the shared database, shown on each site by discipline).
   '/api/listings': listings,
   '/api/listings/submit': listingSubmit,

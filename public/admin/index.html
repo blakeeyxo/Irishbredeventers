@@ -203,9 +203,14 @@
   <div class="adm-pane" id="adm-horses">
     <h3>Horses</h3>
     <p class="intro">Everything about horses in one place. The shared horse database is the one set of horses, sires, dams and breeders that both sites read, so a horse added here is there for eventing and showjumping alike.</p>
-    <div class="adm-tabs" id="hz-tabs"><button class="chip active" type="button" data-hz="hz-missing">Find a horse</button><button class="chip" type="button" data-hz="hz-add">Add one horse</button><button class="chip" type="button" data-hz="hz-many">Paste or upload many</button></div>
+    <div class="adm-tabs" id="hz-tabs"><button class="chip active" type="button" data-hz="hz-missing">Find a horse</button><button class="chip" type="button" data-hz="hz-add">Add one horse</button><button class="chip" type="button" data-hz="hz-many">Paste or upload many</button><button class="chip" type="button" data-hz="hz-shared">Shared database</button></div>
 
     <section class="block" id="hz-missing">
+      <div class="panel" id="hz-fill" hidden>
+        <p><b>Fill gaps from the shared horse database.</b> Horses here with part of their breeding missing get it from the shared database, when it's certainly the same horse (same name, and the same year of birth where both have one). Only what's missing is filled; nothing already recorded changes.</p>
+        <div class="adm-actions"><button class="btn alt" type="button" id="hz-fill-check">Check what can be filled</button></div>
+        <div id="hz-fill-list"></div>
+      </div>
       <h3>Horses on the site</h3>
       <p class="intro">Find any horse by name (untick "Only horses with part of their breeding missing" to see them all). On each horse: fill in its breeding, see its <b>Results</b> and delete any one of them, or <b>Delete horse</b> to take it and all its results off the site.</p>
     <p class="intro">Find a horse or a stallion and fill in or correct its breeding: sire, dam, dam sire, breeder, year of birth and breed (and sex for a horse). Stallions are edited exactly the same way, and a stallion written under two spellings can be joined into one. Every result of that horse on the site shows the new details straight away, and the stallion numbers follow. <b>View on site</b> opens the horse's page as visitors see it. Type names with their codes if you have them, e.g. <i>Womanizer (KWPN)</i> or <i>Cruising (ISH)[TIH]</i>; leave a box empty (or type UNK) if it isn't known.</p>
@@ -262,6 +267,20 @@
         <div class="adm-actions"><button class="btn" type="submit">Check</button><button class="btn alt" type="reset">Clear</button></div>
         <div class="form-done" role="status"></div>
       </form>
+    </section>
+
+    <section class="block" id="hz-shared" hidden>
+      <h3>The shared horse database</h3>
+      <p class="intro">Every horse, stallion, pedigree and breeder in the shared database both sites read. It's here for you only: it isn't shown as a list on the public sites. Horses from a source that may not be shown are marked.</p>
+      <form class="form breed-search" id="hz-shared-find" style="max-width:none;">
+        <div class="form-row">
+          <label>Name, FEI ID or UELN<input type="search" name="q" maxlength="100" placeholder="e.g. Cruising"></label>
+          <label class="chk"><input type="checkbox" name="stallions" value="1" checked> Stallions only (and sires with foals on file)</label>
+        </div>
+        <div class="adm-actions"><button class="btn" type="submit">Find</button></div>
+      </form>
+      <p class="meta" id="hz-shared-count"></p>
+      <div id="hz-shared-list"></div>
     </section>
 
     <section class="block" id="hz-many" hidden>
@@ -476,6 +495,6 @@
 
 <script src="/js/site.js?v=1"></script>
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=36"></script>
+<script src="/admin/admin.js?v=37"></script>
 </body>
 </html>
