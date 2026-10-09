@@ -108,3 +108,21 @@ test('checklist: a pasted FEI horse list keeps Irish-bred and unclear horses; pa
   assert.equal((await listChecklist(db)).counts.to_check, 27);
   assert.equal((await listChecklist(db, { q: 'alonsa' })).horses[0].fei_id, '106AH67');
 });
+
+test('owner area breeding on IBSR: lists FEI horses with gaps and saves breeding into the shared database', async () => {
+  const { sjBreedingList, sjSaveBreeding } = await import('../lib/sj.js');
+  const db = fresh();
+  await runFeiImport(db, JUMPING, { year: 2026, save: true });
+  let list = await sjBreedingList(db, { gaps: true });
+  assert.deepEqual([list.total, list.gaps, list.horses[0].name, list.horses[0].runs], [1, 1, 'Abc Mayflower', 3]);
+  const id = list.horses[0].id;
+  const r = await sjSaveBreeding(db, id, { sire: 'Cruising (ISH)', dam: 'Abc Lady', dam_sire: 'Clover Hill', breeder: 'Mary Brennan (Cork)', sex: 'Mare', breed: 'ISH' }, 'emer');
+  assert.deepEqual([r.saved, r.results], [true, 3]);
+  list = await sjBreedingList(db, { q: 'mayflower' });
+  const h = list.horses[0];
+  assert.deepEqual([h.sire, h.sire_breed, h.dam, h.dam_sire, h.breeder, h.breeder_county, h.sex], ['Cruising', 'ISH', 'Abc Lady', 'Clover Hill', 'Mary Brennan', 'Cork', 'Mare']);
+  assert.equal((await sjBreedingList(db, { gaps: true })).total, 0);
+  assert.equal((await sjBreedingList(db, { sire: 'cruis' })).total, 1);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM horse WHERE name_key = ?').bind('abc mayflower').first()).n, 1, 'the same horse, not a new one');
+  assert.ok((await db.prepare("SELECT COUNT(*) AS n FROM upload_change WHERE field = 'sire_id'").first()).n >= 1, 'the change is logged');
+});
