@@ -149,3 +149,9 @@ test('sites read stallions and horse pages; hidden sources stay hidden', async (
   assert.equal((await listStallions(db, {}))[0].progeny, 3, 'counted, but the horse itself is not listed');
   assert.ok(!(await getHorse(db, stallions[0].id)).progeny.some(p => p.name === 'Hidden Horse'));
 });
+
+test('a table pasted from a spreadsheet with an "FEI Code" column keeps the FEI IDs; extra columns are listed as left out', () => {
+  const { rows, ignored } = readUpload('Name\tFEI Code\tSex\tDOB\tColour\tStudbook\tSire\tDam\tDam Sire\tBreeder\tDNA\tProgeny\nAltivo\t106OV63\tGelding\t2011\t\tISH\t\t\t\t\t\t\nAn Older One\t\tMare\t01-01-2008\tBay\tISH\tSome Sire\tSome Dam\tSome Dam Sire\tA Breeder\tMS\t0');
+  assert.deepEqual(ignored, ['DNA', 'Progeny']);
+  assert.deepEqual([rows[0].fei_id, rows[0].sex, rows[0].foaled_year, rows[1].foaled_year, rows[1].dam_sire.name], ['106OV63', 'gelding', 2011, 2008, 'Some Dam Sire']);
+});
