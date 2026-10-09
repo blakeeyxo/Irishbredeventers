@@ -1286,6 +1286,8 @@
   const taggedName = (name, breed, tih) => name ? `${name}${breed ? ` (${breed})` : ''}${tih ? '[TIH]' : ''}` : '';
   const MISSING_LABEL = { sire: 'sire', dam: 'dam', dam_sire: 'dam sire', breeder: 'breeder' };
   // The same fields for a horse and for a stallion (a stallion has no sex to choose, and can be joined into another spelling).
+  // The showjumping site keeps its horses in the shared database: no TIH flag there.
+  const SJ = window.SITE && window.SITE.discipline === 'showjumping';
   function breedCard(h, stallion = false) {
     const v = stallion
       ? { sire: h.ped_sire, dam: h.ped_dam, dam_sire: h.ped_dam_sire, breeder: h.ped_breeder }
@@ -1309,7 +1311,7 @@
         <label>Year of birth<input name="birth_year" type="number" min="1950" max="2100" value="${esc(h.birth_year ?? '')}"></label>
         ${sexBox}
         <label>Breed<input name="breed" value="${esc(h.breed_code || '')}" placeholder="e.g. ISH" maxlength="8"></label>
-        <label class="chk"><input type="checkbox" name="tih" value="1"${h.tih_flag ? ' checked' : ''}> Traditional Irish Horse [TIH]</label>
+        ${SJ ? '' : `<label class="chk"><input type="checkbox" name="tih" value="1"${h.tih_flag ? ' checked' : ''}> Traditional Irish Horse [TIH]</label>`}
         ${stallion ? `<label class="join-into">Same stallion under another spelling? Join into<input name="merge_into" list="breed-sires" placeholder="${h.similar[0] ? esc(h.similar[0]) : 'Leave empty'}"></label>` : ''}
       </div>
       <div class="adm-actions"><button class="btn sm" type="submit">${stallion ? 'Save stallion' : 'Save breeding'}</button>
@@ -1352,7 +1354,7 @@
   $('breed-list').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target, done = f.querySelector('.form-done'), btn = f.querySelector('button[type=submit]'), stallion = f.dataset.kind === 'sire';
-    const body = { id: Number(f.dataset.id), ...Object.fromEntries(new FormData(f)), tih: f.elements.tih.checked, ...(stallion ? { kind: 'sire' } : {}) };
+    const body = { id: Number(f.dataset.id), ...Object.fromEntries(new FormData(f)), tih: f.elements.tih ? f.elements.tih.checked : false, ...(stallion ? { kind: 'sire' } : {}) };
     const into = stallion ? String(body.merge_into || '').trim() : '';
     if (into && !confirm(`Join "${body.name}" into "${into}"? All its progeny, mares and results move across and this spelling disappears.`)) return;
     btn.disabled = true; done.className = 'form-done'; done.textContent = 'Saving…';
