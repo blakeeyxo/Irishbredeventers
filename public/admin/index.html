@@ -211,6 +211,15 @@
       <label class="chk"><input type="checkbox" name="gaps" value="1"> Only horses with part of their breeding missing <span id="breed-gaps"></span></label>
       <div class="adm-actions"><button class="btn" type="submit">Find</button></div>
     </form>
+    <div class="panel sj-only" id="breed-shd" hidden>
+      <p><b>From SporthorseData pages.</b> Open a horse on <a href="https://sporthorse-data.com/" target="_blank" rel="noopener">SporthorseData</a>, press Ctrl+S and save it as "Webpage, HTML only". Choose one or many here: their sire, dam, dam sire and breeder are filled in for the horse with the same FEI ID (or UELN, or name and year). Nothing already on file is changed without asking. (The automatic SporthorseData reader under <b>FEI results</b> does this by itself once switched on.)</p>
+      <form class="form" id="shd-form" style="max-width:none;">
+        <label>Saved SporthorseData pages<input type="file" id="shd-files" accept=".html,.htm,text/html" multiple></label>
+        <div class="adm-actions"><button class="btn" type="submit">Check</button></div>
+        <div class="form-done" role="status"></div>
+      </form>
+      <div id="shd-preview"></div>
+    </div>
     <div class="panel sj-only" id="breed-sheet" hidden>
       <p><b>Lots of horses to do?</b> Fill them in as a spreadsheet instead of one by one.</p>
       <ol>
@@ -302,13 +311,24 @@
     <p class="intro">Press <b>Check</b> to see what will be added, then <b>Save</b>. Pasting the same page again only adds what's new.</p>
     <p class="intro">Only Irish-bred horses are kept: those in an Irish studbook (ISH, Irish Draught, Connemara). A horse with no studbook on its FEI page is listed so you can tick it in if you know it's Irish-bred. Horses are matched to the shared horse records by FEI ID, then name and year, so any breeding you've uploaded under <b>Shared stallions</b> shows with their results.</p>
     <p class="meta" id="fei-visible"></p>
+
+    <section class="panel" id="auto-panel">
+      <h3>Automatic updates</h3>
+      <p class="intro">The site can read the pages itself, a few horses every few minutes, so you don't have to. FEI and SporthorseData agreed to it, at most 1000 horses a day each; choose a lower daily limit if you like. Both are off until you switch them on.</p>
+      <ul class="intro">
+        <li><b>FEI results</b>: works down the checklist below (horses with a link ↗), never-read horses first, then the ones read longest ago, none more than once in 6 days. It reads the first page of each horse's FEI results, its latest results.</li>
+        <li><b>SporthorseData breeding</b>: horses with results and part of their breeding missing, latest results first. A page is only used when it is the same horse (same FEI ID or UELN, or same name and year), and nothing already on file is changed: a disagreement is listed here for you.</li>
+      </ul>
+      <div id="auto-readers"><p class="meta">Loading…</p></div>
+      <div class="adm-actions"><button class="btn alt" type="button" id="auto-run">Read a few horses now</button><span class="meta" id="auto-run-msg"></span></div>
+    </section>
     <form class="form" id="fei-form" style="max-width:none;">
       <div class="form-row">
         <label>Results from<input type="number" name="year" min="2000" max="2100" placeholder="All years"></label>
         <label>Name for this paste (optional)<input type="text" name="label" maxlength="120" placeholder="e.g. FEI results week of 15 September"></label>
       </div>
-      <label>Saved FEI horse list pages (optional)<input type="file" name="files" id="fei-files" accept=".html,.htm,text/html" multiple></label>
-      <p class="meta" id="fei-files-note">On the FEI horse search results, press Ctrl+S and save as "Webpage, HTML only", once per page of the list. Choose them all here at once: every horse goes on the checklist with a link straight to its FEI results page.</p>
+      <label>Saved FEI pages (optional)<input type="file" name="files" id="fei-files" accept=".html,.htm,text/html" multiple></label>
+      <p class="meta" id="fei-files-note">On an FEI page press Ctrl+S and save it as "Webpage, HTML only". Choose several at once, one kind at a time: horse list pages put every horse on the checklist with a link to its FEI results page; horse results pages add their results.</p>
       <label>Or paste FEI pages<textarea name="text" style="min-height:220px;" placeholder="Horse Performance&#10;Name	ABC MAYFLOWER&#10;FEI ID	109WK62&#10;…"></textarea></label>
       <div class="adm-actions"><button class="btn" type="submit">Check</button><button class="btn alt" type="reset">Clear</button></div>
       <div class="form-done" role="status"></div>
@@ -416,6 +436,6 @@
 
 <script src="/js/site.js?v=1"></script>
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=30"></script>
+<script src="/admin/admin.js?v=31"></script>
 </body>
 </html>

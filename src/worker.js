@@ -56,6 +56,9 @@ import * as listingMedia from '../functions/listing-media/[[path]].js';
 import * as adminListings from '../functions/api/admin/listings.js';
 import * as adminListingCreate from '../functions/api/admin/listings/create.js';
 import * as adminFei from '../functions/api/admin/fei.js';
+import * as adminAuto from '../functions/api/admin/auto.js';
+import { runReaders } from '../lib/auto.js';
+import { siteFor } from '../lib/sites.js';
 
 const ROUTES = {
   '/api/config': config,
@@ -98,7 +101,8 @@ const ROUTES = {
   '/api/listings/enquire': listingEnquire,
   '/api/admin/listings': adminListings,
   '/api/admin/listings/create': adminListingCreate,
-  '/api/admin/fei': adminFei
+  '/api/admin/fei': adminFei,
+  '/api/admin/auto': adminAuto
 };
 
 const METHOD_EXPORT = { GET: 'onRequestGet', HEAD: 'onRequestGet', POST: 'onRequestPost', DELETE: 'onRequestDelete' };
@@ -145,6 +149,16 @@ async function ownerLogin(request, env, why) {
 }
 
 export default {
+  // The cron trigger (IBSR only, see wrangler.jsonc): the automatic FEI and SporthorseData readers, each within its
+  // daily limit and only when the owner has switched it on (lib/auto.js).
+  async scheduled(event, env, ctx) {
+    if (!env.SHARED || siteFor(env).discipline !== 'showjumping') return;
+    ctx.waitUntil(runReaders(env.SHARED).then(r => {
+      const n = r.fei.length + r.shd.length;
+      if (n) console.log(`Automatic readers: ${r.fei.length} FEI, ${r.shd.length} SporthorseData`);
+    }).catch(e => console.error('automatic readers failed', e && e.stack || e)));
+  },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
