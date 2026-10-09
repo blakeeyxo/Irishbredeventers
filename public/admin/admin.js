@@ -1288,6 +1288,7 @@
   // The same fields for a horse and for a stallion (a stallion has no sex to choose, and can be joined into another spelling).
   // The showjumping site keeps its horses in the shared database: no TIH flag there.
   const SJ = window.SITE && window.SITE.discipline === 'showjumping';
+  if (SJ) $('breed-sheet').hidden = false;
   function breedCard(h, stallion = false) {
     const v = stallion
       ? { sire: h.ped_sire, dam: h.ped_dam, dam_sire: h.ped_dam_sire, breeder: h.ped_breeder }

@@ -2,7 +2,7 @@
 // saves a horse, or { kind: 'sire', id, name, breed, tih, merge_into } a sire.
 import { json, bad, readJson } from '../../../lib/http.js';
 import { findHorses, gapCount, saveBreeding, findSires, saveSire, findStallions } from '../../../lib/breeding.js';
-import { sjBreedingList, sjSaveBreeding } from '../../../lib/sj.js';
+import { sjBreedingList, sjSaveBreeding, sjBreedingSheet } from '../../../lib/sj.js';
 import { siteFor } from '../../../lib/sites.js';
 
 // On the showjumping site the horses live in the shared database (env.SHARED), so its breeding is edited there.
@@ -11,6 +11,11 @@ const shared = env => siteFor(env).discipline === 'showjumping';
 export async function onRequestGet({ env, request }) {
   const u = new URL(request.url).searchParams;
   const q = (u.get('q') || '').slice(0, 100), sire = (u.get('sire') || '').slice(0, 300), gaps = u.get('gaps') === '1';
+  if (shared(env) && u.get('format') === 'csv') {
+    return new Response('\ufeff' + await sjBreedingSheet(env.SHARED, { gaps }), { headers: {
+      'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': 'no-store',
+      'Content-Disposition': `attachment; filename="ibsr-breeding-${gaps ? 'missing' : 'all'}.csv"` } });
+  }
   if (shared(env)) return json(await sjBreedingList(env.SHARED, { q, sire, gaps }));
   if (u.get('kind') === 'sires') return json({ sires: await findSires(env.DB, { q }) });
   const [found, missing, sires, stallions] = await Promise.all([
