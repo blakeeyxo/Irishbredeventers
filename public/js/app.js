@@ -1,6 +1,6 @@
 /* Public site for IrishBredEventingResults (IBER) and its sister sites; names come from js/site.js. */
 (function () {
-  const { esc, api, ordinal, niceDate, turnstileReady, mountTurnstile, turnstileToken, resetTurnstile } = window.IBE;
+  const { esc, api, ordinal, niceDate, turnstileReady, mountTurnstile, turnstileToken, resetTurnstile, framePhoto, picture } = window.IBE;
   const $ = id => document.getElementById(id);
   const SITE = window.SITE.name;
   const SHORT = window.SITE.short;
@@ -484,7 +484,7 @@
     $('news-list').dataset.done = '1';
     $('news-list').innerHTML = state.news.length ? state.news.map(a => `
       <a class="article" href="/news/${a.id}" data-link>
-        ${a.image_key ? `<div class="article-thumb"><img src="${imgUrl(a.image_key)}" alt="" loading="lazy"></div>` : ''}
+        ${a.image_key ? `<div class="article-thumb">${picture(imgUrl(a.image_key), 'alt="" loading="lazy"')}</div>` : ''}
         <div>
           <div class="article-date">${esc(niceDate(a.published_at))}${a.source_name ? ` · ${esc(a.source_name)}` : ''}</div>
           <div class="article-title">${esc(a.title)}</div>
@@ -522,7 +522,7 @@
     if (!a) return;
     $('article-modal').innerHTML = `
       <button class="modal-close" aria-label="Close">&times;</button>
-      ${a.image_key ? `<div class="modal-photo"><img src="${imgUrl(a.image_key)}" alt=""></div>` : ''}
+      ${a.image_key ? `<div class="modal-photo">${picture(imgUrl(a.image_key), 'alt=""')}</div>` : ''}
       <div class="article-date">${esc(niceDate(a.published_at))}</div>
       <div class="modal-title">${esc(a.title)}</div>
       <div class="modal-body">${paragraphs(a.body)}</div>
@@ -645,7 +645,7 @@
   function linkCardHTML(l) {
     return `<a class="slot ad-box link-card" href="${esc(l.url)}" target="_blank" rel="noopener" data-link-id="${l.id}">
       <span class="ad-label">Read more</span>
-      ${l.image_key ? `<span class="card-img"><img src="${imgUrl(l.image_key)}" alt="" loading="lazy"></span>` : ''}
+      ${l.image_key ? `<span class="card-img">${picture(imgUrl(l.image_key), 'alt="" loading="lazy"')}</span>` : ''}
       <span class="card-body"><span class="card-kicker">${esc(l.source_name || hostOf(l.url))} ↗</span><b>${esc(l.title)}</b></span></a>`;
   }
   let adsShown = null;
@@ -708,7 +708,7 @@
 
   function listingCard(l) {
     return `<a class="fs-card${l.status === 'sold' ? ' sold' : ''}" href="/for-sale/${l.id}" data-link>
-      <span class="fs-photo">${l.photo ? `<img src="${listingImg(l.photo)}" alt="" loading="lazy">` : `<span class="card-fallback" aria-hidden="true">${esc(SHORT)}</span>`}
+      <span class="fs-photo">${l.photo ? picture(listingImg(l.photo), 'alt="" loading="lazy"') : `<span class="card-fallback" aria-hidden="true">${esc(SHORT)}</span>`}
         ${l.status === 'sold' ? '<span class="fs-badge sold">Sold</span>' : `<span class="fs-badge">${esc(priceText(l))}</span>`}
         ${l.photos > 1 ? `<span class="fs-count">${l.photos} photos</span>` : ''}</span>
       <span class="fs-body">
@@ -832,7 +832,17 @@
   }
   function drawSellThumbs() {
     $('sell-thumbs').innerHTML = sellPhotos.map((p, i) => `<figure><img src="${p.url}" alt=""><figcaption>${i ? `Photo ${i + 1}` : 'Main photo'}</figcaption>
+      <button type="button" class="btn-quiet" data-crop="${i}" aria-label="Crop photo ${i + 1}">${p.phone ? 'Cropped ✓' : 'Crop'}</button>
       <button type="button" class="btn-quiet" data-remove="${i}" aria-label="Remove photo ${i + 1}">Remove</button></figure>`).join('');
+    // Crop: how the photo sits in the ad's box on a laptop and on a phone.
+    $('sell-thumbs').querySelectorAll('[data-crop]').forEach(b => b.addEventListener('click', async () => {
+      const p = sellPhotos[b.dataset.crop];
+      const r = await framePhoto(p.original || p.file, { laptop: '4/3', phone: '4/3', title: 'Crop your photo' });
+      if (!r) return;
+      URL.revokeObjectURL(p.url);
+      Object.assign(p, { original: p.original || p.file, file: r.laptop, phone: r.phone, url: URL.createObjectURL(r.laptop) });
+      drawSellThumbs();
+    }));
     $('sell-thumbs').querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => {
       URL.revokeObjectURL(sellPhotos[b.dataset.remove].url);
       sellPhotos.splice(Number(b.dataset.remove), 1);
@@ -852,7 +862,7 @@
     if (!sellPhotos.length) { done.textContent = 'Add at least one photo.'; return; }
     const form = new FormData(sellForm);
     form.delete('photos');
-    sellPhotos.forEach(p => form.append('photos', p.file));
+    sellPhotos.forEach(p => { form.append('photos', p.file); form.append('photos_phone', p.phone || new File([], 'none')); });
     let token = turnstileToken(sellForm);
     for (let i = 0; !token && i < 24 && sellForm.querySelector('.ts-slot[data-widget]'); i++) { await new Promise(r => setTimeout(r, 250)); token = turnstileToken(sellForm); }
     form.set('turnstile', token || '');
@@ -877,7 +887,7 @@
      Every number on these pages covers the same rolling 12 months (the API works it out from today's date)
      and counts every appearance in the results, not only wins. */
   const fmt = n => Number(n || 0).toLocaleString('en-IE');
-  const stallionPhoto = s => s.image_key ? `<img src="${imgUrl(s.image_key)}" alt="${esc(s.name)}" loading="lazy">` : `<span class="card-fallback" aria-hidden="true">${esc(SHORT)}</span>`;
+  const stallionPhoto = s => s.image_key ? picture(imgUrl(s.image_key), `alt="${esc(s.name)}" loading="lazy"`) : `<span class="card-fallback" aria-hidden="true">${esc(SHORT)}</span>`;
   async function renderStallions(slot) {
     $('stallions-list').hidden = !!slot;
     $('stallion-detail').hidden = !slot;

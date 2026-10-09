@@ -1,6 +1,6 @@
 // External link cards: add, edit, delete and re-order.
 import { json, bad, str, text, readJson } from '../../../lib/http.js';
-import { saveImage } from '../../../lib/images.js';
+import { saveImage, savePhoneImage, phoneKeyOf } from '../../../lib/images.js';
 import { cleanUrl, cleanDate, saveOrder } from '../../../lib/content.js';
 
 export async function onRequestGet({ env }) {
@@ -26,7 +26,7 @@ export async function onRequestPost({ env, request }) {
   const teaser = text(form.get('teaser'), 400);
   const sourceName = str(form.get('source_name'), 120);
   let imageKey = null;
-  try { imageKey = await saveImage(env, form.get('image'), 'links'); } catch (e) { return bad(e.message); }
+  try { imageKey = await saveImage(env, form.get('image'), 'links'); await savePhoneImage(env, imageKey, form.get('image_phone')); } catch (e) { return bad(e.message); }
 
   if (id) {
     const old = await env.DB.prepare('SELECT image_key FROM link_cards WHERE id = ?').bind(id).first();
@@ -34,7 +34,7 @@ export async function onRequestPost({ env, request }) {
     const newKey = imageKey || (form.get('remove_image') === '1' ? null : old.image_key);
     await env.DB.prepare('UPDATE link_cards SET title = ?, url = ?, teaser = ?, source_name = ?, image_key = ?, card_date = ? WHERE id = ?')
       .bind(title, url, teaser, sourceName, newKey, date, id).run();
-    if (old.image_key && old.image_key !== newKey) await env.MEDIA.delete(old.image_key);
+    if (old.image_key && old.image_key !== newKey) await env.MEDIA.delete([old.image_key, phoneKeyOf(old.image_key)]);
   } else {
     await env.DB.prepare(`INSERT INTO link_cards (title, url, teaser, source_name, image_key, card_date, sort_order)
         VALUES (?, ?, ?, ?, ?, ?, (SELECT IFNULL(MIN(sort_order), 1) - 1 FROM link_cards))`)
@@ -46,6 +46,6 @@ export async function onRequestPost({ env, request }) {
 export async function onRequestDelete({ env, request }) {
   const id = Number(new URL(request.url).searchParams.get('id'));
   const row = await env.DB.prepare('DELETE FROM link_cards WHERE id = ? RETURNING image_key').bind(id).first();
-  if (row && row.image_key) await env.MEDIA.delete(row.image_key);
+  if (row && row.image_key) await env.MEDIA.delete([row.image_key, phoneKeyOf(row.image_key)]);
   return json({ ok: true });
 }

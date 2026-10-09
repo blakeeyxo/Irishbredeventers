@@ -608,3 +608,18 @@ a.bar-row:hover .bar-label { color: var(--navy); text-decoration: underline; tex
   .fs-facts-table div:nth-child(2) { border-top: 1px solid var(--rule); }
   .fs-thumbrow { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* Photo framing window (owner area and "I want to sell"): a laptop and a phone crop of each photo. */
+.frame-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 1000; display: grid; place-items: center; padding: 16px; overflow: auto; }
+.frame-box { background: #fff; border-radius: 8px; padding: 16px; width: min(520px, 100%); max-height: 100%; overflow: auto; }
+.frame-box h4 { margin: 0 0 8px; }
+.frame-tabs { display: flex; gap: 6px; margin: 4px 0 8px; }
+.frame-tabs button { border: 1px solid var(--rule-strong); background: #fff; padding: 6px 12px; cursor: pointer; font: inherit; font-size: 13px; }
+.frame-tabs button.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+.frame-note { font-size: 13px; color: #555; margin: 0 0 6px; }
+.frame-stage { position: relative; width: 100%; overflow: hidden; margin: 8px 0; border: 2px solid #1f3d2b; touch-action: none; cursor: grab; }
+.frame-stage img { position: absolute; left: 0; top: 0; max-width: none; user-select: none; -webkit-user-drag: none; }
+.frame-zoom, .frame-whole { display: flex; gap: 10px; align-items: center; margin: 6px 0; font-size: 14px; }
+.frame-zoom input { flex: 1; }
+.frame-actions { display: flex; gap: 8px; margin-top: 10px; }
+picture { display: contents; }

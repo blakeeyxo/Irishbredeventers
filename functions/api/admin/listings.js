@@ -1,6 +1,7 @@
 // Owner area: For Sale. GET ?status=draft|pending_payment|live|sold|expired|removed|rejected (the queue) or ?id=&enquiries=1.
 // POST { id, action, ... } (see ownerAction in lib/listings.js) or { action: 'settings', ... }.
 // DELETE ?id= deletes an ad and its photos for good; DELETE ?photo= removes one photo.
+import { phoneKeyOf } from '../../../lib/images.js';
 import { json, bad, readJson } from '../../../lib/http.js';
 import { withShared } from '../../../lib/shared-http.js';
 import { siteFor } from '../../../lib/sites.js';
@@ -39,10 +40,10 @@ export const onRequestDelete = ({ env, request }) => withShared(env, async db =>
   const u = new URL(request.url).searchParams;
   if (u.get('photo')) {
     const row = await deletePhoto(db, Number(u.get('photo')));
-    if (row && env.LISTING_MEDIA) await env.LISTING_MEDIA.delete(row.image_key);
+    if (row && env.LISTING_MEDIA) await env.LISTING_MEDIA.delete([row.image_key, phoneKeyOf(row.image_key)]);
     return json({ ok: true });
   }
   const keys = await deleteListing(db, Number(u.get('id')));
-  if (env.LISTING_MEDIA) await Promise.all(keys.map(k => env.LISTING_MEDIA.delete(k)));
+  if (env.LISTING_MEDIA) await Promise.all(keys.map(k => env.LISTING_MEDIA.delete([k, phoneKeyOf(k)])));
   return json({ ok: true });
 });
