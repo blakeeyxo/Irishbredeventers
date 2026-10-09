@@ -587,6 +587,23 @@
     f => ({ event: f.get('event'), message: f.get('message'), email: f.get('email') }),
     'Sent. Thank you, it will be checked before the results are changed.'));
 
+  // Showjumping site: owners send in results and breeding through a proper form (approved in the owner area).
+  if (window.SITE && window.SITE.discipline === 'showjumping') {
+    $('corrections').hidden = true;
+    $('send-result').hidden = false;
+    const sr = $('send-result-form');
+    const showKind = () => {
+      const breeding = sr.elements.kind.value === 'breeding';
+      sr.querySelector('.sr-result').hidden = breeding;
+      sr.querySelector('.sr-breeding').hidden = !breeding;
+      sr.elements.date.required = sr.elements.show.required = !breeding;
+    };
+    sr.elements.kind.addEventListener('change', showKind);
+    showKind();
+    sr.addEventListener('submit', e => submitForm(e, '/api/submissions', f => Object.fromEntries(f), 'Sent. Thank you: it will be checked before anything changes on the site.'));
+    sr.addEventListener('reset', () => setTimeout(showKind));
+  }
+
   $('enquiry-form').addEventListener('submit', e => submitForm(e, '/api/enquiries',
     f => Object.fromEntries(['name', 'business', 'email', 'phone', 'interest', 'message'].map(k => [k, f.get(k)])),
     "Thanks. We'll be in touch about advertising shortly."));

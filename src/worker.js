@@ -57,6 +57,8 @@ import * as adminListings from '../functions/api/admin/listings.js';
 import * as adminListingCreate from '../functions/api/admin/listings/create.js';
 import * as adminFei from '../functions/api/admin/fei.js';
 import * as adminAuto from '../functions/api/admin/auto.js';
+import * as submissions from '../functions/api/submissions.js';
+import * as adminSubmissions from '../functions/api/admin/submissions.js';
 import { runReaders } from '../lib/auto.js';
 import { siteFor } from '../lib/sites.js';
 
@@ -102,7 +104,9 @@ const ROUTES = {
   '/api/admin/listings': adminListings,
   '/api/admin/listings/create': adminListingCreate,
   '/api/admin/fei': adminFei,
-  '/api/admin/auto': adminAuto
+  '/api/admin/auto': adminAuto,
+  '/api/submissions': submissions,
+  '/api/admin/submissions': adminSubmissions
 };
 
 const METHOD_EXPORT = { GET: 'onRequestGet', HEAD: 'onRequestGet', POST: 'onRequestPost', DELETE: 'onRequestDelete' };

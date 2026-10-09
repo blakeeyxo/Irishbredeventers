@@ -118,6 +118,63 @@
         <div class="form-done" role="status"></div>
       </form>
     </div>
+
+    <div class="block" id="send-result" hidden>
+      <h3 class="section-title">Send in a result or breeding</h3>
+      <p class="page-intro">Own, bred or ride an Irish-bred horse? Send in a missing result, a correction, or its breeding. It is checked before anything changes on the site, and your contact details are never shown.</p>
+      <form class="form" id="send-result-form">
+        <label>What are you sending in?<select name="kind" required>
+          <option value="missing_result">A missing result</option>
+          <option value="result_correction">A correction to a result</option>
+          <option value="breeding">Breeding (missing or wrong)</option>
+        </select></label>
+        <div class="form-row">
+          <label>Horse's name<input type="text" name="horse_name" required maxlength="120"></label>
+          <label>FEI ID, if you know it<input type="text" name="fei_id" maxlength="10" placeholder="e.g. 109WK62"></label>
+          <label>Year of birth<input type="number" name="foaled_year" min="1970" max="2100"></label>
+        </div>
+        <fieldset class="sr-result" style="border:0;padding:0;margin:0;">
+          <div class="form-row">
+            <label>Date of the class<input type="date" name="date"></label>
+            <label>Show (venue)<input type="text" name="show" maxlength="120" placeholder="e.g. Dublin Horse Show"></label>
+            <label>Country<input type="text" name="country" maxlength="40" placeholder="e.g. Ireland"></label>
+          </div>
+          <div class="form-row">
+            <label>Level<input type="text" name="level" maxlength="30" placeholder="e.g. CSI2*"></label>
+            <label>Class<input type="text" name="class_name" maxlength="120" placeholder="e.g. Grand Prix"></label>
+            <label>Height (cm)<input type="number" name="height_cm" min="60" max="220"></label>
+          </div>
+          <div class="form-row">
+            <label>Placing<input type="number" name="placing" min="1" max="999"></label>
+            <label>Faults<input type="text" name="faults" maxlength="10" placeholder="e.g. 0"></label>
+            <label>Time (seconds)<input type="text" name="time" maxlength="10" placeholder="e.g. 38.12"></label>
+          </div>
+          <div class="form-row">
+            <label>Rider<input type="text" name="rider" maxlength="120"></label>
+            <label>Rider's country<input type="text" name="rider_country" maxlength="3" placeholder="e.g. IRL"></label>
+          </div>
+        </fieldset>
+        <fieldset class="sr-breeding" style="border:0;padding:0;margin:0;" hidden>
+          <div class="form-row">
+            <label>Sire<input type="text" name="sire" maxlength="120" placeholder="e.g. Cruising (ISH)"></label>
+            <label>Dam<input type="text" name="dam" maxlength="120"></label>
+          </div>
+          <div class="form-row">
+            <label>Dam sire<input type="text" name="dam_sire" maxlength="120"></label>
+            <label>Breeder (county)<input type="text" name="breeder" maxlength="160" placeholder="e.g. Mary Brennan (Cork)"></label>
+          </div>
+        </fieldset>
+        <label>Anything else (optional)<textarea name="message" maxlength="2000"></textarea></label>
+        <div class="form-row">
+          <label>Your name<input type="text" name="contact_name" required maxlength="120"></label>
+          <label>Your email<input type="email" name="contact_email" required maxlength="200"></label>
+          <label>You are the horse's<select name="relation"><option value="owner">Owner</option><option value="breeder">Breeder</option><option value="rider">Rider</option><option value="other">Other</option></select></label>
+        </div>
+        <div class="ts-slot"></div>
+        <button class="btn" type="submit">Send</button>
+        <div class="form-done" role="status"></div>
+      </form>
+    </div>
   </section>
 
   <!-- STALLIONS -->
