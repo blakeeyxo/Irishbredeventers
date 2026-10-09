@@ -20,7 +20,7 @@ export const onRequestPost = ({ env, request, data }) => withShared(env, async d
     if (!text.trim()) return bad('Paste one or more FEI pages.');
     if (text.length > 2_000_000) return bad('That is too much at once. Paste fewer pages.');
     if (isFeiList(text) && !/^\s*Name\t/m.test(text)) return json({ kind: 'list', ...(await runFeiList(db, text, { save: Boolean(b.save) })) });
-    const year = Number(b.year) || new Date().getUTCFullYear();
+    const year = Number(b.year) || null; // empty: every year on the page
     return json({ kind: 'results', ...(await runFeiImport(db, text, {
       year, includeUnclear: Array.isArray(b.include_unclear) ? b.include_unclear.map(String) : [], save: Boolean(b.save),
       user: data.user ? data.user.email : '', label: str(b.label, 120)

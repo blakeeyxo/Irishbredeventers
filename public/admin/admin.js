@@ -1774,7 +1774,6 @@
   let feiTicked = [];
   async function loadFei() {
     const f = $('fei-form');
-    if (!f.elements.year.value) f.elements.year.value = new Date().getFullYear();
     try {
       const d = await api('/api/admin/shared/sources');
       const fei = d.sources.find(s => s.slug === 'fei');
@@ -1802,7 +1801,7 @@
     const c = r.counts;
     const OUT = { new: 'New', updated: 'Updated', same: 'Already on file' };
     $('fei-preview').innerHTML = `<div class="summary-box">
-      <p><b>${c.horses} Irish-bred horse${c.horses === 1 ? '' : 's'}</b> with ${r.year} results: ${c.results} new result${c.results === 1 ? '' : 's'}, ${c.updated} updated, ${c.same} already on file
+      <p><b>${c.horses} Irish-bred horse${c.horses === 1 ? '' : 's'}</b> with ${r.year ? `${r.year} ` : ''}results: ${c.results} new result${c.results === 1 ? '' : 's'}, ${c.updated} updated, ${c.same} already on file
         (${c.events} new show${c.events === 1 ? '' : 's'}, ${c.classes} new class${c.classes === 1 ? '' : 'es'}). ${c.horsesNew} new horse record${c.horsesNew === 1 ? '' : 's'}.</p>
       ${r.left.length ? `<p class="meta"><b>Left out:</b></p><ul class="meta">${r.left.map(h => `<li>${esc(h.name)} (${esc(h.fei_id)}): ${esc(h.why)}
         ${h.unclear ? ` <label class="chk"><input type="checkbox" data-fei-tick="${esc(h.fei_id)}" ${feiTicked.includes(h.fei_id) ? 'checked' : ''}> It's Irish-bred, include it</label>` : ''}</li>`).join('')}</ul>` : ''}
