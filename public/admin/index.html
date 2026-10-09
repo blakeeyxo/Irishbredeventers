@@ -307,7 +307,9 @@
         <label>Results from<input type="number" name="year" min="2000" max="2100" placeholder="All years"></label>
         <label>Name for this paste (optional)<input type="text" name="label" maxlength="120" placeholder="e.g. FEI results week of 15 September"></label>
       </div>
-      <label>FEI horse pages<textarea name="text" style="min-height:220px;" placeholder="Horse Performance&#10;Name	ABC MAYFLOWER&#10;FEI ID	109WK62&#10;…"></textarea></label>
+      <label>Saved FEI horse list pages (optional)<input type="file" name="files" id="fei-files" accept=".html,.htm,text/html" multiple></label>
+      <p class="meta" id="fei-files-note">On the FEI horse search results, press Ctrl+S and save as "Webpage, HTML only", once per page of the list. Choose them all here at once: every horse goes on the checklist with a link straight to its FEI results page.</p>
+      <label>Or paste FEI pages<textarea name="text" style="min-height:220px;" placeholder="Horse Performance&#10;Name	ABC MAYFLOWER&#10;FEI ID	109WK62&#10;…"></textarea></label>
       <div class="adm-actions"><button class="btn" type="submit">Check</button><button class="btn alt" type="reset">Clear</button></div>
       <div class="form-done" role="status"></div>
     </form>
@@ -315,7 +317,7 @@
 
     <section class="block" id="fei-checklist">
       <h3>Checklist: horses to look up</h3>
-      <p class="meta">Irish-bred horses from the pasted FEI lists. Copy a horse's FEI ID, find it on the <a href="https://data.fei.org/Horse/Search.aspx" target="_blank" rel="noopener">FEI database</a>, and paste its results page above. Horses looked up longest ago come first, so you can work down the list again through the season.</p>
+      <p class="meta">Irish-bred horses from the FEI lists. Click a horse's name to open its FEI results page (horses from a saved list page have the link; for the rest, copy the FEI ID and find it on the <a href="https://data.fei.org/Horse/Search.aspx" target="_blank" rel="noopener">FEI database</a>), then copy that page and paste it above. Horses looked up longest ago come first, so you can work down the list again through the season.</p>
       <div class="adm-tabs" id="fei-views"></div>
       <form class="form breed-search" id="fei-find" style="max-width:420px;"><label>Find a horse<input type="search" name="q" placeholder="Name or FEI ID"></label></form>
       <div id="fei-list"><p class="meta">Loading…</p></div>
@@ -414,6 +416,6 @@
 
 <script src="/js/site.js?v=1"></script>
 <script src="/js/common.js?v=4"></script>
-<script src="/admin/admin.js?v=29"></script>
+<script src="/admin/admin.js?v=30"></script>
 </body>
 </html>

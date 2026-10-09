@@ -5,7 +5,7 @@
 import { json, bad, readJson, str } from '../../../lib/http.js';
 import { withShared } from '../../../lib/shared-http.js';
 import { runFeiImport, runFeiList, listChecklist, setChecklistStatus } from '../../../lib/sj.js';
-import { isFeiList } from '../../../lib/fei.js';
+import { isFeiList, isFeiListHtml } from '../../../lib/fei.js';
 
 export const onRequestGet = ({ env, request }) => withShared(env, async db => {
   const u = new URL(request.url).searchParams;
@@ -19,7 +19,8 @@ export const onRequestPost = ({ env, request, data }) => withShared(env, async d
     const text = String(b.text || '');
     if (!text.trim()) return bad('Paste one or more FEI pages.');
     if (text.length > 2_000_000) return bad('That is too much at once. Paste fewer pages.');
-    if (isFeiList(text) && !/^\s*Name\t/m.test(text)) return json({ kind: 'list', ...(await runFeiList(db, text, { save: Boolean(b.save) })) });
+    if (isFeiListHtml(text) || (isFeiList(text) && !/^\s*Name\t/m.test(text))) return json({ kind: 'list', ...(await runFeiList(db, text, { save: Boolean(b.save) })) });
+    if (/<html|<tr[\s>]/i.test(text)) return bad('That saved page isn\'t a FEI horse list. Saved horse list pages can be chosen here; a horse\'s results page is still copied and pasted as text.');
     const year = Number(b.year) || null; // empty: every year on the page
     return json({ kind: 'results', ...(await runFeiImport(db, text, {
       year, includeUnclear: Array.isArray(b.include_unclear) ? b.include_unclear.map(String) : [], save: Boolean(b.save),
