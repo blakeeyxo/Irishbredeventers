@@ -52,6 +52,7 @@ export default {
       <p>IrishBredEventingResults (IBER) has tracked the performance of Irish-bred horses across the world's eventing circuits for close to twenty years — first as a set of spreadsheets, then as weekly posts on Horse Sport Ireland and The Irish Field, read by thousands of breeders, owners and riders every week.</p>
       <p>This site is that same weekly results service, given a permanent, searchable home. It stays independent, stays free for breeders and owners to use, and stays in the same voice it's always had.</p>
       <p>Every result traces back to the horse's breeding, so a mare sold as a foal in 2009 is just as easy to find as this week's winner.</p>
+      <p>IrishBredEventingResults is run by Charlie, because he truly loves Irish horses and wants to show the world just how special they are.</p>
     `,
     emailLinkHtml: '<a href="mailto:info@iber.ie">info@iber.ie</a>',
     phoneLinkHtml: '<a href="tel:+353872165442">+353 87 216 5442</a>',
