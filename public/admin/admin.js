@@ -1589,9 +1589,67 @@
   // Horses: one part at a time (breeding missing, add one horse, paste or upload many).
   const showHorsesPart = id => {
     document.querySelectorAll('#hz-tabs [data-hz]').forEach(b => b.classList.toggle('active', b.dataset.hz === id));
-    ['hz-missing', 'hz-add', 'hz-many'].forEach(x => { $(x).hidden = x !== id; });
+    ['hz-missing', 'hz-add', 'hz-many', 'hz-shared'].forEach(x => { $(x).hidden = x !== id; });
+    if (id === 'hz-shared' && !$('hz-shared-list').dataset.loaded) loadSharedHorses();
   };
   $('hz-tabs').addEventListener('click', e => { const b = e.target.closest('[data-hz]'); if (b) showHorsesPart(b.dataset.hz); });
+  // The shared horse database, for the owner only.
+  async function loadSharedHorses() {
+    const f = $('hz-shared-find').elements, list = $('hz-shared-list');
+    list.dataset.loaded = '1'; list.innerHTML = '<p class="meta">Loading…</p>';
+    try {
+      const d = await api(`/api/admin/shared/horses?${new URLSearchParams({ q: f.q.value.trim(), stallions: f.stallions.checked ? '1' : '' })}`);
+      $('hz-shared-count').textContent = d.total > d.horses.length ? `Showing ${d.horses.length} of ${d.total}. Narrow the search to see the rest.` : `${d.total} on file.`;
+      const tagged = (n, b) => (n ? `${n}${b ? ` (${b})` : ''}` : '');
+      list.innerHTML = d.horses.length ? `<div class="table-scroll"><table class="adm-table stack"><tr><th>Horse</th><th>Breeding</th><th>Breeder</th><th>Foals</th><th>Source</th></tr>
+        ${d.horses.map(h => `<tr><td><b>${esc(tagged(h.name, h.studbook))}</b><br><span class="meta">${esc([h.foaled_year, h.sex !== 'unknown' ? h.sex : '', h.colour, h.fei_id, h.ueln].filter(Boolean).join(' · '))}</span></td>
+          <td>${h.sire || h.dam ? `${esc(tagged(h.sire, h.sire_book) || 'UNK')} × ${esc(h.dam || 'UNK')}${h.dam_sire ? `<br><span class="meta">dam by ${esc(tagged(h.dam_sire, h.dam_sire_book))}</span>` : ''}` : '<span class="meta">Not recorded</span>'}</td>
+          <td>${esc(h.breeder ? `${h.breeder}${h.breeder_county ? ` (${h.breeder_county})` : ''}` : '')}</td>
+          <td>${h.progeny ? `<a href="#" data-progeny="${h.id}">${h.progeny}</a>` : '0'}${h.results ? `<br><span class="meta">${h.results} result${h.results === 1 ? '' : 's'}</span>` : ''}</td>
+          <td class="meta">${esc(h.source || '')}${h.can_display ? '' : ' (hidden from visitors)'}</td></tr>
+          <tr class="progeny-row" data-for="${h.id}" hidden><td colspan="5"></td></tr>`).join('')}</table></div>`
+        : '<div class="empty-state">Nothing on file matches.</div>';
+    } catch (e) { list.innerHTML = `<p class="meta">${esc(e.message)}</p>`; }
+  }
+  $('hz-shared-find').addEventListener('submit', e => { e.preventDefault(); loadSharedHorses(); });
+  $('hz-shared-list').addEventListener('click', async e => {
+    const a = e.target.closest('[data-progeny]');
+    if (!a) return;
+    e.preventDefault();
+    const row = $('hz-shared-list').querySelector(`.progeny-row[data-for="${a.dataset.progeny}"]`);
+    if (!row.hidden) { row.hidden = true; return; }
+    row.hidden = false; row.firstElementChild.innerHTML = '<span class="meta">Loading…</span>';
+    const { progeny } = await api(`/api/admin/shared/horses?progeny=${a.dataset.progeny}`);
+    row.firstElementChild.innerHTML = progeny.map(p => `${esc(p.name)} <span class="meta">${esc([p.foaled_year, p.sex !== 'unknown' ? p.sex : '', p.dam ? `out of ${p.dam}${p.dam_sire ? ` by ${p.dam_sire}` : ''}` : ''].filter(Boolean).join(' · '))}</span>`).join('<br>');
+  });
+
+  // IBER: fill gaps in its breeding records from the shared horse database (check first, then fill).
+  if (!(window.SITE && window.SITE.discipline === 'showjumping')) $('hz-fill').hidden = false;
+  $('hz-fill-check').addEventListener('click', async () => {
+    const box = $('hz-fill-list');
+    box.innerHTML = '<p class="meta">Checking…</p>';
+    try {
+      const { plan } = await api('/api/admin/breeding?fill=1');
+      if (!plan.length) { box.innerHTML = '<p class="meta">Nothing to fill: no horse with breeding missing matches one in the shared database for certain.</p>'; return; }
+      const L = { sire: 'Sire', dam: 'Dam', dam_sire: 'Dam sire', breeder: 'Breeder' };
+      box.innerHTML = `<p><b>${plan.length} horse${plan.length === 1 ? '' : 's'}</b> can be filled in. Untick any you don't want.</p>
+        <div class="table-scroll"><table class="adm-table stack"><tr><th></th><th>Horse</th><th>Fills in</th></tr>
+        ${plan.map(p => `<tr><td><input type="checkbox" checked data-fill="${p.id}"></td><td><b>${esc(p.name)}</b> <span class="meta">${esc(p.birth_year || '')}${p.runs ? ` · ${p.runs} result${p.runs === 1 ? '' : 's'}` : ''}</span></td>
+          <td>${Object.entries(p.adds).map(([k, v]) => `${L[k]}: <b>${esc(v)}</b>`).join('<br>')}</td></tr>`).join('')}</table></div>
+        <div class="adm-actions"><button class="btn" type="button" id="hz-fill-go">Fill these in</button><span class="meta" id="hz-fill-msg"></span></div>`;
+      $('hz-fill-go').addEventListener('click', async () => {
+        const ids = [...box.querySelectorAll('[data-fill]:checked')].map(x => Number(x.dataset.fill));
+        if (!ids.length) return;
+        $('hz-fill-go').disabled = true; $('hz-fill-msg').textContent = 'Filling…';
+        try {
+          const r = await api('/api/admin/breeding', { method: 'POST', body: { action: 'fill', ids } });
+          box.innerHTML = `<p>✓ Filled in ${r.filled} horse${r.filled === 1 ? '' : 's'}. Their results on the site show the new breeding.${r.filled < ids.length ? ' Press Check again for the rest.' : ''}</p>`;
+          loadBreeding();
+        } catch (err) { $('hz-fill-msg').textContent = err.message; $('hz-fill-go').disabled = false; }
+      });
+    } catch (err) { box.innerHTML = `<p class="meta">${esc(err.message)}</p>`; }
+  });
+
   // Add one horse: the form becomes a one-row upload, checked and saved the same way (preview under "Paste or upload many").
   $('hz-add-form').addEventListener('submit', e => {
     e.preventDefault();
