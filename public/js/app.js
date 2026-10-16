@@ -1,6 +1,6 @@
 /* Public site for IrishBredEventingResults (IBER) and its sister sites; names come from js/site.js. */
 (function () {
-  const { esc, api, ordinal, niceDate, turnstileReady, mountTurnstile, waitForTurnstile, resetTurnstile, framePhoto, picture } = window.IBE;
+  const { esc, api, ordinal, niceDate, turnstileReady, mountTurnstile, mountVisibleTurnstiles, waitForTurnstile, resetTurnstile, framePhoto, picture } = window.IBE;
   const $ = id => document.getElementById(id);
   const SITE = window.SITE.name;
   const SHORT = window.SITE.short;
@@ -85,6 +85,8 @@
     renderAds(r.view);
     if (r.view === 'news') renderNews().then(() => { if (r.id) openArticle(Number(r.id)); });
     if (r.hash) setTimeout(() => { const el = document.querySelector(r.hash); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 60);
+    // The spam check in the forms this page now shows (forms drawn later, like an ad's, mount themselves).
+    setTimeout(mountVisibleTurnstiles, 0);
   }
 
   document.addEventListener('click', e => {
@@ -1105,7 +1107,6 @@
     });
     try { state.config = await api('/api/config'); } catch { /* keep defaults */ }
     turnstileReady(state.config.turnstileSiteKey);
-    document.querySelectorAll('form .ts-slot').forEach(s => mountTurnstile(s.closest('form')));
     render();
     try { [state.ads, state.links] = await Promise.all([api('/api/ads'), api('/api/links').then(d => d.links || []).catch(() => [])]); } catch { /* the slots show as available */ }
     state.adsLoaded = true;

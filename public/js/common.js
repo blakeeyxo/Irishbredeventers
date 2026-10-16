@@ -65,19 +65,27 @@
     }
     return tsReady;
   }
-  function mountTurnstile(form) {
-    const slot = form.querySelector('.ts-slot');
-    if (!tsKey || !slot || slot.dataset.mounted) return;
-    slot.dataset.mounted = '1';
-    tsReady.then(() => {
-      slot.dataset.widget = window.turnstile.render(slot, {
-        sitekey: tsKey, appearance: 'interaction-only',
-        // Cloudflare's own error code (e.g. 110200: this site's address isn't on the widget's hostname list).
-        'error-callback': code => { slot.dataset.error = String(code || 'unknown'); return true; },
-        'expired-callback': () => { try { window.turnstile.reset(slot.dataset.widget); } catch { /* re-rendered below */ } },
-        callback: () => { delete slot.dataset.error; }
-      });
+  // Cloudflare's check never finishes in a form that isn't on screen, so a widget is only drawn once its form shows
+  // (forms on other pages or in a hidden part of a page are drawn when they're opened, or when they're sent).
+  const onScreen = el => !!(el && el.getClientRects().length);
+  function drawWidget(slot) {
+    slot.dataset.widget = window.turnstile.render(slot, {
+      sitekey: tsKey, appearance: 'interaction-only',
+      // Cloudflare's own error code (e.g. 110200: this site's address isn't on the widget's hostname list).
+      'error-callback': code => { slot.dataset.error = String(code || 'unknown'); return true; },
+      'expired-callback': () => { try { window.turnstile.reset(slot.dataset.widget); } catch { /* drawn again when sent */ } },
+      callback: () => { delete slot.dataset.error; }
     });
+  }
+  function mountTurnstile(form) {
+    const slot = form && form.querySelector('.ts-slot');
+    if (!tsKey || !slot || slot.dataset.mounted || !onScreen(slot)) return;
+    slot.dataset.mounted = '1';
+    tsReady.then(() => drawWidget(slot));
+  }
+  /** Draws the check in every form now on screen (called after each page change). */
+  function mountVisibleTurnstiles() {
+    document.querySelectorAll('form .ts-slot:not([data-mounted])').forEach(s => mountTurnstile(s.closest('form')));
   }
   function turnstileToken(form) {
     const slot = form.querySelector('.ts-slot');
@@ -92,11 +100,17 @@
     const slot = form.querySelector('.ts-slot');
     if (!tsKey || !slot) return { token: '' };
     mountTurnstile(form);
+    await tsReady;
     for (let i = 0; i < 80; i++) {
       const t = turnstileToken(form);
       if (t) return { token: t };
       if (slot.dataset.error) break;
-      if (i === 40 && slot.dataset.widget && window.turnstile.isExpired && window.turnstile.isExpired(slot.dataset.widget)) window.turnstile.reset(slot.dataset.widget);
+      // Stuck (drawn while hidden, or run out): draw it again, now that the form is on screen.
+      if (i === 12 || i === 48) {
+        try { if (slot.dataset.widget) window.turnstile.remove(slot.dataset.widget); } catch { /* already gone */ }
+        slot.innerHTML = ''; slot.dataset.mounted = '1';
+        drawWidget(slot);
+      }
       await new Promise(r => setTimeout(r, 250));
     }
     if (slot.dataset.error) return { error: `The spam check couldn't load on this page (Cloudflare error ${slot.dataset.error}). Please reload the page and try again.` };
@@ -213,5 +227,5 @@
     return `<picture><source media="(max-width: 720px)" srcset="${esc(phone)}"><img src="${esc(src)}" ${attrs}></picture>`;
   }
 
-  window.IBE = { esc, api, ordinal, niceDate, scoreText, breedingText, turnstileReady, mountTurnstile, turnstileToken, waitForTurnstile, resetTurnstile, framePhoto, phoneKey, picture };
+  window.IBE = { esc, api, ordinal, niceDate, scoreText, breedingText, turnstileReady, mountTurnstile, mountVisibleTurnstiles, turnstileToken, waitForTurnstile, resetTurnstile, framePhoto, phoneKey, picture };
 })();
