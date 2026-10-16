@@ -44,6 +44,7 @@ export default {
     adminNameHtml: 'IrishBred<span>Eventing</span>Results',
     heroHeadline: 'Irish-bred eventing results, every week',
     heroCopy: 'Every Irish-bred horse placed in eventing worldwide, with its breeding and breeder.',
+    legendScoreTitle: 'Score',
     legendScore: 'Dressage, show jumping and cross country penalties, then the final score. Lowest wins.',
     correctionExample: 'e.g. Thoresby, CCI4*-S Section G',
     aboutPhotoHtml: '<img src="/img/xc-jump.jpg" alt="An Irish-bred horse jumping a cross-country fence">',

@@ -97,7 +97,7 @@
       <div class="legend-grid">
         <div><b>Pl</b><p>The horse's placing in the whole class, not just among Irish-breds, so numbers can skip.</p></div>
         <div><b>Sire × Dam</b><p>The dam's own sire is shown underneath as "dam by …".</p></div>
-        <div><b>Score</b><p data-site="legendScore">Dressage, show jumping and cross country penalties, then the final score. Lowest wins.</p></div>
+        <div><b data-site="legendScoreTitle">Score</b><p data-site="legendScore">Dressage, show jumping and cross country penalties, then the final score. Lowest wins.</p></div>
         <div><b>Former names</b><p>Shown under the horse and included in search.</p></div>
         <div><b>OIO</b><p>Of Irish Origin: part of the horse's breeding (sire, dam or dam sire) is not recorded.</p></div>
         <div><b>UNK</b><p>Unknown: a sire, dam, dam sire or breeder that isn't recorded.</p></div>
@@ -146,8 +146,7 @@
           </div>
           <div class="form-row">
             <label>Placing<input type="number" name="placing" min="1" max="999"></label>
-            <label>Faults<input type="text" name="faults" maxlength="10" placeholder="e.g. 0"></label>
-            <label>Time (seconds)<input type="text" name="time" maxlength="10" placeholder="e.g. 38.12"></label>
+            <label>Owner<input type="text" name="owner" maxlength="160"></label>
           </div>
           <div class="form-row">
             <label>Rider<input type="text" name="rider" maxlength="120"></label>

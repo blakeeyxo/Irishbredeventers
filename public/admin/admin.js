@@ -1,11 +1,13 @@
 /* Owner area. Every action works on a phone. */
 (function () {
   const { esc, api, ordinal, niceDate, scoreText } = window.IBE;
+  // The showjumping site (IBSR) records placings only (no scores, faults or times), and each horse's owner.
+  const JUMPING = window.SITE && window.SITE.discipline === 'showjumping';
   const $ = id => document.getElementById(id);
 
   /* ---------- Tabs ---------- */
   let countryList = [];
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, horses: () => { loadBreeding(); loadShared(); }, fei: () => loadFei(), forsale: () => loadForSale(), analytics: () => loadAnalytics(), messages: () => { loadSubmissions(); loadComments(); loadCorrections(); loadEnquiries(); } };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, horses: () => { loadBreeding(); loadShared(); }, forsale: () => loadForSale(), analytics: () => loadAnalytics(), messages: () => { loadSubmissions(); loadComments(); loadCorrections(); loadEnquiries(); } };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -107,7 +109,7 @@
     ['foaled', 'Year'], ['sex', 'Sex'], ['sire', 'Sire'], ['sire_breed', 'Sire code'], ['sire_tih', 'Sire TIH', 'check'],
     ['dam', 'Dam'], ['dam_breed', 'Dam code'], ['dam_tih', 'Dam TIH', 'check'], ['dam_sire', 'Dam sire'], ['dam_sire_breed', 'Dam sire code'],
     ['dam_sire_tih', 'Dam sire TIH', 'check'], ['breeder', 'Breeder'], ['breeder_county', 'County'], ['rider_name', 'Rider'], ['rider_country', 'Rider country'],
-    ['dressage', 'Dressage'], ['show_jumping', 'Show jumping'], ['cross_country', 'Cross country'], ['score', 'Total'],
+    ...(JUMPING ? [['owner', 'Owner']] : [['dressage', 'Dressage'], ['show_jumping', 'Show jumping'], ['cross_country', 'Cross country'], ['score', 'Total']]),
     ['class_name', 'Class'], ['event_name', 'Event'], ['country', 'Country'], ['start_date', 'Event start (YYYY-MM-DD)']
   ];
 
@@ -134,7 +136,7 @@
       <td data-label="Sire × Dam">${tagged(r.sire, r.sire_breed, r.sire_tih)} × ${tagged(r.dam, r.dam_breed, r.dam_tih)}<br><small>dam by ${r.dam_sire ? tagged(r.dam_sire, r.dam_sire_breed, r.dam_sire_tih) : '–'}</small></td>
       <td data-label="Breeder">${r.breeder ? esc(r.breeder) : '–'}${r.breeder_county ? `<br><small>${esc(r.breeder_county)}</small>` : ''}</td>
       <td data-label="Rider">${esc(r.rider_name || '–')}${r.rider_country ? ` <small>${esc(r.rider_country)}</small>` : ''}</td>
-      <td data-label="Score">${esc(scoreText(r) || '–')}</td>
+      ${JUMPING ? `<td data-label="Owner">${esc(r.owner || '–')}</td>` : `<td data-label="Score">${esc(scoreText(r) || '–')}</td>`}
       <td data-label="Event">${esc(r.event_name || '?')}<br><small>${esc(r.class_name || '?')} · ${esc(r.country || '?')}</small>
         ${r.issues.length ? `<div class="iss">⚠ Row ${i + 1}: ${r.issues.map(x => esc(plainIssue(x))).join(' ')}</div>` : ''}
         ${r.warnings.length ? `<div class="adm-warn">${esc(r.warnings.join('; '))}</div>` : ''}</td>
@@ -197,7 +199,7 @@
       ${questionsHTML()}
       <div class="adm-bar"><label class="chk"><input type="checkbox" id="imp-only" ${imp.onlyProblems ? 'checked' : ''}> Show only rows with warnings</label>
         <span>New on file if saved: ${nc.horses ?? '…'} horses, ${nc.sires ?? '…'} sires, ${nc.dams ?? '…'} dams, ${nc.breeders ?? '…'} breeders</span></div>
-      <div class="table-scroll"><table class="adm-table stack imp-table"><tr><th>Place</th><th>Horse</th><th>Sire × Dam</th><th>Breeder</th><th>Rider</th><th>Score</th><th>Event · class</th><th></th></tr>
+      <div class="table-scroll"><table class="adm-table stack imp-table"><tr><th>Place</th><th>Horse</th><th>Sire × Dam</th><th>Breeder</th><th>Rider</th><th>${JUMPING ? 'Owner' : 'Score'}</th><th>Event · class</th><th></th></tr>
       ${shown.map(([r, i]) => rowHTML(r, i)).join('')}</table></div>
       ${imp.notes.length ? `<details class="adm-notes"><summary>${imp.notes.length} line${imp.notes.length === 1 ? '' : 's'} not used (commentary or notes)</summary>${imp.notes.map(n => `<p>${esc(n)}</p>`).join('')}</details>` : ''}
       <div class="form confirm-box">
@@ -254,6 +256,8 @@
     };
     r.issues = r.issues.filter(x => (x.startsWith('Could not tell') ? !r.breeder : !solved[x]));
     const warnSolved = { 'No breeder given': !!r.breeder, 'No dam sire given': !!r.dam_sire, 'No scores given': r.score !== null && r.score !== '', 'Sire unknown': !!r.sire };
+    // A showjumping row's own doubts (two placings, a class heading or a year not recognised) go once it's been checked and fixed.
+    if (JUMPING) r.issues = r.issues.filter(x => !/^(Two placings given|Class heading not recognised|Year ")/.test(x));
     r.warnings = r.warnings.filter(x => !warnSolved[x]);
   }
 
@@ -339,7 +343,8 @@
 
   /* ---------- Unverified ---------- */
   const FIELDS = [['position', 'Pos'], ['horse_name', 'Horse'], ['former_name', 'Former name(s)'], ['breed', 'Breed'], ['foaled', 'Foaled'], ['sex', 'Sex'],
-    ['sire', 'Sire'], ['dam', 'Dam'], ['dam_sire', 'Dam sire'], ['breeder', 'Breeder'], ['dressage', 'Dressage'], ['show_jumping', 'Show jumping'], ['cross_country', 'Cross country'], ['score', 'Final score']];
+    ['sire', 'Sire'], ['dam', 'Dam'], ['dam_sire', 'Dam sire'], ['breeder', 'Breeder'],
+    ...(JUMPING ? [['owner_name', 'Owner']] : [['dressage', 'Dressage'], ['show_jumping', 'Show jumping'], ['cross_country', 'Cross country'], ['score', 'Final score']])];
 
   // One result as an editable card: in the Unverified tab (check = true: a Verified tick box and no buttons, nothing
   // saved until Done), and under an upload opened with Edit (check = false: Save buttons). Always called with
@@ -366,7 +371,7 @@
           <b>${esc(resultLabel(r))}</b></div>
         ${eventHeading(r)}
         <ul class="problems">${(r.problems || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>
-        ${r.raw_line ? `<p class="meta">As written in the article: ${esc(r.raw_line)}</p>` : ''}
+        ${r.raw_line ? `<p class="meta">As written ${JUMPING ? 'in the file' : 'in the article'}: ${esc(r.raw_line)}</p>` : ''}
         <div class="adm-row-edit">${FIELDS.map(([k, l]) => `<label>${l}<input name="${k}" value="${esc(r[k] ?? '')}"></label>`).join('')}</div>
         ${eventFixHTML(r)}
         <div class="adm-actions"><button class="btn sm alt" data-act="remove">Delete this result</button><span class="form-done" role="status"></span></div></form>`;
@@ -1226,9 +1231,6 @@
   const taggedName = (name, breed, tih) => name ? `${name}${breed ? ` (${breed})` : ''}${tih ? '[TIH]' : ''}` : '';
   const MISSING_LABEL = { sire: 'sire', dam: 'dam', dam_sire: 'dam sire', breeder: 'breeder' };
   // The same fields for a horse and for a stallion (a stallion has no sex to choose, and can be joined into another spelling).
-  // The showjumping site keeps its horses in the shared database: no TIH flag there.
-  const SJ = window.SITE && window.SITE.discipline === 'showjumping';
-  if (SJ) $('breed-sheet').hidden = false;
   function breedCard(h, stallion = false) {
     const v = stallion
       ? { sire: h.ped_sire, dam: h.ped_dam, dam_sire: h.ped_dam_sire, breeder: h.ped_breeder }
@@ -1252,7 +1254,7 @@
         <label>Year of birth<input name="birth_year" type="number" min="1950" max="2100" value="${esc(h.birth_year ?? '')}"></label>
         ${sexBox}
         <label>Breed<input name="breed" value="${esc(h.breed_code || '')}" placeholder="e.g. ISH" maxlength="8"></label>
-        ${SJ ? '' : `<label class="chk"><input type="checkbox" name="tih" value="1"${h.tih_flag ? ' checked' : ''}> Traditional Irish Horse [TIH]</label>`}
+        <label class="chk"><input type="checkbox" name="tih" value="1"${h.tih_flag ? ' checked' : ''}> Traditional Irish Horse [TIH]</label>
         ${stallion ? `<label class="join-into">Same stallion under another spelling? Join into<input name="merge_into" list="breed-sires" placeholder="${h.similar[0] ? esc(h.similar[0]) : 'Leave empty'}"></label>` : ''}
       </div>
       <div class="adm-actions"><button class="btn sm" type="submit">${stallion ? 'Save stallion' : 'Save breeding'}</button>
@@ -1443,7 +1445,7 @@
       return `<div class="adm-card" data-sub="${x.id}">
         <b>${esc(SUB_KIND[x.kind] || x.kind)}: ${esc(x.horse_name)}</b> <span class="meta">${x.fei_id ? `${esc(x.fei_id)} · ` : ''}${x.foaled_year ? `${x.foaled_year} · ` : ''}${esc(niceDate(x.created_at))}</span>
         ${r ? `<div class="breed-grid" style="margin:8px 0;">${row('Date', r.date)}${row('Show', [r.show, r.country].filter(Boolean).join(', '))}${row('Class', [r.level, r.class_name, r.height_cm ? `${r.height_cm}cm` : ''].filter(Boolean).join(' · '))}
-          ${row('Placing', r.placing)}${row('Faults / time', [r.faults, r.time].filter(Boolean).join(' / '))}${row('Rider', [r.rider, r.rider_country].filter(Boolean).join(' '))}</div>` : ''}
+          ${row('Placing', r.placing)}${row('Owner', r.owner)}${row('Rider', [r.rider, r.rider_country].filter(Boolean).join(' '))}</div>` : ''}
         ${b ? `<div class="breed-grid" style="margin:8px 0;">${row('Sire', b.sire)}${row('Dam', b.dam)}${row('Dam sire', b.dam_sire)}${row('Breeder', b.breeder)}</div>` : ''}
         ${x.message ? `<p style="margin:6px 0;white-space:pre-wrap;">${esc(x.message)}</p>` : ''}
         <div class="meta">From ${esc(x.contact_name)} (${esc(x.relation || 'other')}) · <a href="mailto:${esc(x.contact_email)}">${esc(x.contact_email)}</a></div>
@@ -1623,8 +1625,8 @@
     row.firstElementChild.innerHTML = progeny.map(p => `${esc(p.name)} <span class="meta">${esc([p.foaled_year, p.sex !== 'unknown' ? p.sex : '', p.dam ? `out of ${p.dam}${p.dam_sire ? ` by ${p.dam_sire}` : ''}` : ''].filter(Boolean).join(' · '))}</span>`).join('<br>');
   });
 
-  // IBER: fill gaps in its breeding records from the shared horse database (check first, then fill).
-  if (!(window.SITE && window.SITE.discipline === 'showjumping')) $('hz-fill').hidden = false;
+  // Fill gaps in the site's breeding records from the shared horse database (check first, then fill).
+  $('hz-fill').hidden = false;
   $('hz-fill-check').addEventListener('click', async () => {
     const box = $('hz-fill-list');
     box.innerHTML = '<p class="meta">Checking…</p>';
@@ -1893,198 +1895,6 @@
     finally { btn.disabled = false; }
   });
 
-  /* ---------- FEI results (showjumping site): FEI horse pages pasted in → shared database ---------- */
-  // On the showjumping site results come only from FEI pages, so the eventing Results and Unverified tabs step aside
-  // and the owner area opens on FEI results.
-  if (window.SITE && window.SITE.discipline === 'showjumping') {
-    for (const k of ['results', 'unverified']) document.querySelector(`#adm-tabs [data-a="${k}"]`).hidden = true;
-    const fei = document.querySelector('#adm-tabs [data-a="fei"]');
-    fei.hidden = false;
-  }
-  let feiTicked = [];
-  async function loadFei() {
-    const f = $('fei-form');
-    loadAuto();
-    try {
-      const d = await api('/api/admin/shared/sources');
-      const fei = d.sources.find(s => s.slug === 'fei');
-      $('fei-visible').innerHTML = fei && fei.can_display
-        ? 'FEI results are <b>shown</b> on the site (FEI agreed to their reuse).'
-        : 'FEI results are saved but <b>hidden from visitors</b> until the FEI terms are confirmed. When they are, tick "Can show on the sites" for the FEI source under <b>Horses → Sources</b>.';
-    } catch (e) { $('fei-visible').textContent = e.message; }
-    loadChecklist();
-  }
-  async function feiSend(save) {
-    const f = $('fei-form'), done = f.querySelector('.form-done');
-    btnMsg(done, save ? 'Saving…' : 'Checking…');
-    try {
-      const r = await api('/api/admin/fei', { method: 'POST', body: { text: feiSaved || f.elements.text.value, year: f.elements.year.value, label: f.elements.label.value, include_unclear: feiTicked, save } });
-      const msg = !save ? '' : r.kind === 'list'
-        ? (r.saved ? `Added ${r.added} horses to the checklist${r.linked ? `; ${r.linked} with their FEI link` : ''}.` : 'Nothing new to add: these horses are already on the checklist.')
-        : (r.saved ? `Saved: ${r.counts.results} results added, ${r.counts.updated} updated.` : r.message);
-      btnMsg(done, msg);
-      renderFei(r, save && r.saved);
-      if (save) { loadFei(); if (r.saved && feiSaved) { feiSaved = ''; $('fei-perf-files').value = ''; } }
-    } catch (e) { btnMsg(done, e.message); }
-  }
-  function renderFei(r, saved) {
-    if (r.kind === 'list') return renderFeiList(r, saved);
-    const c = r.counts;
-    const OUT = { new: 'New', updated: 'Updated', same: 'Already on file' };
-    $('fei-preview').innerHTML = `<div class="summary-box">
-      <p><b>${c.horses} Irish-bred horse${c.horses === 1 ? '' : 's'}</b> with ${r.year ? `${r.year} ` : ''}results: ${c.results} new result${c.results === 1 ? '' : 's'}, ${c.updated} updated, ${c.same} already on file
-        (${c.events} new show${c.events === 1 ? '' : 's'}, ${c.classes} new class${c.classes === 1 ? '' : 'es'}). ${c.horsesNew} new horse record${c.horsesNew === 1 ? '' : 's'}.</p>
-      ${r.left.length ? `<p class="meta"><b>Left out:</b></p><ul class="meta">${r.left.map(h => `<li>${esc(h.name)} (${esc(h.fei_id)}): ${esc(h.why)}
-        ${h.unclear ? ` <label class="chk"><input type="checkbox" data-fei-tick="${esc(h.fei_id)}" ${feiTicked.includes(h.fei_id) ? 'checked' : ''}> It's Irish-bred, include it</label>` : ''}</li>`).join('')}</ul>` : ''}
-      ${r.problems.map(p => `<p class="meta">${esc(p.message)}</p>`).join('')}
-      ${saved ? '' : `<div class="adm-actions"><button class="btn" type="button" id="fei-save" ${c.results || c.updated || c.horsesNew ? '' : 'disabled'}>Save</button></div>`}
-    </div>
-    ${r.horses.map(h => `<h4 style="margin:16px 0 4px;">${esc(h.name)} <span class="meta">${esc(h.fei_id)} · ${h.horse === 'new' ? 'new horse record' : h.horse === 'held' ? 'needs a decision' : 'matched to the horse on file'}</span></h4>
-      ${h.notes && h.notes.length ? `<p class="adm-warn">${h.notes.map(esc).join('<br>')}</p>` : ''}
-      ${h.results.length ? `<div class="table-scroll"><table class="adm-table stack imp-table"><tr><th>Date</th><th>Show</th><th>Level</th><th>Class</th><th>Pl</th><th>Score</th><th>Rider</th><th></th></tr>
-      ${h.results.map(x => `<tr class="${x.outcome === 'same' ? 'skip' : ''}"><td>${esc(niceDate(x.date))}</td><td>${esc(x.show)} (${esc(x.country)})</td><td>${esc(x.event)}</td><td>${esc(x.class)}</td>
-        <td>${x.position ? esc(ordinal(x.position)) : esc(x.status || '–')}</td><td>${esc(x.score)}</td><td>${esc(x.rider)}</td><td>${OUT[x.outcome]}</td></tr>`).join('')}</table></div>` : ''}`).join('')}`;
-    $('fei-preview').querySelectorAll('[data-fei-tick]').forEach(b => b.addEventListener('change', () => {
-      feiTicked = b.checked ? [...feiTicked, b.dataset.feiTick] : feiTicked.filter(x => x !== b.dataset.feiTick);
-      feiSend(false);
-    }));
-    const save = $('fei-save');
-    if (save) save.addEventListener('click', () => feiSend(true));
-  }
-  function renderFeiList(r, saved) {
-    $('fei-preview').innerHTML = `<div class="summary-box">
-      <p><b>An FEI horse list: ${r.total} horses.</b> ${r.irish} Irish-bred (Irish studbook), ${r.unclear} with no studbook, ${r.notIrish} bred elsewhere (left out).</p>
-      <p>${r.added} new to the checklist${r.already ? `, ${r.already} already on it` : ''}.${r.unclear ? ` The ${r.unclear} with no studbook go under <b>No studbook</b> for you to decide: ${esc(r.unclearNames.join(', '))}.` : ''}</p>
-      ${r.problems.map(p => `<p class="meta">${esc(p.message)}</p>`).join('')}
-      ${saved ? '' : `<div class="adm-actions"><button class="btn" type="button" id="fei-save" ${r.added ? '' : 'disabled'}>Add to the checklist</button></div>`}
-    </div>`;
-    const save = $('fei-save');
-    if (save) save.addEventListener('click', () => feiSend(true));
-  }
-
-  let feiView = 'to_check';
-  const FEI_VIEWS = [['to_check', 'Following'], ['never', 'Not read yet'], ['unclear', 'No studbook'], ['skip', 'Left out']];
-  async function loadChecklist() {
-    let d;
-    try { d = await api(`/api/admin/fei?view=${feiView}&q=${encodeURIComponent($('fei-find').elements.q.value)}`); }
-    catch (e) { $('fei-list').innerHTML = `<p class="meta">${esc(e.message)}</p>`; return; }
-    $('fei-views').innerHTML = FEI_VIEWS.map(([k, label]) => `<button class="chip${k === feiView ? ' active' : ''}" type="button" data-fei-view="${k}">${label} <span class="meta">${d.counts[k] || 0}</span></button>`).join('');
-    $('fei-views').querySelectorAll('[data-fei-view]').forEach(b => b.addEventListener('click', () => { feiView = b.dataset.feiView; loadChecklist(); }));
-    const age = y => (y ? `${new Date().getFullYear() - Number(y.slice(0, 4))} yrs` : '');
-    $('fei-list').innerHTML = d.horses.length ? `<div class="table-scroll"><table class="adm-table stack"><tr><th>FEI ID</th><th>Horse</th><th>Studbook</th><th></th><th>Looked up</th><th></th></tr>
-      ${d.horses.map(h => `<tr><td><b>${esc(h.fei_id)}</b> <button class="btn-quiet" type="button" data-copy="${esc(h.fei_id)}">Copy</button></td>
-        <td>${h.fei_url ? `<a href="${esc(h.fei_url)}" target="_blank" rel="noopener">${esc(h.name)} ↗</a>` : esc(h.name)}</td><td>${esc(h.studbook || '–')}</td><td class="meta">${esc([h.sex, age(h.foaled), h.nf].filter(Boolean).join(' · '))}</td>
-        <td>${h.last_pasted_at ? `${esc(niceDate(h.last_pasted_at))} · ${h.results_found} result${h.results_found === 1 ? '' : 's'}` : '<span class="meta">Not yet</span>'}</td>
-        <td>${h.status === 'unclear' ? `<button class="btn alt" type="button" data-fei-status="to_check" data-fei="${esc(h.fei_id)}">It's Irish-bred</button> <button class="btn-quiet" type="button" data-fei-status="skip" data-fei="${esc(h.fei_id)}">Leave out</button>`
-          : h.status === 'to_check' ? `<button class="btn-quiet" type="button" data-fei-status="skip" data-fei="${esc(h.fei_id)}">Leave out</button>`
-          : `<button class="btn-quiet" type="button" data-fei-status="to_check" data-fei="${esc(h.fei_id)}">Put back</button>`}</td></tr>`).join('')}</table></div>
-      ${d.horses.length >= 200 ? '<p class="meta">Showing the first 200. Use Find to look for a horse.</p>' : ''}` : '<p class="meta">None here.</p>';
-    $('fei-list').querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; } catch { b.textContent = b.dataset.copy; }
-      setTimeout(() => { b.textContent = 'Copy'; }, 1500);
-    }));
-    $('fei-list').querySelectorAll('[data-fei-status]').forEach(b => b.addEventListener('click', async () => {
-      await api('/api/admin/fei', { method: 'POST', body: { action: 'status', fei_id: b.dataset.fei, status: b.dataset.feiStatus } });
-      loadChecklist();
-    }));
-  }
-  let feiFindTimer = null;
-  $('fei-find').addEventListener('input', () => { clearTimeout(feiFindTimer); feiFindTimer = setTimeout(loadChecklist, 300); });
-  $('fei-find').addEventListener('submit', e => { e.preventDefault(); loadChecklist(); });
-  $('fei-form').addEventListener('submit', e => { e.preventDefault(); feiTicked = []; feiSend(false); });
-  $('fei-form').addEventListener('reset', () => { feiTicked = []; feiSaved = ''; $('fei-preview').innerHTML = ''; });
-  // Saved FEI list pages: only their horse rows are sent (a saved page is mostly scripts and styles).
-  let feiSaved = '';
-  $('fei-form').elements.text.addEventListener('input', () => { if (feiSaved) { feiSaved = ''; $('fei-perf-files').value = ''; } });
-  // Saved FEI pages. A saved page is mostly scripts and styles, so only what's read is sent: a horse list's rows, or a
-  // horse results page's tables.
-  const stripPage = t => t.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<select[\s\S]*?<\/select>|<!--[\s\S]*?-->|<link[^>]*>|<img[^>]*>/gi, '');
-  // Step 1: saved FEI list pages are added straight away (only their horse rows are sent).
-  $('fei-files').addEventListener('change', async e => {
-    const files = [...e.target.files], note = $('fei-files-note');
-    if (!files.length) return;
-    const pages = await Promise.all(files.map(f => f.text()));
-    const rows = pages.flatMap(t => t.match(/<tr[^>]*>[\s\S]*?<\/tr>/g) || []).filter(t => /_lblResID_\d/.test(t));
-    e.target.value = '';
-    if (!rows.length) { note.textContent = 'No FEI horse list in those files. On the FEI horse search results, press Ctrl+S and save as "Webpage, HTML only".'; return; }
-    note.textContent = `Adding ${rows.length} horses…`;
-    try {
-      const r = await api('/api/admin/fei', { method: 'POST', body: { text: `<table>${rows.join('\n')}</table>`, save: true } });
-      note.textContent = `Done: ${r.added} new horse${r.added === 1 ? '' : 's'} followed${r.already ? `, ${r.already} already followed` : ''}${r.notIrish ? `, ${r.notIrish} not Irish-bred left out` : ''}.`;
-      loadFei();
-    } catch (err) { note.textContent = err.message; }
-  });
-  // "Add results by hand": saved FEI horse results pages for the form under More options.
-  $('fei-perf-files').addEventListener('change', async e => {
-    const pages = (await Promise.all([...e.target.files].map(f => f.text()))).filter(t => /Horse Performance/.test(t));
-    feiSaved = pages.map(t => { const x = stripPage(t); const i = x.indexOf('Horse Performance'); return `<table><tr><td>${i < 0 ? x : x.slice(i)}</td></tr></table>`; }).join('\n');
-    btnMsg($('fei-form').querySelector('.form-done'), pages.length ? `${pages.length} saved results page${pages.length === 1 ? '' : 's'} chosen. Press Check.` : 'No FEI horse results page in those files.');
-  });
-
-  /* ---------- Automatic FEI reader ---------- */
-  const READER_NAMES = { fei: 'FEI results' };
-  const OUTCOME = { saved: 'Saved', nothing_new: 'Nothing new', not_found: 'Not found', failed: 'Failed', held: 'Needs you' };
-  function renderReaders(readers) {
-    $('auto-readers').innerHTML = readers.map(r => `<form class="form auto-reader" data-slug="${esc(r.slug)}">
-      <div class="breed-head"><b>${esc(READER_NAMES[r.slug] || r.slug)}</b>
-        ${r.enabled ? '<span class="st st-live">On</span>' : '<span class="st st-held">Off</span>'}
-        <span class="meta">${r.today} horse${r.today === 1 ? '' : 's'} read today${Object.keys(r.outcomes).length ? ` (${Object.entries(r.outcomes).map(([k, n]) => `${n} ${(OUTCOME[k] || k).toLowerCase()}`).join(', ')})` : ''}</span></div>
-      <div class="form-row">
-        <label class="chk"><input type="checkbox" name="enabled" ${r.enabled ? 'checked' : ''}> Switched on</label>
-        <label>Horses a day (at most ${r.max_daily})<input type="number" name="daily_limit" min="1" max="${r.max_daily}" value="${r.daily_limit}"></label>
-      </div>
-      <div class="adm-actions"><button class="btn sm" type="submit">Save</button></div>
-      <div class="form-done" role="status"></div>
-      ${r.recent.length ? `<details><summary>Latest horses read</summary><div class="table-scroll"><table class="adm-table stack"><tr><th>Horse</th><th></th><th>When</th></tr>
-        ${r.recent.map(x => `<tr><td>${esc(x.horse)}${x.fei_id ? ` <span class="meta">${esc(x.fei_id)}</span>` : ''}</td>
-          <td><b>${esc(OUTCOME[x.outcome] || x.outcome)}</b> <span class="meta">${esc(x.detail)}</span></td><td class="meta">${esc(x.read_at)}</td></tr>`).join('')}</table></div></details>` : ''}
-    </form>`).join('');
-  }
-  function renderStatus(d) {
-    const fei = d.readers.find(r => r.slug === 'fei') || {};
-    const on = Boolean(fei.enabled), f = d.followed;
-    const held = d.readers.flatMap(r => r.recent.filter(x => x.outcome === 'held'));
-    $('auto-followed').textContent = f.total ? `${f.total} Irish-bred horses followed${f.never ? `, ${f.never} not read yet` : ''}.` : 'No horses followed yet.';
-    $('auto-status').innerHTML = `<p><b>${on ? 'On' : 'Off'}.</b> ${on ? 'The site is reading the results by itself.' : 'Switch on and the site reads the results by itself.'}</p>
-      <ul class="intro">
-        <li>Results: ${fei.outcomes && fei.outcomes.saved || 0} horse${(fei.outcomes && fei.outcomes.saved) === 1 ? '' : 's'} with new results today (${fei.today || 0} read).</li>
-        ${held.length ? `<li><b>Needs you:</b> ${held.map(x => `${esc(x.horse)}: ${esc(x.detail)}`).join('; ')}</li>` : ''}
-      </ul>`;
-    $('auto-switch').textContent = on ? 'Switch off' : 'Switch on';
-    $('auto-switch').dataset.on = on ? '1' : '';
-    renderReaders(d.readers);
-  }
-  async function loadAuto() {
-    try { renderStatus(await api('/api/admin/auto')); }
-    catch (e) { $('auto-status').innerHTML = `<p class="meta">${esc(e.message)}</p>`; }
-  }
-  $('auto-switch').addEventListener('click', async () => {
-    const b = $('auto-switch');
-    b.disabled = true;
-    try { renderStatus(await api('/api/admin/auto', { method: 'POST', body: { action: 'switch', enabled: !b.dataset.on } })); }
-    catch (err) { $('auto-run-msg').textContent = err.message; }
-    finally { b.disabled = false; }
-  });
-  $('auto-readers').addEventListener('submit', async e => {
-    e.preventDefault();
-    const f = e.target, done = f.querySelector('.form-done');
-    btnMsg(done, 'Saving…');
-    try {
-      const r = await api('/api/admin/auto', { method: 'POST', body: { slug: f.dataset.slug, enabled: f.elements.enabled.checked, daily_limit: f.elements.daily_limit.value } });
-      renderStatus(r);
-    } catch (err) { btnMsg(done, err.message); }
-  });
-  $('auto-run').addEventListener('click', async () => {
-    const b = $('auto-run'), msg = $('auto-run-msg');
-    b.disabled = true; msg.textContent = 'Reading…';
-    try {
-      const r = await api('/api/admin/auto', { method: 'POST', body: { action: 'run' } });
-      msg.textContent = r.fei.length ? `Read ${r.fei.length} horse${r.fei.length === 1 ? '' : 's'} on FEI.` : 'Nothing due just now: every followed horse was read in the last 6 days.';
-      renderStatus(r);
-      loadChecklist();
-    } catch (err) { msg.textContent = err.message; }
-    finally { b.disabled = false; }
-  });
 
 
 
@@ -2096,5 +1906,4 @@
   });
 
   refreshSummary().then(loadBatches);
-  if (window.SITE && window.SITE.discipline === 'showjumping') document.querySelector('#adm-tabs [data-a="fei"]').click();
 })();

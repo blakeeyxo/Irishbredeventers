@@ -12,7 +12,8 @@ export async function onRequestPost({ env, request, waitUntil }) {
   // Never save a result whose event heading was not read: it would end up under the wrong event.
   const noEvent = rows.filter(r => r.event_name === 'Event not given' || /\(\s*[A-Z]{3,4}\s*\)/.test(r.class_name)).length;
   if (noEvent) return bad(`${noEvent} result${noEvent === 1 ? ' has' : 's have'} no readable event heading above ${noEvent === 1 ? 'it' : 'them'}, so nothing was saved. Fix the Event, Country and Start date on those rows (Edit), then save again.`);
-  const out = await importResults(env.DB, rows, { decisions: b.decisions || {}, weekLabel: str(b.weekLabel, 120), sourceNotes: str(b.sourceNotes, 200) });
+  const out = await importResults(env.DB, rows, { decisions: b.decisions || {}, weekLabel: str(b.weekLabel, 120), sourceNotes: str(b.sourceNotes, 200),
+    withOwner: siteFor(env).discipline === 'showjumping' });
   if (out.needsDecision) return json({ needsDecision: out.needsDecision }, { status: 409 });
 
   out.emailed = 0;

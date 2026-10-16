@@ -118,7 +118,8 @@
     return 'Other';
   }
   function levelOf(cls, row) {
-    if (JUMPING) return jumpingLevel(row && row.level);
+    // An uploaded file's class starts with its level ("CSI 3* · € 125,000 Grand Prix …").
+    if (JUMPING) return jumpingLevel((row && row.level) || cls);
     const c = cls || '';
     const star = c.match(/\b(?:CCIO?|CIC|CCN)?\s*-?\s*([1-5])\s*\*/i);
     if (star) return `CCI${star[1]}*`;
@@ -172,23 +173,27 @@
     const parts = h.dressage !== '' && h.dressage !== null ? `<small>${esc(h.dressage)} · ${esc(h.show_jumping)} · ${esc(h.cross_country)}</small>` : '';
     return `<b>${esc(h.score)}</b>${parts}`;
   }
+  // Showjumping (IBSR) records placings only: no score column. The owner shows under the breeder.
+  const ownerLine = h => (JUMPING && h.owner_name ? `<span class="sub">Owner: ${esc(h.owner_name)}</span>` : '');
   function rowHTML(h, withEvent) {
     const ev = withEvent ? `<td data-label="Event">${esc(h.event_name)}<span class="sub">${esc(h.class_name)}</span></td>` : '';
     return `<tr class="row">
       <td class="c-pl">${esc(ordinal(h.position))}</td>
       <td class="c-horse">${horseCell(h)}</td>
       <td data-label="Sire × Dam">${breedingCell(h)}</td>
-      <td data-label="Breeder">${esc(unk(h.breeder))}</td>
+      <td data-label="Breeder">${esc(unk(h.breeder))}${ownerLine(h)}</td>
       ${ev}
-      <td class="c-score">${scoreCell(h)}</td></tr>`;
+      ${JUMPING ? '' : `<td class="c-score">${scoreCell(h)}</td>`}</tr>`;
   }
-  const HEAD_FLAT = '<thead><tr><th>Pl</th><th>Horse</th><th>Sire × Dam</th><th>Breeder</th><th>Event</th><th class="c-score">Score</th></tr></thead>';
-  const HEAD_GROUPED = '<thead><tr><th>Pl</th><th>Horse</th><th>Sire × Dam</th><th>Breeder</th><th class="c-score">Score</th></tr></thead>';
+  const SCORE_HEAD = JUMPING ? '' : '<th class="c-score">Score</th>';
+  const HEAD_FLAT = `<thead><tr><th>Pl</th><th>Horse</th><th>Sire × Dam</th><th>Breeder</th><th>Event</th>${SCORE_HEAD}</tr></thead>`;
+  const HEAD_GROUPED = `<thead><tr><th>Pl</th><th>Horse</th><th>Sire × Dam</th><th>Breeder</th>${SCORE_HEAD}</tr></thead>`;
+  const SPAN = JUMPING ? 4 : 5; // columns in a grouped table (a flat one has one more, the event)
 
   function flatTable(rows, limit) {
     const shown = limit ? rows.slice(0, limit) : rows;
     const more = limit && rows.length > limit
-      ? `<tr class="more-row"><td colspan="6"><button class="btn-quiet" type="button" data-more>Show all ${rows.length} placings</button></td></tr>` : '';
+      ? `<tr class="more-row"><td colspan="${SPAN + 1}"><button class="btn-quiet" type="button" data-more>Show all ${rows.length} placings</button></td></tr>` : '';
     return `<div class="rtable-wrap"><table class="rtable">${HEAD_FLAT}<tbody>${shown.map(h => rowHTML(h, true)).join('')}${more}</tbody></table></div>`;
   }
 
@@ -200,7 +205,7 @@
       byCountry.get(h.country).push(h);
     }
     for (const [country, rows] of byCountry) {
-      html += `<tr class="grp-country"><td colspan="5">${esc(country)}</td></tr>`;
+      html += `<tr class="grp-country"><td colspan="${SPAN}">${esc(country)}</td></tr>`;
       let eventId = null, cls = null;
       for (const h of rows) {
         if (h.event_id !== eventId) {
@@ -209,10 +214,10 @@
           const details = [h.date_text, h.country, `${classes} class${classes === 1 ? '' : 'es'}`, `${evRows.length} Irish-bred placing${evRows.length === 1 ? '' : 's'}`]
             .filter(Boolean).map(esc).join(' · ');
           // No source is named on the public site: every result is Charlie's.
-          html += `<tr class="grp-event"><td colspan="5"><b>${esc(h.event_name)}</b><span>${details}</span></td></tr>`;
+          html += `<tr class="grp-event"><td colspan="${SPAN}"><b>${esc(h.event_name)}</b><span>${details}</span></td></tr>`;
           eventId = h.event_id; cls = null;
         }
-        if (h.class_name !== cls) { html += `<tr class="grp-class"><td colspan="5">${esc(h.class_name)}</td></tr>`; cls = h.class_name; }
+        if (h.class_name !== cls) { html += `<tr class="grp-class"><td colspan="${SPAN}">${esc(h.class_name)}</td></tr>`; cls = h.class_name; }
         html += rowHTML(h, false);
       }
     }
@@ -306,14 +311,17 @@
 
   async function renderResults(params) {
     const current = state.config.currentYear;
-    const season = Number(params.get('season')) || current;
-    $('results-title').textContent = season === current ? `All of ${season}` : `${season} season`;
-    if (state.season !== season || !state.loaded.results) {
+    let season = Number(params.get('season')) || current;
+    // IBSR lists only the years that have results: with no year asked for, it opens on the newest of them.
+    const latest = JUMPING && !params.get('season');
+    if (!state.loaded.results || (latest ? state.seasonLatest !== true : state.season !== season || state.seasonLatest)) {
       state.season = season;
       state.loaded.results = true;
       $('results-list').innerHTML = '<div class="empty-state">Loading…</div>';
       try {
-        const d = await api(`/api/results?season=${season}`);
+        const d = await api(`/api/results?season=${season}${latest ? '&latest=1' : ''}`);
+        season = state.season = d.season;
+        state.seasonLatest = latest;
         state.seasonRows = d.rows;
         $('season-toggle').innerHTML = d.seasons.map(y =>
           `<button class="chip ${y === season ? 'active' : ''}" data-year="${y}">${y === current ? `All of ${y}` : y}</button>`).join('');
@@ -322,7 +330,10 @@
         $('results-list').innerHTML = `<div class="empty-state">${esc(e.message)}</div>`;
         return;
       }
+    } else if (latest) {
+      season = state.season;
     }
+    $('results-title').textContent = season === current ? `All of ${season}` : `${season} season`;
     state.month = /^\d{2}$/.test(params.get('month') || '') ? params.get('month') : '';
     // Selects are rebuilt in applyFilters; seed them with the URL values first.
     for (const k of ['week', 'event', 'level']) {
@@ -404,14 +415,14 @@
     let month = null;
     return runs.map(r => {
       const m = monthOf(r.start_date);
-      const head = m !== month ? `<tr class="grp-class"><td colspan="5">${esc(m)}</td></tr>` : '';
+      const head = m !== month ? `<tr class="grp-class"><td colspan="${SPAN}">${esc(m)}</td></tr>` : '';
       month = m;
       return `${head}<tr class="row">
           <td class="c-pl">${esc(ordinal(r.position))}</td>
           <td data-label="Date">${esc(r.class_date ? niceDate(r.class_date) : (r.date_text || niceDate(r.start_date)))}</td>
           <td class="c-horse"><a href="${esc(eventHref(r))}" data-link data-close-modal>${esc(r.event_name)}</a><span class="sub">${esc(r.country)}</span></td>
           <td data-label="Class">${esc(r.class_name)}${statusTag(r)}</td>
-          <td class="c-score">${scoreCell(r)}</td></tr>`;
+          ${JUMPING ? '' : `<td class="c-score">${scoreCell(r)}</td>`}</tr>`;
     }).join('');
   }
   async function openHorse(id) {
@@ -427,15 +438,14 @@
     const dressage = runs.map(r => parseFloat(r.dressage)).filter(n => !isNaN(n));
     const xcKnown = runs.filter(r => r.cross_country !== '' && r.cross_country !== null);
     const xcClear = xcKnown.filter(r => parseFloat(r.cross_country) === 0).length;
-    // Showjumping: clear rounds and the biggest class jumped (heights are in the class name, e.g. "(1.45m)").
-    const faultsKnown = runs.filter(r => r.faults !== null && r.faults !== undefined);
-    const heights = runs.map(r => parseFloat((String(r.class_name).match(/\((\d\.\d{2})m\)/) || [])[1])).filter(n => !isNaN(n));
+    // Showjumping: the biggest class jumped (heights are in the class name, e.g. "1.45m" or "1.50 m").
+    const heights = runs.map(r => parseFloat(([...String(r.class_name).matchAll(/\b(\d\.\d{2})\s?m\b/g)].pop() || [])[1])).filter(n => !isNaN(n));
     const fact = (label, v) => `<div><span>${label}</span><b>${esc(v || '–')}</b></div>`;
     el.innerHTML = `${CLOSE}
       <p class="eyebrow">Horse</p>
       <h2 class="page-title horse-title">${esc(h.horse_name)}</h2>
       ${formers.length ? `<p class="horse-former">Formerly competed as ${esc(formers.join(', '))}</p>` : ''}
-      <div class="facts">${fact('Breed', h.breed)}${fact('Foaled', h.foaled)}${fact('Sex', h.sex)}${fact('Breeder', unk(h.breeder))}</div>
+      <div class="facts">${fact('Breed', h.breed)}${fact('Foaled', h.foaled)}${fact('Sex', h.sex)}${fact('Breeder', unk(h.breeder))}${JUMPING && runs[0] && runs[0].owner_name ? fact('Owner', runs[0].owner_name) : ''}</div>
       <div class="horse-grid">
         <div>
           <h3 class="section-title">Pedigree</h3>
@@ -450,8 +460,7 @@
           <div class="stats">
             <div><span>Runs recorded</span><b>${runs.length}</b></div>
             <div><span>Wins / Placings<small>1st / top three</small></span><b>${positions.filter(p => p === 1).length} / ${positions.filter(p => p <= 3).length}</b></div>
-            ${JUMPING ? `<div><span>Clear rounds</span><b>${faultsKnown.length ? `${faultsKnown.filter(r => r.faults === 0).length} of ${faultsKnown.length}` : '–'}</b></div>
-            <div><span>Biggest class</span><b>${heights.length ? `${Math.max(...heights).toFixed(2)}m` : '–'}</b></div>`
+            ${JUMPING ? `<div><span>Biggest class</span><b>${heights.length ? `${Math.max(...heights).toFixed(2)}m` : '–'}</b></div>`
             : `<div><span>Best dressage</span><b>${dressage.length ? Math.min(...dressage) : '–'}</b></div>
             <div><span>Clear cross country</span><b>${xcKnown.length ? `${xcClear} of ${xcKnown.length}` : '–'}</b></div>`}
           </div>
@@ -459,7 +468,7 @@
       </div>
       <h3 class="section-title">Form</h3>
       <div class="rtable-wrap"><table class="rtable form-table">
-        <thead><tr><th>Pl</th><th>Date</th><th>Event</th><th>Class</th><th class="c-score">Score</th></tr></thead>
+        <thead><tr><th>Pl</th><th>Date</th><th>Event</th><th>Class</th>${SCORE_HEAD}</tr></thead>
         <tbody>${formRows(runs)}</tbody>
       </table></div>
       <p class="note">Every class ${esc(h.horse_name)} has run in, newest first, by month. Click an event to open its results.</p>`;
