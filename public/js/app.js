@@ -732,10 +732,13 @@
 
   async function renderForSale(id, params) {
     $('fs-list').hidden = !!id;
-    $('fs-detail').hidden = !id || id === 'sell';
+    $('fs-detail').hidden = !id || id === 'sell' || id === 'looking-for';
     $('fs-sell').hidden = id !== 'sell';
+    $('fs-want').hidden = id !== 'looking-for';
     if (id === 'sell') return showSellForm();
+    if (id === 'looking-for') return mountTurnstile(wantForm);
     if (id) return renderListing(Number(id));
+    renderWanted();
     for (const k of FS_KEYS) fsForm.elements[k].value = params.get(k) || (k === 'sort' ? 'newest' : '');
     $('fs-grid').innerHTML = '<div class="empty-state">Loading…</div>';
     try {
@@ -821,6 +824,57 @@
         'Sent. The seller will reply to you by email.'));
     }
   }
+
+  /* ---------- Looking for: buyers' posts under the ads; a seller answers with the form under each one ---------- */
+  const fromTo = (a, b, fmt) => (a != null && b != null ? (a === b ? fmt(a) : `${fmt(a)} to ${fmt(b)}`) : a != null ? `${fmt(a)} or over` : b != null ? `up to ${fmt(b)}` : '');
+  const wantedFacts = w => [cap(w.sex), fromTo(w.age_min, w.age_max, v => `${v} yrs`), fromTo(w.height_min, w.height_max, v => hh(v) || `${v}hh`),
+    w.budget_cents ? `budget up to ${euro(w.budget_cents)}` : ''].filter(Boolean).map(esc).join(' · ');
+  function wantedCard(w) {
+    return `<article class="fs-want-card" id="looking-for-${w.id}">
+      <b class="fs-title">${esc(w.title)}</b>
+      ${wantedFacts(w) ? `<span class="fs-facts">${wantedFacts(w)}</span>` : ''}
+      ${w.level ? `<span class="fs-level">${esc(w.level)}</span>` : ''}
+      ${w.description ? `<p class="fs-description">${esc(w.description)}</p>` : ''}
+      <span class="fs-meta"><span>${[w.location ? `Buying from ${esc(w.location)}` : '', esc(listedText(w.published_at).replace(/^Listed/, 'Posted'))].filter(Boolean).join(' · ')}</span>
+        <button class="btn-quiet" type="button" data-answer="${w.id}">I have a horse like this</button></span>
+    </article>`;
+  }
+  async function renderWanted() {
+    const box = $('fs-wanted');
+    try {
+      const { wanted } = await api('/api/wanted');
+      box.innerHTML = wanted.length ? wanted.map(wantedCard).join('')
+        : '<div class="empty-state">No buyers have posted yet. <a class="text-link" href="/for-sale/looking-for" data-link>Tell sellers what you\'re looking for →</a></div>';
+      const hash = routeFromUrl().hash;
+      if (/^#looking-for(-\d+)?$/.test(hash)) { const el = document.querySelector(hash); if (el) el.scrollIntoView({ behavior: 'smooth' }); }
+    } catch (e) { box.innerHTML = `<div class="empty-state">${esc(e.message)}</div>`; }
+  }
+  $('fs-wanted').addEventListener('click', e => {
+    const b = e.target.closest('[data-answer]');
+    if (!b) return;
+    const card = b.closest('.fs-want-card');
+    const open = card.querySelector('form');
+    if (open) { open.remove(); return; }
+    card.insertAdjacentHTML('beforeend', `<form class="form">
+      <p class="form-note">Your message is emailed to the buyer, who will reply to you directly.</p>
+      <div class="form-row"><label>Your name<input type="text" name="name" required maxlength="80"></label>
+      <label>Your email<input type="email" name="email" required maxlength="200"></label></div>
+      <label>Phone (optional)<input type="tel" name="phone" maxlength="40"></label>
+      <label>About your horse<textarea name="message" required maxlength="3000" placeholder="Name, age, height, breeding, what it has done, price, where it is, a video link…"></textarea></label>
+      <div class="ts-slot"></div>
+      <button class="btn" type="submit">Send to the buyer</button>
+      <div class="form-done" role="status"></div></form>`);
+    const form = card.querySelector('form');
+    mountTurnstile(form);
+    const id = Number(b.dataset.answer);
+    form.addEventListener('submit', ev => submitForm(ev, '/api/wanted/reply',
+      f => ({ id, name: f.get('name'), email: f.get('email'), phone: f.get('phone'), message: f.get('message') }),
+      'Sent. The buyer will reply to you by email.'));
+    form.elements.name.focus();
+  });
+  const wantForm = $('want-form');
+  wantForm.addEventListener('submit', e => submitForm(e, '/api/wanted', f => Object.fromEntries(f),
+    'Sent. We\'ll check it and email you when it\'s on the site.'));
 
   /* "I want to sell": photos are made smaller in the browser before sending (long side 1600px), so uploads are quick. */
   const sellForm = $('sell-form');

@@ -7,7 +7,7 @@
 
   /* ---------- Tabs ---------- */
   let countryList = [];
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, horses: () => { loadBreeding(); loadShared(); }, forsale: () => loadForSale(), analytics: () => loadAnalytics(), messages: () => { loadSubmissions(); loadComments(); loadCorrections(); loadEnquiries(); } };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, horses: () => { loadBreeding(); loadShared(); }, forsale: () => { loadForSale(); loadWanted(); }, analytics: () => loadAnalytics(), messages: () => { loadSubmissions(); loadComments(); loadCorrections(); loadEnquiries(); } };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -38,11 +38,13 @@
   const refreshSummary = () => loadSummary().then(s => { summary = s; refreshForSaleCount(); }).catch(showLoginError);
   // Ads waiting for review, from the shared database (the tab shows nothing if it isn't set up yet).
   function refreshForSaleCount() {
-    api('/api/admin/listings?status=draft').then(d => {
-      const n = d.counts.draft || 0;
+    // Ads and "looking for" posts waiting for review, together.
+    Promise.all([api('/api/admin/listings?status=draft').catch(() => null), api('/api/admin/wanted?status=draft').catch(() => null)]).then(([a, w]) => {
+      if (!a && !w) return;
+      const n = (a ? a.counts.draft || 0 : 0) + (w ? w.counts.draft || 0 : 0);
       $('n-forsale').textContent = n;
       $('n-forsale').hidden = !n;
-    }).catch(() => {});
+    });
   }
 
   // The owner API answers "Not found" once the login has run out (it never says why to strangers).
@@ -1679,6 +1681,61 @@
     const msg = f.querySelector('.form-done');
     try { await api('/api/admin/shared/sources', { method: 'POST', body }); btnMsg(msg, 'Saved.'); f.reset(); f.elements.id.value = ''; loadShared(); }
     catch (err) { btnMsg(msg, err.message); }
+  });
+
+  /* ---------- For sale → Looking for: buyers' posts ---------- */
+  const WT_STATUS = [['draft', 'Waiting for review'], ['live', 'Live'], ['found', 'Found a horse'], ['removed', 'Removed'], ['rejected', 'Turned down']];
+  let wtStatus = 'draft';
+  const wtRange = (a, b, unit) => (a != null && b != null ? `${a} to ${b}${unit}` : a != null ? `${a}${unit} or over` : b != null ? `up to ${b}${unit}` : '');
+  async function loadWanted() {
+    let d;
+    try { d = await api(`/api/admin/wanted?status=${wtStatus}`); } catch (e) { $('wt-adm-list').innerHTML = `<p class="meta">${esc(e.message)}</p>`; return; }
+    $('wt-adm-status').innerHTML = WT_STATUS.map(([k, label]) => `<button class="chip${k === wtStatus ? ' active' : ''}" data-wt-status="${k}">${label}${d.counts[k] ? ` <span class="count">${d.counts[k]}</span>` : ''}</button>`).join('');
+    $('wt-adm-list').innerHTML = d.wanted.length ? d.wanted.map(w => {
+      const facts = [w.sex, wtRange(w.age_min, w.age_max, ' yrs'), wtRange(w.height_min, w.height_max, 'hh'), w.budget_cents ? `budget up to ${fsEuro(w.budget_cents)}` : '', w.level, w.location ? `buying from ${w.location}` : '']
+        .filter(Boolean).join(' · ');
+      const acts = w.status === 'draft' || w.status === 'rejected'
+        ? `<button class="btn sm" data-wt="approve">Approve: put it live</button>${w.status === 'draft' ? '<button class="btn sm alt" data-wt="reject">Turn down</button>' : ''}`
+        : w.status === 'live' ? `${w.ended ? '<button class="btn sm" data-wt="approve">Put it back up</button>' : ''}<button class="btn sm alt" data-wt="found">Found a horse</button><button class="btn sm alt" data-wt="removed">Remove</button>`
+        : '<button class="btn sm alt" data-wt="approve">Put it back up</button>';
+      return `<div class="fs-adm-card" data-wanted="${w.id}">
+        <b>${esc(w.title)}</b> <span class="meta">${esc(niceDate(w.created_at))}${w.status === 'live' ? ` · ${w.ended ? 'ended' : 'live until'} ${esc(niceDate(w.expires_at))}` : ''}${w.disciplines.length > 1 ? ` · also on ${esc(window.SITE.otherName)}` : ''}</span>
+        ${facts ? `<div class="meta">${esc(facts)}</div>` : ''}
+        ${w.description ? `<p style="margin:6px 0;white-space:pre-wrap;">${esc(w.description)}</p>` : ''}
+        <div class="meta">From ${esc(w.buyer_name)} · <a href="mailto:${esc(w.buyer_email)}">${esc(w.buyer_email)}</a>${w.buyer_phone ? ` · <a href="tel:${esc(w.buyer_phone)}">${esc(w.buyer_phone)}</a>` : ''}</div>
+        ${w.reject_reason ? `<div class="meta">Turned down: ${esc(w.reject_reason)}</div>` : ''}
+        <div class="adm-actions">${acts}${w.replies ? `<button class="btn sm alt" data-wt="replies">${w.replies} answer${w.replies === 1 ? '' : 's'} from sellers</button>` : ''}<button class="btn sm alt danger" data-wt="delete">Delete</button></div>
+        <div class="wt-replies"></div><div class="form-done" role="status"></div></div>`;
+    }).join('') : `<div class="empty-state">${wtStatus === 'draft' ? 'Nothing waiting.' : 'None.'}</div>`;
+  }
+  $('wt-adm-status').addEventListener('click', e => { const b = e.target.closest('[data-wt-status]'); if (b) { wtStatus = b.dataset.wtStatus; loadWanted(); } });
+  $('wt-adm-list').addEventListener('click', async e => {
+    const b = e.target.closest('[data-wt]');
+    if (!b) return;
+    const card = b.closest('[data-wanted]'), id = Number(card.dataset.wanted), done = card.querySelector('.form-done'), action = b.dataset.wt;
+    if (action === 'replies') {
+      const box = card.querySelector('.wt-replies');
+      if (box.innerHTML) { box.innerHTML = ''; return; }
+      const { replies } = await api(`/api/admin/wanted?id=${id}&replies=1`);
+      box.innerHTML = replies.map(r => `<div class="adm-card"><b>${esc(r.name)}</b> <span class="meta">${esc(niceDate(r.created_at))} · <a href="mailto:${esc(r.email)}">${esc(r.email)}</a>${r.phone ? ` · ${esc(r.phone)}` : ''}${r.emailed ? ' · emailed to the buyer' : ' · not emailed: pass it on'}</span>
+        <p style="margin:6px 0;white-space:pre-wrap;">${esc(r.message)}</p></div>`).join('');
+      return;
+    }
+    if (action === 'delete') {
+      if (!confirm('Delete this post and its answers for good?')) return;
+      await api(`/api/admin/wanted?id=${id}`, { method: 'DELETE' });
+      loadWanted(); refreshForSaleCount();
+      return;
+    }
+    let reason = '';
+    if (action === 'reject') { reason = prompt('Turn this post down? The buyer is emailed this reason (optional):', ''); if (reason === null) return; }
+    card.querySelectorAll('button').forEach(x => { x.disabled = true; });
+    btnMsg(done, 'Saving…');
+    try {
+      const r = await api('/api/admin/wanted', { method: 'POST', body: { id, action, reason } });
+      btnMsg(done, r.emailed === 'not-set-up' ? 'Done. Email is not set up yet, so tell the buyer yourself.' : r.emailed === false ? 'Done, but the email to the buyer could not be sent.' : 'Done.');
+      setTimeout(() => { loadWanted(); refreshForSaleCount(); }, 800);
+    } catch (err) { btnMsg(done, err.message); card.querySelectorAll('button').forEach(x => { x.disabled = false; }); }
   });
 
   /* ---------- For sale ---------- */

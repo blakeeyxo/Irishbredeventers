@@ -203,7 +203,7 @@
           <h2 class="page-title">Horses for sale</h2>
           <p class="page-intro">Irish-bred horses for sale, with their breeding. Every ad is checked before it goes up.</p>
         </div>
-        <a class="btn" href="/for-sale/sell" data-link>I want to sell</a>
+        <div class="fs-head-acts"><a class="btn" href="/for-sale/sell" data-link>I want to sell</a><a class="btn alt" href="/for-sale/looking-for" data-link>I'm looking for a horse</a></div>
       </div>
       <form class="filters fs-filters" id="fs-filters">
         <label>Search<input type="search" name="q" maxlength="80" placeholder="Name, sire, level…"></label>
@@ -218,6 +218,55 @@
       <p class="filter-count" id="fs-count"></p>
       <div class="fs-grid" id="fs-grid"><div class="empty-state">Loading…</div></div>
       <div class="fs-pager" id="fs-pager"></div>
+
+      <!-- LOOKING FOR: buyers' posts, approved in the owner area; sellers answer through the form under each one -->
+      <section class="fs-wanted" id="looking-for">
+        <div class="fs-head">
+          <div>
+            <p class="eyebrow">Looking for</p>
+            <h2 class="page-title">Buyers looking for a horse</h2>
+            <p class="page-intro">Have a horse that fits? Answer the buyer here: your message is emailed to them and they reply to you directly.</p>
+          </div>
+          <a class="btn alt" href="/for-sale/looking-for" data-link>Post what you're looking for</a>
+        </div>
+        <div class="fs-wanted-list" id="fs-wanted"><div class="empty-state">Loading…</div></div>
+      </section>
+    </div>
+
+    <div id="fs-want" hidden>
+      <p><a class="text-link" href="/for-sale#looking-for" data-link>← Buyers looking for a horse</a></p>
+      <p class="eyebrow">Looking for</p>
+      <h2 class="page-title">Tell sellers what you're looking for</h2>
+      <p class="page-intro">Describe the horse you want. Posting is free. We check every post before it goes up. Sellers answer through a form and we email their message on to you; your email and phone number are never shown on the site.</p>
+      <form class="form fs-sell-form" id="want-form">
+        <h3 class="section-title">The horse you want</h3>
+        <label>In a line<input type="text" name="title" required maxlength="100" placeholder="e.g. 1.20m schoolmaster for a teenager"></label>
+        <div class="form-row">
+          <label>Sex<select name="sex"><option value="">Any</option><option value="mare">Mare</option><option value="gelding">Gelding</option><option value="stallion">Stallion</option></select></label>
+          <label>Level or experience<input type="text" name="level" maxlength="120" placeholder="e.g. Jumping 1.20m, ready to event"></label>
+        </div>
+        <div class="form-row">
+          <label>Age (years)<span class="fs-range"><input type="number" name="age_min" min="0" max="30" aria-label="Youngest" placeholder="From"><span>to</span><input type="number" name="age_max" min="0" max="30" aria-label="Oldest" placeholder="To"></span></label>
+          <label>Height (hands)<span class="fs-range"><input type="text" name="height_min" inputmode="decimal" maxlength="5" aria-label="Smallest" placeholder="e.g. 15.2"><span>to</span><input type="text" name="height_max" inputmode="decimal" maxlength="5" aria-label="Tallest" placeholder="e.g. 16.3"></span></label>
+        </div>
+        <div class="form-row">
+          <label>Budget, up to (€, optional)<input type="text" name="budget" inputmode="numeric" maxlength="10" placeholder="e.g. 15000"></label>
+          <label>Where you'd buy from<input type="text" name="location" maxlength="80" placeholder="e.g. Ireland or UK"></label>
+        </div>
+        <label>More about what you want<textarea name="description" maxlength="3000" style="min-height:140px;" placeholder="Temperament, who will ride, what you'll do together, anything you won't consider…"></textarea></label>
+        <label class="chk"><input type="checkbox" name="share_other"> Also show my post on our sister site, <span data-site="otherSiteName">IrishBredShowjumpingResults (showjumping)</span></label>
+
+        <h3 class="section-title">Your details</h3>
+        <p class="form-note">Only used to send you sellers' answers. Never shown on the site.</p>
+        <div class="form-row">
+          <label>Your name<input type="text" name="buyer_name" required maxlength="80"></label>
+          <label>Email<input type="email" name="buyer_email" required maxlength="200"></label>
+        </div>
+        <label>Phone (optional, only for us)<input type="tel" name="buyer_phone" maxlength="40"></label>
+        <div class="ts-slot"></div>
+        <button class="btn" type="submit">Send my post for review</button>
+        <div class="form-done" role="status"></div>
+      </form>
     </div>
 
     <div id="fs-detail" hidden></div>
@@ -360,7 +409,7 @@
 
     <div class="panel" id="privacy">
       <h2>Privacy</h2>
-      <p class="privacy-copy">If you sign up for results emails we keep only your email address, use it only to send a link when new results are published, and never share or sell it. Every email has an unsubscribe link, and unsubscribing deletes your address. Comments show the name you give and your comment once approved. Correction and advertising forms keep your contact details only so we can reply. If you sell a horse here, we keep your name, email and phone only to send you your ad's updates and buyers' messages; they are never shown on the site. A buyer's message to a seller is emailed to that seller. To have anything removed, email us.</p>
+      <p class="privacy-copy">If you sign up for results emails we keep only your email address, use it only to send a link when new results are published, and never share or sell it. Every email has an unsubscribe link, and unsubscribing deletes your address. Comments show the name you give and your comment once approved. Correction and advertising forms keep your contact details only so we can reply. If you sell a horse here, we keep your name, email and phone only to send you your ad's updates and buyers' messages; they are never shown on the site. A buyer's message to a seller is emailed to that seller. The same goes for a post saying what horse you're looking for: your details are kept only to send you sellers' answers, which are emailed to you. To have anything removed, email us.</p>
     </div>
   </section>
 
