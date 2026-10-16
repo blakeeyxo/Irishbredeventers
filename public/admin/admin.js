@@ -1962,5 +1962,13 @@
     catch (err) { btnMsg(done, err.message); }
   });
 
+  // The public forms are refused while the spam check isn't set up properly on this Worker: say so at the top.
+  api('/api/admin/spamcheck').then(c => {
+    const why = !c.hasSiteKey && !c.hasSecret ? 'neither TURNSTILE_SITE_KEY nor TURNSTILE_SECRET is set on this Worker'
+      : !c.hasSiteKey ? 'TURNSTILE_SITE_KEY is not set on this Worker'
+      : !c.hasSecret ? 'TURNSTILE_SECRET is not set on this Worker'
+      : c.secretOk === false ? `Cloudflare doesn't accept this Worker's TURNSTILE_SECRET (${c.codes.join(', ')}): it must be the secret key of the same Turnstile widget as the site key ${c.siteKey}` : '';
+    if (why) document.querySelector('main').insertAdjacentHTML('afterbegin', `<div class="notice"><b>Spam check not working, so visitors' forms are refused:</b> ${esc(why)}. Fix it in Cloudflare → Workers &amp; Pages → this Worker → Settings → Variables and Secrets.</div>`);
+  }).catch(() => {});
   refreshSummary().then(loadBatches);
 })();

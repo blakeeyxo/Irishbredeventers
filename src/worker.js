@@ -56,6 +56,7 @@ import * as listingEnquire from '../functions/api/listings/enquire.js';
 import * as wanted from '../functions/api/wanted.js';
 import * as wantedReply from '../functions/api/wanted/reply.js';
 import * as adminWanted from '../functions/api/admin/wanted.js';
+import * as adminSpamCheck from '../functions/api/admin/spamcheck.js';
 import * as listingMedia from '../functions/listing-media/[[path]].js';
 import * as adminListings from '../functions/api/admin/listings.js';
 import * as adminListingCreate from '../functions/api/admin/listings/create.js';
@@ -107,6 +108,7 @@ const ROUTES = {
   '/api/wanted/reply': wantedReply,
   '/api/admin/listings': adminListings,
   '/api/admin/wanted': adminWanted,
+  '/api/admin/spamcheck': adminSpamCheck,
   '/api/admin/listings/create': adminListingCreate,
   '/api/admin/listings/photo': adminListingPhoto,
   '/api/submissions': submissions,
