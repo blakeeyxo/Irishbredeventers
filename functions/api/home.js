@@ -1,22 +1,14 @@
 // Home page: the first-placed horses from the latest week (the upload holding the most recent event),
 // and the top news article as the commentary. A gap in the breeding (OIO / UNK) doesn't stop a winner showing.
 import { json } from '../../lib/http.js';
-import { PLACING_COLUMNS, PLACING_JOIN, PLACING_ORDER, PUBLIC_SQL } from '../../lib/results.js';
+import { placingColumns, PLACING_JOIN, PLACING_ORDER, PUBLIC_SQL } from '../../lib/results.js';
 import { siteFor } from '../../lib/sites.js';
-import { sjWeekWinners } from '../../lib/sj.js';
 
 export async function onRequestGet({ env }) {
   const db = env.DB;
-  if (siteFor(env).discipline === 'showjumping') {
-    const [headline, week] = await Promise.all([
-      db.prepare('SELECT id, title, snippet, published_at FROM news ORDER BY sort_order ASC, published_at DESC, id DESC LIMIT 1').first(),
-      env.SHARED ? sjWeekWinners(env.SHARED).catch(() => []) : []
-    ]);
-    return json({ headline, week }, { headers: { 'cache-control': 'public, max-age=60' } });
-  }
   const [headline, week] = await Promise.all([
     db.prepare('SELECT id, title, snippet, published_at FROM news ORDER BY sort_order ASC, published_at DESC, id DESC LIMIT 1').first(),
-    db.prepare(`SELECT ${PLACING_COLUMNS} ${PLACING_JOIN}
+    db.prepare(`SELECT ${placingColumns(siteFor(env))} ${PLACING_JOIN}
       WHERE ${PUBLIC_SQL} AND p.position = 1 AND p.batch_id = (
         -- the upload holding the most recent event, so loading older results never replaces this week
         SELECT p2.batch_id FROM placings p2 JOIN classes c2 ON c2.id = p2.class_id JOIN events e2 ON e2.id = c2.event_id

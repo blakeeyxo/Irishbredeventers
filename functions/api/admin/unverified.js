@@ -1,14 +1,15 @@
 // Rows for Charlie to check: only real problems (misread, conflicting, marked not verified). They are hidden from
 // the public site until he fixes them and marks them verified. A gap in the breeding is not a problem: it shows
 // on the site as OIO / UNK and is not listed here.
+import { siteFor } from '../../../lib/sites.js';
 import { json, bad, readJson, str } from '../../../lib/http.js';
-import { PLACING_COLUMNS, PLACING_JOIN, PLACING_ORDER, TO_CHECK_SQL, refreshBatchCounts, renameEvent, moveResult } from '../../../lib/results.js';
+import { adminPlacingColumns, PLACING_JOIN, PLACING_ORDER, TO_CHECK_SQL, refreshBatchCounts, renameEvent, moveResult } from '../../../lib/results.js';
 import { problemsFor } from '../../../lib/checks.js';
 
 const EDITABLE = ['horse_name', 'former_name', 'breed', 'sex', 'sire', 'dam', 'dam_sire', 'breeder', 'dressage', 'show_jumping', 'cross_country'];
 
 export async function onRequestGet({ env }) {
-  const { results } = await env.DB.prepare(`SELECT ${PLACING_COLUMNS}, IFNULL(r.raw_line, '') AS raw_line, IFNULL(r.parse_ok, 1) AS parse_ok,
+  const { results } = await env.DB.prepare(`SELECT ${adminPlacingColumns(siteFor(env))}, IFNULL(r.raw_line, '') AS raw_line, IFNULL(r.parse_ok, 1) AS parse_ok,
       IFNULL(r.article_url, '') AS article_url,
       (SELECT COUNT(*) FROM results rr WHERE rr.event_id = e.id) AS event_results ${PLACING_JOIN} WHERE ${TO_CHECK_SQL} ${PLACING_ORDER} LIMIT 1000`).all();
   // Each row says what is wrong with it, in plain words.
@@ -57,6 +58,10 @@ export async function onRequestPost({ env, request }) {
     if ('score' in f) { sets.push('score = ?'); vals.push(f.score === '' ? null : Number(f.score)); }
     if (b.verify) sets.push('verified = 1');
     if (sets.length) await env.DB.prepare(`UPDATE placings SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, id).run();
+    // IBSR: the owner is kept on the result (migrations-ibsr/0002).
+    if ('owner_name' in f && row.result_id && siteFor(env).discipline === 'showjumping') {
+      await env.DB.prepare('UPDATE results SET owner_name = ? WHERE id = ?').bind(str(f.owner_name, 160), row.result_id).run();
+    }
   }
   await refreshBatchCounts(env.DB, row.batch_id);
   return json({ ok: true });

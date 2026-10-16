@@ -17,7 +17,7 @@ export const onRequestPost = ({ env, request, data }) => withShared(env, async d
   const id = Number(b.id), user = data.user ? data.user.email : '', site = siteFor(env).id;
   if (!Number.isInteger(id)) return bad('Choose a submission.');
   try {
-    if (b.action === 'approve') return json({ ok: true, ...(await approveSubmission(db, site, id, user)) });
+    if (b.action === 'approve') return json({ ok: true, ...(await approveSubmission(db, site, id, user, { siteDb: env.DB })) });
     if (b.action === 'reject') { await rejectSubmission(db, site, id, user, b.note); return json({ ok: true }); }
     return bad('Unknown action.');
   } catch (e) {

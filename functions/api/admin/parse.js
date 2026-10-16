@@ -2,10 +2,12 @@
 import { json, bad } from '../../../lib/http.js';
 import { docxToText } from '../../../lib/docx.js';
 import { parseResults } from '../../../lib/parser.js';
+import { parseShowjumping } from '../../../lib/parser-sj.js';
+import { siteFor } from '../../../lib/sites.js';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
-export async function onRequestPost({ request }) {
+export async function onRequestPost({ env, request }) {
   const form = await request.formData().catch(() => null);
   if (!form) return bad('Bad request');
   let text = String(form.get('text') || '');
@@ -21,7 +23,9 @@ export async function onRequestPost({ request }) {
     }
   }
   if (!text.trim()) return bad('Choose a file or paste the results first.');
-  const result = parseResults(text, {
+  // IBSR: Charlie's showjumping results files (lib/parser-sj.js); IBER: the weekly eventing articles.
+  const parse = siteFor(env).discipline === 'showjumping' ? parseShowjumping : parseResults;
+  const result = parse(text, {
     defaultCountry: String(form.get('country') || ''),
     defaultYear: Number(form.get('year')) || new Date().getFullYear()
   });

@@ -1,25 +1,21 @@
 // Results for one season (default: the current calendar year), plus the list of seasons. Results with a real
 // problem stay hidden until Charlie marks them verified.
+// IBSR lists only the seasons that have results, and with latest=1 opens on the newest of them when the current year
+// has none yet (its archive is uploaded a year at a time).
 import { json } from '../../lib/http.js';
-import { PLACING_COLUMNS, PLACING_JOIN, PLACING_ORDER, PUBLIC_SQL } from '../../lib/results.js';
+import { placingColumns, PLACING_JOIN, PLACING_ORDER, PUBLIC_SQL } from '../../lib/results.js';
 import { siteFor } from '../../lib/sites.js';
-import { sjSeason } from '../../lib/sj.js';
 
 export async function onRequestGet({ env, request }) {
+  const site = siteFor(env), jumping = site.discipline === 'showjumping';
   const current = new Date().getFullYear();
-  const season = Number(new URL(request.url).searchParams.get('season')) || current;
-  // Showjumping results live in the shared database (pasted from FEI pages).
-  if (siteFor(env).discipline === 'showjumping') {
-    const sj = env.SHARED ? await sjSeason(env.SHARED, season).catch(() => ({ rows: [], seasons: [] })) : { rows: [], seasons: [] };
-    const years = new Set([...sj.seasons, current]);
-    return json({ season, seasons: [...years].sort((a, b) => b - a), rows: sj.rows }, { headers: { 'cache-control': 'public, max-age=60' } });
-  }
-  const [rows, seasons] = await Promise.all([
-    env.DB.prepare(`SELECT ${PLACING_COLUMNS} ${PLACING_JOIN} WHERE e.season = ? AND ${PUBLIC_SQL} ${PLACING_ORDER}`).bind(season).all(),
-    env.DB.prepare('SELECT DISTINCT season FROM events ORDER BY season DESC').all()
-  ]);
-  const years = new Set(seasons.results.map(s => s.season));
-  years.add(current);
+  const params = new URL(request.url).searchParams;
+  const { results: seasons } = await env.DB.prepare('SELECT DISTINCT season FROM events ORDER BY season DESC').all();
+  const years = new Set(seasons.map(s => s.season));
+  if (!jumping) years.add(current);
+  let season = Number(params.get('season')) || current;
+  if (jumping && params.get('latest') === '1' && !years.has(season) && years.size) season = Math.max(...years);
+  const rows = await env.DB.prepare(`SELECT ${placingColumns(site)} ${PLACING_JOIN} WHERE e.season = ? AND ${PUBLIC_SQL} ${PLACING_ORDER}`).bind(season).all();
   return json({
     season,
     seasons: [...years].sort((a, b) => b - a),

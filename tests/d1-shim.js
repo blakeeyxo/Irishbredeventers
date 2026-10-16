@@ -28,7 +28,7 @@ export function memoryD1(migrationsDir) {
       try {
         const out = stmts.map(s => {
           const p = raw.prepare(s.sql);
-          return /^\s*(select|with)/i.test(s.sql) ? { results: p.all(...s.args) } : (p.run(...s.args), { results: [] });
+          return /^\s*(select|with)/i.test(s.sql) || /\breturning\b/i.test(s.sql) ? { results: p.all(...s.args) } : (p.run(...s.args), { results: [] });
         });
         raw.exec('COMMIT');
         return out;

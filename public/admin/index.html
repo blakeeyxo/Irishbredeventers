@@ -36,7 +36,6 @@
     <button class="chip" data-a="ads">Ads</button>
     <button class="chip" data-a="stallions">Stallions</button>
     <button class="chip" data-a="horses">Horses</button>
-    <button class="chip" data-a="fei" hidden>FEI results</button>
     <button class="chip" data-a="forsale">For sale <span class="count" id="n-forsale" hidden></span></button>
     <button class="chip" data-a="analytics">Analytics</button>
     <button class="chip" data-a="messages">Messages <span class="count" id="n-messages" hidden></span></button>
@@ -222,14 +221,6 @@
       <label class="chk"><input type="checkbox" name="gaps" value="1"> Only horses with part of their breeding missing <span id="breed-gaps"></span></label>
       <div class="adm-actions"><button class="btn" type="submit">Find</button></div>
     </form>
-    <div class="panel sj-only" id="breed-sheet" hidden>
-      <p><b>Lots of horses to do?</b> Fill them in as a spreadsheet instead of one by one.</p>
-      <ol>
-        <li><a href="/api/admin/breeding?format=csv&amp;gaps=1" download>Download the horses missing breeding</a> (or <a href="/api/admin/breeding?format=csv" download>every horse</a>). It opens in Excel or Google Sheets, with what's already on file filled in.</li>
-        <li>Fill in Sire, Dam, Dam sire and Breeder. Write a sire's studbook if you know it, e.g. <i>Cruising (ISH)</i>, and the breeder's county in brackets, e.g. <i>Mary Brennan (Cork)</i>. A stallion already in the shared file is linked to automatically, pedigree and all, so just type his name. Leave a box empty if it isn't known. Don't change the FEI ID column: that's how each row finds its horse.</li>
-        <li>Save it as CSV and upload it under <b>Paste or upload many</b> below. Press Check first: it lists anything it couldn't match before anything is saved.</li>
-      </ol>
-    </div>
     <datalist id="breed-sires"></datalist>
     <p class="meta" id="breed-count"></p>
     <div id="breed-list"></div>
@@ -348,53 +339,6 @@
     <section class="st-feature" id="st-feature"></section>
     <div class="stallion-admin" id="st-list"><p class="meta">Loading…</p></div>
     <datalist id="sire-names"></datalist>
-  </div>
-
-  <!-- FEI RESULTS (showjumping site) -->
-  <div class="adm-pane" id="adm-fei">
-    <h3>Showjumping results</h3>
-    <p class="intro">Two steps, then the site does the rest by itself: it reads each horse's results on the FEI database, a few horses every few minutes (FEI agreed, at most 1000 horses a day). Breeding is added under <b>Horses</b>.</p>
-
-    <section class="panel">
-      <h3>1. Horses to follow</h3>
-      <p class="meta" id="auto-followed"></p>
-      <p class="intro">On the <a href="https://data.fei.org/Horse/Search.aspx" target="_blank" rel="noopener">FEI horse search</a> (Studbook ISH, Jumping, this year, 80 results by page), save each page of the list with Ctrl+S as "Webpage, HTML only". Choose them all here: they're added straight away. Do it again now and then to pick up new horses; horses already followed are skipped.</p>
-      <label class="btn alt" style="display:inline-block;cursor:pointer;">Add saved FEI list pages<input type="file" id="fei-files" accept=".html,.htm,text/html" multiple hidden></label>
-      <p class="meta" id="fei-files-note"></p>
-    </section>
-
-    <section class="panel" id="auto-panel">
-      <h3>2. Automatic updates</h3>
-      <div id="auto-status"><p class="meta">Loading…</p></div>
-      <div class="adm-actions"><button class="btn" type="button" id="auto-switch">Switch on</button><button class="btn alt" type="button" id="auto-run">Update a few horses now</button><span class="meta" id="auto-run-msg"></span></div>
-    </section>
-
-    <details class="block">
-      <summary>More options</summary>
-      <p class="meta" id="fei-visible"></p>
-      <h4>Daily limits and the latest horses read</h4>
-      <div id="auto-readers"><p class="meta">Loading…</p></div>
-
-      <h4>Add results by hand</h4>
-      <p class="meta">Only needed for something the automatic updates can't read. Paste an FEI horse results page (Ctrl+A, Ctrl+C), or choose saved ones, then press Check and Save.</p>
-      <form class="form" id="fei-form" style="max-width:none;">
-        <div class="form-row">
-          <label>Results from<input type="number" name="year" min="2000" max="2100" placeholder="All years"></label>
-          <label>Name for this paste (optional)<input type="text" name="label" maxlength="120" placeholder="e.g. FEI results week of 15 September"></label>
-        </div>
-        <label>Saved FEI horse results pages<input type="file" id="fei-perf-files" accept=".html,.htm,text/html" multiple></label>
-        <label>Or paste FEI pages<textarea name="text" style="min-height:160px;" placeholder="Horse Performance&#10;Name	ABC MAYFLOWER&#10;FEI ID	109WK62&#10;…"></textarea></label>
-        <div class="adm-actions"><button class="btn" type="submit">Check</button><button class="btn alt" type="reset">Clear</button></div>
-        <div class="form-done" role="status"></div>
-      </form>
-      <div id="fei-preview"></div>
-
-      <h4>Horses followed</h4>
-      <p class="meta">Every horse the site follows, with a link ↗ to its FEI results page. "Leave out" stops following a horse.</p>
-      <div class="adm-tabs" id="fei-views"></div>
-      <form class="form breed-search" id="fei-find" style="max-width:420px;"><label>Find a horse<input type="search" name="q" placeholder="Name or FEI ID"></label></form>
-      <div id="fei-list"><p class="meta">Loading…</p></div>
-    </details>
   </div>
 
   <!-- FOR SALE -->
