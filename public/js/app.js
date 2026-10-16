@@ -1,6 +1,6 @@
 /* Public site for IrishBredEventingResults (IBER) and its sister sites; names come from js/site.js. */
 (function () {
-  const { esc, api, ordinal, niceDate, turnstileReady, mountTurnstile, turnstileToken, resetTurnstile, framePhoto, picture } = window.IBE;
+  const { esc, api, ordinal, niceDate, turnstileReady, mountTurnstile, waitForTurnstile, resetTurnstile, framePhoto, picture } = window.IBE;
   const $ = id => document.getElementById(id);
   const SITE = window.SITE.name;
   const SHORT = window.SITE.short;
@@ -571,15 +571,12 @@
     e.preventDefault();
     const form = e.target, done = form.querySelector('.form-done'), btn = form.querySelector('button[type=submit]');
     const body = build(new FormData(form));
-    // The spam check runs quietly in the background; give it a moment if the form is sent straight away.
-    let token = turnstileToken(form);
-    for (let i = 0; !token && i < 24 && form.querySelector('.ts-slot[data-widget]'); i++) {
-      await new Promise(r => setTimeout(r, 250));
-      token = turnstileToken(form);
-    }
-    body.turnstile = token;
     btn.disabled = true;
     done.textContent = 'Sending…';
+    // The spam check runs quietly in the background; wait for it rather than send a form it hasn't passed yet.
+    const check = await waitForTurnstile(form);
+    if (check.error) { done.textContent = check.error; btn.disabled = false; return; }
+    body.turnstile = check.token;
     try {
       await api(url, { method: 'POST', body });
       form.reset();
@@ -926,9 +923,9 @@
     const form = new FormData(sellForm);
     form.delete('photos');
     sellPhotos.forEach(p => { form.append('photos', p.file); form.append('photos_phone', p.phone || new File([], 'none')); });
-    let token = turnstileToken(sellForm);
-    for (let i = 0; !token && i < 24 && sellForm.querySelector('.ts-slot[data-widget]'); i++) { await new Promise(r => setTimeout(r, 250)); token = turnstileToken(sellForm); }
-    form.set('turnstile', token || '');
+    const check = await waitForTurnstile(sellForm);
+    if (check.error) { done.textContent = check.error; return; }
+    form.set('turnstile', check.token);
     btn.disabled = true;
     done.textContent = 'Sending your ad…';
     try {

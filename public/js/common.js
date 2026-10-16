@@ -69,12 +69,38 @@
     const slot = form.querySelector('.ts-slot');
     if (!tsKey || !slot || slot.dataset.mounted) return;
     slot.dataset.mounted = '1';
-    tsReady.then(() => { slot.dataset.widget = window.turnstile.render(slot, { sitekey: tsKey, appearance: 'interaction-only' }); });
+    tsReady.then(() => {
+      slot.dataset.widget = window.turnstile.render(slot, {
+        sitekey: tsKey, appearance: 'interaction-only',
+        // Cloudflare's own error code (e.g. 110200: this site's address isn't on the widget's hostname list).
+        'error-callback': code => { slot.dataset.error = String(code || 'unknown'); return true; },
+        'expired-callback': () => { try { window.turnstile.reset(slot.dataset.widget); } catch { /* re-rendered below */ } },
+        callback: () => { delete slot.dataset.error; }
+      });
+    });
   }
   function turnstileToken(form) {
     const slot = form.querySelector('.ts-slot');
     if (!slot || !slot.dataset.widget || !window.turnstile) return '';
     return window.turnstile.getResponse(slot.dataset.widget) || '';
+  }
+  /**
+   * The spam check's token for a form, waiting up to 20 seconds for it to finish. { token } or { error } in words
+   * to show under the form. With no site key set up (or in local development) there is nothing to wait for.
+   */
+  async function waitForTurnstile(form) {
+    const slot = form.querySelector('.ts-slot');
+    if (!tsKey || !slot) return { token: '' };
+    mountTurnstile(form);
+    for (let i = 0; i < 80; i++) {
+      const t = turnstileToken(form);
+      if (t) return { token: t };
+      if (slot.dataset.error) break;
+      if (i === 40 && slot.dataset.widget && window.turnstile.isExpired && window.turnstile.isExpired(slot.dataset.widget)) window.turnstile.reset(slot.dataset.widget);
+      await new Promise(r => setTimeout(r, 250));
+    }
+    if (slot.dataset.error) return { error: `The spam check couldn't load on this page (Cloudflare error ${slot.dataset.error}). Please reload the page and try again.` };
+    return { error: 'The spam check hasn\'t finished yet. If a "Verify you are human" box shows above the button, tick it, then press Send again.' };
   }
   function resetTurnstile(form) {
     const slot = form.querySelector('.ts-slot');
@@ -187,5 +213,5 @@
     return `<picture><source media="(max-width: 720px)" srcset="${esc(phone)}"><img src="${esc(src)}" ${attrs}></picture>`;
   }
 
-  window.IBE = { esc, api, ordinal, niceDate, scoreText, breedingText, turnstileReady, mountTurnstile, turnstileToken, resetTurnstile, framePhoto, phoneKey, picture };
+  window.IBE = { esc, api, ordinal, niceDate, scoreText, breedingText, turnstileReady, mountTurnstile, turnstileToken, waitForTurnstile, resetTurnstile, framePhoto, phoneKey, picture };
 })();
