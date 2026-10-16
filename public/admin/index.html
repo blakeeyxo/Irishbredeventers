@@ -389,12 +389,18 @@
     </details>
     <div class="adm-tabs fs-adm-status" id="fs-adm-status"></div>
     <div id="fs-adm-list"><p class="meta">Loading…</p></div>
+    <section class="block" id="wt-adm">
+      <h3>Looking for</h3>
+      <p class="intro">Buyers say what horse they want with <b>I'm looking for a horse</b> on the For Sale page. Posts are free. <b>Approve</b> puts one live for the number of days set below (the buyer is emailed), <b>Turn down</b> emails them your reason, and <b>Found a horse</b> or <b>Remove</b> takes it off the site. Sellers' answers are emailed to the buyer and listed under each post. Each site keeps its own posts; one shows on the other site too if the buyer ticked <b>Also show on</b>.</p>
+      <div class="adm-tabs fs-adm-status" id="wt-adm-status"></div>
+      <div id="wt-adm-list"><p class="meta">Loading…</p></div>
+    </section>
     <details class="block">
       <summary><b>For sale settings</b>: fee, how long ads run, how to pay</summary>
       <form class="form" id="fs-settings">
         <div class="form-row">
           <label>Default listing fee (€)<input type="text" name="listing_fee" inputmode="decimal" maxlength="10" placeholder="e.g. 25"></label>
-          <label>Days an ad stays live<input type="number" name="listing_days" min="7" max="365"></label>
+          <label>Days an ad (or a "looking for" post) stays live<input type="number" name="listing_days" min="7" max="365"></label>
         </div>
         <label>How to pay (included in the payment request email)<textarea name="payment_instructions" maxlength="2000" placeholder="e.g. Payment is by phone: please call Charlie on +353 87 216 5442 and quote your ad number."></textarea></label>
         <div class="adm-actions"><button class="btn" type="submit">Save settings</button></div>
