@@ -100,7 +100,7 @@
       // keep_vars (top level) applies here too: dashboard values on the IBSR Worker survive deploys.
       "vars": {
         "SITE_ID": "ibsr",
-        "SITE_URL": "https://irishbredshowjumpers.emerblakeey.workers.dev",
+        "SITE_URL": "https://ibsr.ie",
         "MAIL_PROVIDER": "resend",
         "MAIL_FROM": "IrishBredShowjumpingResults <info@iber.ie>"
       },

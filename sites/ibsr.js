@@ -12,7 +12,7 @@ export default {
   discipline: 'showjumping',
   name: 'IrishBredShowjumpingResults',
   short: 'IBSR',
-  publicUrl: 'https://irishbredshowjumpers.emerblakeey.workers.dev',
+  publicUrl: 'https://ibsr.ie',
 
   // Same colours as IBER (green, white and orange), taken from sites/iber.js so the two always match.
   // (The earlier navy and blue theme was #16233F / #0D1526 / #2A3957 with #3A8DDE, if it's ever wanted again.)
