@@ -102,3 +102,23 @@ test("IBER's results reads never ask for an owner column (its database has none)
   assert.doesNotMatch(placingColumns({ discipline: 'eventing' }), /owner_name/);
   assert.match(placingColumns(IBSR), /owner_name/);
 });
+
+test('the October 2026 file: a title with no date, team placings, a typo in a date and new level lines', () => {
+  const r = parseShowjumping(readFileSync(new URL('./fixtures/sj-2026-10.txt', import.meta.url), 'utf8'), { defaultYear: 2026 });
+  assert.deepEqual([r.weekLabel, r.rows.length, r.events, r.notes.length], ['Week of 12 – 18 October 2026', 41, 8, 0]);
+  // "15th – 187th October 2026": read, not a crash; the event is dated from the day that can be read, and flagged.
+  const sgm = r.rows.filter(x => x.event_name === 'San Giovanni in Marignano International');
+  assert.equal(sgm.length, 2);
+  assert.ok(sgm.every(x => x.start_date === '2026-10-15' && /The day "187th"/.test(x.issues.join(' '))));
+  // "In 2nd Team" then horses with no placing of their own.
+  const team = r.rows.filter(x => x.class_name === 'CSI 5* · $ 200,000 Team 1.50m');
+  assert.deepEqual(team.map(x => [x.horse_name, x.position]), [['My Clementine', 2], ['Kinmar Quality Hero', 2], ['HK Carrera', 3], ['Rockwell RC', 7]]);
+  assert.match(team[3].issues[0], /Listed under "In 4th team" but also given its own placing \(7\)/);
+  assert.ok(team[0].warnings.includes('Placed with its team (2nd team)'));
+  // "1st team Donogue Doctor George", "CSI Ch Amateur", "(BWP)by Heartbreaker", an owner with no label.
+  const dd = r.rows.find(x => x.position === 1 && x.horse_name === 'Donogue Doctor George');
+  assert.deepEqual([dd.class_name, dd.owner], ['CSI Ch Amateur · € 212 Table A, one round against the clock Team 1.20m', 'Katja Goess-Saurau']);
+  assert.equal(r.rows.find(x => x.horse_name === 'Pittsburgh B').dam_sire, 'Heartbreaker');
+  assert.match(r.rows.find(x => x.horse_name === 'Dunaghmore').issues.join(' '), /is the second part the owner/);
+  assert.equal(r.rows.filter(x => x.issues.length).length, 5);
+});

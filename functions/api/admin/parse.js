@@ -25,9 +25,15 @@ export async function onRequestPost({ env, request }) {
   if (!text.trim()) return bad('Choose a file or paste the results first.');
   // IBSR: Charlie's showjumping results files (lib/parser-sj.js); IBER: the weekly eventing articles.
   const parse = siteFor(env).discipline === 'showjumping' ? parseShowjumping : parseResults;
-  const result = parse(text, {
-    defaultCountry: String(form.get('country') || ''),
-    defaultYear: Number(form.get('year')) || new Date().getFullYear()
-  });
+  let result;
+  try {
+    result = parse(text, {
+      defaultCountry: String(form.get('country') || ''),
+      defaultYear: Number(form.get('year')) || new Date().getFullYear()
+    });
+  } catch (e) {
+    console.error('results reader failed', e && e.stack || e);
+    return bad('The results could not be read: a line in them confused the reader. Nothing was saved. Send the file to Emer so the reader can be fixed.');
+  }
   return json({ text, ...result });
 }
