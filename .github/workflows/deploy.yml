@@ -1,0 +1,36 @@
+# A "Deploy" button (GitHub → Actions → Deploy → Run workflow), for when Cloudflare's own builds don't start.
+# It does what Cloudflare's build does: runs the database migrations, then deploys the chosen site(s) from main.
+# Needs two repository secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   a Cloudflare API token ("Edit Cloudflare Workers" template, plus Account → D1 → Edit)
+#   CLOUDFLARE_ACCOUNT_ID  the account ID (in the dashboard address: dash.cloudflare.com/<account id>/…)
+name: Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: Which site to deploy
+        type: choice
+        options: [both, IBER, IBSR]
+        default: both
+concurrency: deploy
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test
+      - name: Deploy IBER (irishbredeventers)
+        if: inputs.site != 'IBSR'
+        run: npm run deploy
+      - name: Deploy IBSR (irishbredshowjumpers)
+        if: inputs.site != 'IBER'
+        run: npm run deploy:ibsr
