@@ -84,10 +84,10 @@ test('"Breeder: X, Rider:" with a comma, and a malformed "[ISH)" tag', () => {
   assert.deepEqual(splitTagged('Beach Ball [ISH)'), { name: 'Beach Ball', breed_code: 'ISH', tih: false, former: '', notes: [] });
 });
 
-test('lines it cannot read are flagged, never guessed', () => {
+test('a gap is placed and noted; only a line that is really wrong is held back', () => {
   const noBreeding = entry('9th Ross Joey (unk) - 2014 gelding. Rider: Georgia Reece (GBR) 37.3, 0, 10.8 = 48.1');
-  assert.equal(noBreeding.verified, false);
-  assert.ok(noBreeding.issues.includes('Breeding not found'));
+  assert.equal(noBreeding.verified, true);
+  assert.ok(noBreeding.warnings.includes('No breeding found (shown as OIO)'));
   const twice = entry('2nd MBF Vital Finesse (ISH) - 2018 gelding by Ringwood Cassero (HOLST) out of Paddys Pride (TB)[IRL] out of Indian River (TB). Breeder: A. Rider: B (GBR) 29.5, 0, 0.0 = 29.5');
   assert.ok(twice.issues.includes('"out of" appears twice'));
   assert.equal(twice.verified, false);
@@ -112,7 +112,7 @@ test('2010 archive style', () => {
   assert.deepEqual([missingBracket.dam, missingBracket.dam_sire, missingBracket.dam_sire_breed], ['Dawn Cherry', 'Oakley Dawn', 'RID']);
   const sireOnly = parseEntry(5, "The Cult ('03 g Cult Hero. Rd Tanya Kyle) 30.5, 0, 5.6 = 36.1", ctx);
   assert.equal(sireOnly.sire, 'Cult Hero');
-  assert.ok(sireOnly.issues.includes('Dam not found'));
+  assert.ok(sireOnly.warnings.includes('No dam found (shown as OIO)'));
 });
 
 test('event lines: country codes, missing bracket, missing year, month ranges', () => {
@@ -226,7 +226,8 @@ test('HSI article typos: missing year or sex, misspelt sex, "byName", "out pf", 
   assert.deepEqual([braces.tih_flag, braces.sire_breed], [true, 'unk']);
   const badYear = entry('6th LVS Vincenzo (ISH) – 2105 gelding by Vancouver (KWPN) out of Agonda (KWPN). Breeder: A. Rider: B (ITA) 28.9, 0, 8.0 = 36.9');
   assert.equal(badYear.horse_name, 'LVS Vincenzo');
-  assert.ok(badYear.issues.includes('Year "2105" is not a year'));
+  assert.deepEqual([badYear.foaled, badYear.verified], [2015, true]);
+  assert.ok(badYear.warnings.includes('Year "2105" read as 2015'));
 });
 
 test('HSI article headings: age classes, odd country codes, a place with no space after it', () => {

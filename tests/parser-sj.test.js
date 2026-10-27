@@ -48,26 +48,27 @@ test('the 2024 file: horse, breeding, breeder, county, owner and rider each in t
   assert.ok(r.rows.every(x => !x.warnings.includes('No scores given')));
 });
 
-test('the 2024 file: lines the parser is not sure of are flagged, not guessed', async () => {
+test('the 2024 file: odd lines are placed as best they can be, with a note, and none held back', async () => {
   const r = await read();
-  const flagged = r.rows.filter(x => x.issues.length);
-  assert.deepEqual(flagged.map(x => [x.horse_name, x.position]), [['Leestone Mylord Trumps', 1], ['ABC Caruso', 5], ['Express Trend', 3], ['ESI Toulouse', 1], ['Curraghgraigue OBOS Flight', 1]]);
-  assert.match(flagged[0].issues[0], /Two placings given \("1st 2nd"\): 1 used, check which is right/);
-  assert.ok(flagged.slice(1).every(x => /Year "20240" in the event heading is not a year/.test(x.issues[0])), 'every placing under "May 20240"');
-  assert.ok(flagged.every(x => !x.verified), 'kept off the site until checked');
+  assert.equal(r.rows.filter(x => x.issues.length).length, 0);
+  const lee = r.rows.find(x => x.horse_name === 'Leestone Mylord Trumps' && x.position === 1);
+  assert.ok(lee.warnings.includes('Two placings given ("1st 2nd"): 1st used'));
+  const kron = r.rows.filter(x => x.event_name === 'Kronenberg International');
+  assert.ok(kron.every(x => x.season === 2024 && x.warnings.includes('Year "20240" in the event heading is not a year: 2024 used')), 'every placing under "May 20240"');
   const lex = r.rows.filter(x => x.event_name === 'Lexington International');
   assert.ok(lex.every(x => x.warnings.includes('No year in the event heading; 2024 taken from the file title') && x.verified), 'a note, not a doubt');
-  assert.equal(r.rows.filter(x => x.verified).length, 13);
+  assert.equal(r.rows.filter(x => x.verified).length, 18);
 });
 
-test('a line inside an event that is neither a class nor a horse is used as the class, but flagged', () => {
+test('a line inside an event that is neither a class nor a horse is used as the class, with a note', () => {
   const r = parseShowjumping(`1.6.24 International Showjumping Results
 Dublin Horse Show (IRL) 5th – 9th August 2024
 CSIO 5*
 Aga Khan Trophy
 1st Some Horse (ISH) – 2015 gelding by A (ISH) out of B (ISH) by C (TB). Breeder: D. Owner: E. Rider: F (IRL).`);
   assert.equal(r.rows[0].class_name, 'CSIO 5* · Aga Khan Trophy');
-  assert.match(r.rows[0].issues.join(' '), /Class heading not recognised \("Aga Khan Trophy"\)/);
+  assert.deepEqual(r.rows[0].issues, []);
+  assert.ok(r.rows[0].warnings.includes('"Aga Khan Trophy" taken as the class heading'));
 });
 
 test('the eventing parser is untouched by the showjumping one', async () => {
@@ -84,7 +85,7 @@ test('IBSR: the 2024 file saves with owners, shows OIO, and search never matches
   const out = await importResults(db, cleanRows(rows, 2024), { weekLabel: r.weekLabel, withOwner: true });
   assert.equal(out.results, 19);
   const shown = (await db.prepare(`SELECT ${placingColumns(IBSR)} ${PLACING_JOIN} WHERE e.season = 2024 AND ${PUBLIC_SQL} ${PLACING_ORDER}`).all()).results;
-  assert.equal(shown.length, 14, 'the 5 flagged placings wait in Unverified');
+  assert.equal(shown.length, 19, 'every placing is on the site');
   const ult = shown.find(x => x.horse_name === 'Ultimately Cooley' && x.position === 8);
   assert.deepEqual([ult.owner_name, ult.rider_name, ult.breeder, ult.oio], ['Orpen Horses Ltd', 'Loic Cannaert', 'Patrick J. Kearns', 0]);
   assert.equal(shown.find(x => x.horse_name === 'Mystery Horse').oio, 1, 'no breeding listed: OIO');
@@ -109,16 +110,17 @@ test('the October 2026 file: a title with no date, team placings, a typo in a da
   // "15th – 187th October 2026": read, not a crash; the event is dated from the day that can be read, and flagged.
   const sgm = r.rows.filter(x => x.event_name === 'San Giovanni in Marignano International');
   assert.equal(sgm.length, 2);
-  assert.ok(sgm.every(x => x.start_date === '2026-10-15' && /The day "187th"/.test(x.issues.join(' '))));
+  assert.ok(sgm.every(x => x.start_date === '2026-10-15' && !x.issues.length && x.warnings.some(w => /The day "187th"/.test(w))));
   // "In 2nd Team" then horses with no placing of their own.
   const team = r.rows.filter(x => x.class_name === 'CSI 5* · $ 200,000 Team 1.50m');
   assert.deepEqual(team.map(x => [x.horse_name, x.position]), [['My Clementine', 2], ['Kinmar Quality Hero', 2], ['HK Carrera', 3], ['Rockwell RC', 7]]);
-  assert.match(team[3].issues[0], /Listed under "In 4th team" but also given its own placing \(7\)/);
+  assert.ok(team[3].warnings.includes('Listed under "In 4th team" with its own placing: 7th used'));
   assert.ok(team[0].warnings.includes('Placed with its team (2nd team)'));
   // "1st team Donogue Doctor George", "CSI Ch Amateur", "(BWP)by Heartbreaker", an owner with no label.
   const dd = r.rows.find(x => x.position === 1 && x.horse_name === 'Donogue Doctor George');
   assert.deepEqual([dd.class_name, dd.owner], ['CSI Ch Amateur · € 212 Table A, one round against the clock Team 1.20m', 'Katja Goess-Saurau']);
   assert.equal(r.rows.find(x => x.horse_name === 'Pittsburgh B').dam_sire, 'Heartbreaker');
-  assert.match(r.rows.find(x => x.horse_name === 'Dunaghmore').issues.join(' '), /is the second part the owner/);
-  assert.equal(r.rows.filter(x => x.issues.length).length, 5);
+  const dun = r.rows.find(x => x.horse_name === 'Dunaghmore');
+  assert.deepEqual([dun.breeder, dun.owner, dun.issues], ['Tom & Linda Magee', 'Bosch Sporthorses & Mulder Sporthorses', []]);
+  assert.equal(r.rows.filter(x => x.issues.length).length, 0, 'nothing held back');
 });

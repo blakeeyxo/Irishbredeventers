@@ -192,7 +192,9 @@
     const bad = incl.filter(r => r.issues.length).length, warn = incl.filter(r => !r.issues.length && r.warnings.length).length;
     const open = imp.questions.filter(q => !imp.decisions[q.key]).length;
     const subs = summary ? summary.subscribers : 0;
-    const shown = imp.rows.map((r, i) => [r, i]).filter(([r]) => !imp.onlyProblems || r.issues.length || r.warnings.length);
+    // Rows that couldn't be read cleanly first (their row numbers stay as in the file).
+    const shown = imp.rows.map((r, i) => [r, i]).filter(([r]) => !imp.onlyProblems || r.issues.length || r.warnings.length)
+      .sort(([a, i], [b, j]) => (b.issues.length && !b.skip) - (a.issues.length && !a.skip) || i - j);
     const nc = imp.newCounts || {};
     box.innerHTML = `<div style="margin-top:30px;">
       <h3>Check before saving</h3>
@@ -317,8 +319,11 @@
     box.innerHTML = '<div class="empty-state">Loading…</div>';
     const id = Number(row.dataset.batch), label = row.querySelector('b').textContent;
     const d = await api(`/api/admin/batches?id=${id}`);
+    // The server lists the ones that need fixing first.
+    const fixCount = d.rows.filter(r => r.doubtful || !r.verified || !r.parse_ok).length;
     box.innerHTML = `<form class="form batch-label" data-id="${id}"><label>Upload name<input name="label" value="${esc(label)}" maxlength="120"></label>
         <div class="adm-actions"><button class="btn sm" type="submit">Save name</button></div></form>
+      ${fixCount ? `<div class="notice"><b>${fixCount} result${fixCount === 1 ? ' needs' : 's need'} fixing</b>, listed first. Correct ${fixCount === 1 ? 'it' : 'each one'} and press <b>Save and mark as verified</b> to put ${fixCount === 1 ? 'it' : 'them'} on the site.</div>` : ''}
       <p class="meta">${d.rows.length} results. Correct any field and press Save; Delete takes one result off the site.</p>
       <div class="unv-list">${d.rows.map(r => rowEditCard(r)).join('')}</div>`;
   }
