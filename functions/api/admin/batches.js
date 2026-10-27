@@ -2,7 +2,12 @@
 // (unpublish / re-publish), or removed whole.
 import { siteFor } from '../../../lib/sites.js';
 import { json, bad, readJson, str } from '../../../lib/http.js';
-import { deleteBatch, adminPlacingColumns, PLACING_JOIN, PLACING_ORDER, DOUBT_SQL } from '../../../lib/results.js';
+import { deleteBatch, adminPlacingColumns, PLACING_JOIN, DOUBT_SQL } from '../../../lib/results.js';
+
+// In an upload opened with Edit, the results that need fixing come first (a real problem, not verified, or a line that
+// couldn't be read cleanly), then the rest in the usual order.
+const NEEDS_FIXING_FIRST = `ORDER BY (COALESCE(${DOUBT_SQL}, 0) = 1 OR p.verified = 0 OR IFNULL(r.parse_ok, 1) = 0) DESC,
+  e.start_date DESC, e.id, c.id, p.position, p.id`;
 
 export async function onRequestGet({ env, request }) {
   const id = Number(new URL(request.url).searchParams.get('id'));
@@ -10,7 +15,7 @@ export async function onRequestGet({ env, request }) {
     // One upload's results, for editing. Fixes are saved through /api/admin/unverified (any placing by id).
     const { results } = await env.DB.prepare(`SELECT ${adminPlacingColumns(siteFor(env))}, IFNULL(r.raw_line, '') AS raw_line, IFNULL(r.parse_ok, 1) AS parse_ok,
       (SELECT COUNT(*) FROM results rr WHERE rr.event_id = e.id) AS event_results
-      ${PLACING_JOIN} WHERE p.batch_id = ? ${PLACING_ORDER} LIMIT 2000`).bind(id).all();
+      ${PLACING_JOIN} WHERE p.batch_id = ? ${NEEDS_FIXING_FIRST} LIMIT 2000`).bind(id).all();
     return json({ rows: results });
   }
   // Every upload with the events it holds, newest events first (so a late-loaded older week sits with its own
