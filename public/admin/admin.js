@@ -242,6 +242,7 @@
       // Changed and Done: the row is verified and goes live when the upload is saved (unless a problem is left).
       if (r.edited) {
         revalidate(r);
+        r.guesses = []; // checked by hand: no "best guess" note on the site
         if (!r.warnings.includes('Edited by hand')) r.warnings = r.warnings.concat('Edited by hand');
         if (!r.issues.length) r.verified = true;
       }
@@ -364,7 +365,9 @@
   /* ---------- Unverified ---------- */
   const FIELDS = [['position', 'Pos'], ['horse_name', 'Horse'], ['former_name', 'Former name(s)'], ['breed', 'Breed'], ['foaled', 'Foaled'], ['sex', 'Sex'],
     ['sire', 'Sire'], ['dam', 'Dam'], ['dam_sire', 'Dam sire'], ['breeder', 'Breeder'],
-    ...(JUMPING ? [['owner_name', 'Owner']] : [['dressage', 'Dressage'], ['show_jumping', 'Show jumping'], ['cross_country', 'Cross country'], ['score', 'Final score']])];
+    ...(JUMPING ? [['owner_name', 'Owner']] : [['dressage', 'Dressage'], ['show_jumping', 'Show jumping'], ['cross_country', 'Cross country'], ['score', 'Final score']]),
+    // The reader's best guess, shown on the site. Empty it once the result is checked.
+    ['note', 'Note shown on the site (empty it once checked)']];
 
   // One result as an editable card: in the Unverified tab (check = true: a Verified tick box and no buttons, nothing
   // saved until Done), and under an upload opened with Edit (check = false: Save buttons). Always called with

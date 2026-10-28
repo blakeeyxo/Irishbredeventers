@@ -164,7 +164,9 @@
     const former = h.former_name ? `was ${esc(h.former_name)}` : '';
     const sub = [facts && esc(facts), former].filter(Boolean).join(' · ');
     const rider = h.rider_name ? `<span class="sub rider">Rider: ${esc(h.rider_name)}${h.rider_country ? ` (${esc(h.rider_country)})` : ''}</span>` : '';
-    return `<a class="horse-link" href="${horseHref(h)}" data-link>${esc(h.horse_name)}</a>${statusTag(h)}${sub ? `<span class="sub">${sub}</span>` : ''}${rider}`;
+    // A best guess the results software made about this entry (Terms of Use, point 3): unconfirmed until checked.
+    const note = h.note ? `<span class="sub result-note" title="A best guess made when the results were read in. Unconfirmed until checked.">Note: ${esc(h.note)}</span>` : '';
+    return `<a class="horse-link" href="${horseHref(h)}" data-link>${esc(h.horse_name)}</a>${statusTag(h)}${sub ? `<span class="sub">${sub}</span>` : ''}${rider}${note}`;
   }
   function breedingCell(h) {
     // Unknown parts show as UNK; the dam's sire line only when the dam is known.
@@ -423,7 +425,7 @@
           <td class="c-pl">${esc(ordinal(r.position))}</td>
           <td data-label="Date">${esc(r.class_date ? niceDate(r.class_date) : (r.date_text || niceDate(r.start_date)))}</td>
           <td class="c-horse"><a href="${esc(eventHref(r))}" data-link data-close-modal>${esc(r.event_name)}</a><span class="sub">${esc(r.country)}</span></td>
-          <td data-label="Class">${esc(r.class_name)}${statusTag(r)}</td>
+          <td data-label="Class">${esc(r.class_name)}${statusTag(r)}${r.note ? `<span class="sub result-note">Note: ${esc(r.note)}</span>` : ''}</td>
           ${JUMPING ? '' : `<td class="c-score">${scoreCell(r)}</td>`}</tr>`;
     }).join('');
   }

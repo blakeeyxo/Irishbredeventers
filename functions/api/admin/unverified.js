@@ -58,6 +58,8 @@ export async function onRequestPost({ env, request }) {
     if ('score' in f) { sets.push('score = ?'); vals.push(f.score === '' ? null : Number(f.score)); }
     if (b.verify) sets.push('verified = 1');
     if (sets.length) await env.DB.prepare(`UPDATE placings SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, id).run();
+    // The note shown on the site with a best-guess result: emptied once checked.
+    if ('note' in f && row.result_id) await env.DB.prepare('UPDATE results SET public_note = ? WHERE id = ?').bind(str(f.note, 400), row.result_id).run();
     // IBSR: the owner is kept on the result (migrations-ibsr/0002).
     if ('owner_name' in f && row.result_id && siteFor(env).discipline === 'showjumping') {
       await env.DB.prepare('UPDATE results SET owner_name = ? WHERE id = ?').bind(str(f.owner_name, 160), row.result_id).run();

@@ -124,3 +124,30 @@ test('the October 2026 file: a title with no date, team placings, a typo in a da
   assert.deepEqual([dun.breeder, dun.owner, dun.issues], ['Tom & Linda Magee', 'Bosch Sporthorses & Mulder Sporthorses', []]);
   assert.equal(r.rows.filter(x => x.issues.length).length, 0, 'nothing held back');
 });
+
+test('a best guess is shown with the result on the site as a note; a line read as written has none (both sites)', async () => {
+  // IBSR: the October file.
+  const sj = memoryD1(new URL('../migrations-ibsr/', import.meta.url));
+  const oct = parseShowjumping(readFileSync(new URL('./fixtures/sj-2026-10.txt', import.meta.url), 'utf8'), { defaultYear: 2026 });
+  // The file asks whether two near-identical names are the same (as the owner area would): answered "different".
+  const ask = await importResults(sj, cleanRows(oct.rows, 2026), { withOwner: true });
+  if (ask.needsDecision) {
+    const decisions = Object.fromEntries(ask.needsDecision.map(q => [q.key, 'new']));
+    await importResults(sj, cleanRows(oct.rows, 2026), { withOwner: true, decisions });
+  }
+  const shown = (await sj.prepare(`SELECT ${placingColumns(IBSR)} ${PLACING_JOIN} WHERE ${PUBLIC_SQL}`).all()).results;
+  assert.equal(shown.find(x => x.horse_name === 'Dunaghmore').note, '"Bosch Sporthorses & Mulder Sporthorses" read as the owner (it had no "Owner:" label)');
+  assert.match(shown.find(x => x.horse_name === 'BP Pocahontas').note, /The day "187th" in the event heading isn't a date/);
+  assert.equal(shown.find(x => x.horse_name === 'Mondavi').note, '', 'read as written: no note');
+  // IBER: a mistyped year.
+  const ev = memoryD1(new URL('../migrations/', import.meta.url));
+  const r = parseResults(`27.10.26 International Eventing Results
+Ireland
+Test Horse Trials (IRL) 24th – 25th October 2026
+CCI2*-S
+1st LVS Vincenzo (ISH) – 2105 gelding by Vancouver (KWPN) out of Agonda (KWPN) by Darco (BWP). Breeder: A. Rider: B (ITA) 28.9, 0, 8.0 = 36.9`);
+  const q = await importResults(ev, cleanRows(r.rows, 2026));
+  if (q.needsDecision) await importResults(ev, cleanRows(r.rows, 2026), { decisions: Object.fromEntries(q.needsDecision.map(x => [x.key, 'new'])) });
+  const row = await ev.prepare(`SELECT ${placingColumns({ discipline: 'eventing' })} ${PLACING_JOIN} WHERE e.name = 'Test Horse Trials'`).first();
+  assert.deepEqual([row.foaled, row.note], [2015, 'Year of birth read as 2015 (written "2105")']);
+});
