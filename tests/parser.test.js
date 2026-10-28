@@ -87,10 +87,19 @@ test('"Breeder: X, Rider:" with a comma, and a malformed "[ISH)" tag', () => {
 test('a gap is placed and noted; only a line that is really wrong is held back', () => {
   const noBreeding = entry('9th Ross Joey (unk) - 2014 gelding. Rider: Georgia Reece (GBR) 37.3, 0, 10.8 = 48.1');
   assert.equal(noBreeding.verified, true);
-  assert.ok(noBreeding.warnings.includes('No breeding found (shown as OIO)'));
+  assert.ok(noBreeding.warnings.includes('Breeding not known: put as UNK'));
   const twice = entry('2nd MBF Vital Finesse (ISH) - 2018 gelding by Ringwood Cassero (HOLST) out of Paddys Pride (TB)[IRL] out of Indian River (TB). Breeder: A. Rider: B (GBR) 29.5, 0, 0.0 = 29.5');
   assert.ok(twice.issues.includes('"out of" appears twice'));
   assert.equal(twice.verified, false);
+});
+
+test('breeding written as UNK or unknown is left blank (shown as UNK), placed, and never a horse called "UNK"', () => {
+  const r = entry('5th Hidden Gem (ISH) - 2015 mare by UNK out of Quiet Lady (ISH) by unknown. Breeder: A. Rider: B (IRL) 30.0, 0, 0.0 = 30.0');
+  assert.deepEqual([r.sire, r.dam, r.dam_breed, r.dam_sire, r.verified], ['', 'Quiet Lady', 'ISH', '', true]);
+  const both = entry('6th Mystery Man (ISH) - 2016 gelding by Unk (ISH) out of UNK. Breeder: A. Rider: B (IRL) 30.0, 0, 0.0 = 30.0');
+  assert.deepEqual([both.sire, both.sire_breed, both.dam, both.verified], ['', '', '', true]);
+  const sireUnk = entry('7th Lucky Find (ISH) - 2014 gelding sire unk out of Kates Girl (ISH) by Cruising (ISH). Breeder: A. Rider: B (IRL) 30.0, 0, 0.0 = 30.0');
+  assert.deepEqual([sireUnk.sire, sireUnk.dam, sireUnk.dam_sire], ['', 'Kates Girl', 'Cruising']);
 });
 
 test('scores that do not add up get a warning', () => {
@@ -112,7 +121,7 @@ test('2010 archive style', () => {
   assert.deepEqual([missingBracket.dam, missingBracket.dam_sire, missingBracket.dam_sire_breed], ['Dawn Cherry', 'Oakley Dawn', 'RID']);
   const sireOnly = parseEntry(5, "The Cult ('03 g Cult Hero. Rd Tanya Kyle) 30.5, 0, 5.6 = 36.1", ctx);
   assert.equal(sireOnly.sire, 'Cult Hero');
-  assert.ok(sireOnly.warnings.includes('No dam found (shown as OIO)'));
+  assert.ok(sireOnly.warnings.includes('Dam not known: put as UNK'));
 });
 
 test('event lines: country codes, missing bracket, missing year, month ranges', () => {

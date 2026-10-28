@@ -135,7 +135,7 @@
       <td data-label="Place"><small class="rownum">Row ${i + 1}</small><br>${esc(ordinal(r.position))}</td>
       <td data-label="Horse"><b>${esc(r.horse_name || '?')}</b>${r.breed ? ` <small>(${esc(r.breed)})</small>` : ''}${r.tih_flag ? ' <small class="tih">TIH</small>' : ''}
         ${r.former_name ? `<br><small>was ${esc(r.former_name)}</small>` : ''}<br><small>${esc([r.foaled, r.sex].filter(Boolean).join(' ') || 'year and sex?')}</small></td>
-      <td data-label="Sire × Dam">${tagged(r.sire, r.sire_breed, r.sire_tih)} × ${tagged(r.dam, r.dam_breed, r.dam_tih)}<br><small>dam by ${r.dam_sire ? tagged(r.dam_sire, r.dam_sire_breed, r.dam_sire_tih) : '–'}</small></td>
+      <td data-label="Sire × Dam">${r.sire ? tagged(r.sire, r.sire_breed, r.sire_tih) : 'UNK'} × ${r.dam ? tagged(r.dam, r.dam_breed, r.dam_tih) : 'UNK'}<br><small>dam by ${r.dam_sire ? tagged(r.dam_sire, r.dam_sire_breed, r.dam_sire_tih) : 'UNK'}</small></td>
       <td data-label="Breeder">${r.breeder ? esc(r.breeder) : '–'}${r.breeder_county ? `<br><small>${esc(r.breeder_county)}</small>` : ''}</td>
       <td data-label="Rider">${esc(r.rider_name || '–')}${r.rider_country ? ` <small>${esc(r.rider_country)}</small>` : ''}</td>
       ${JUMPING ? `<td data-label="Owner">${esc(r.owner || '–')}</td>` : `<td data-label="Score">${esc(scoreText(r) || '–')}</td>`}
