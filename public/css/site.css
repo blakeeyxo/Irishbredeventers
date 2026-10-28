@@ -23,7 +23,7 @@
   --sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --page: 1320px;
   --side: 170px;
-  --wide: 1680px;              /* header, top banner, ad columns and content (from 1024px wide) */
+  --wide: 1812px;              /* from 1200px: 230px ads + 24px gaps + a 1256px middle + 24px side padding */
 }
 
 * { box-sizing: border-box; }
@@ -115,34 +115,37 @@ html { scroll-padding-top: calc(var(--top-h, 260px) + 12px); }
 .ad-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ad-box.ad-open { align-items: center; justify-content: center; }
 .ad-box .ad-name { font-family: var(--serif); font-weight: 600; color: var(--navy); text-align: center; padding: 0 10px; }
-/* Wide layout, from 1024px: header, top banner, side ads and content share one width that runs nearly to the screen
-   edges (24px each side). The logo lines up with the left ad column and the banner spans the ads and the content. */
+/* Larger screens. From 1024px: a bigger logo mark and wordmark, and tighter gaps under the header and banner.
+   From 1200px: header, top banner, side ads and content share one width, so the logo lines up with the left ad column
+   and the banner spans the ads and the content. The middle column keeps exactly the width it had before (up to
+   1256px); the ads take the rest: 186px on a laptop, up to 230px on a large screen. */
 @media (min-width: 1024px) {
-  :root { --side: 190px; }
-  .site-header .container, .banner-bar .container, .container.page { max-width: var(--wide); padding-left: 24px; padding-right: 24px; }
-  .hdr-inner { padding: 12px 24px 12px; }
+  .hdr-inner { padding: 12px 32px; }
   .brand-mark { width: 88px; height: 88px; font-size: 23px; border-width: 2px; }
   .brand-name { font-size: 28px; }
   .nav { gap: 22px; }
   .hdr-search { width: 330px; }
   .banner-bar { padding: 16px 0 8px; }
   .container.page { padding-top: 8px; }
-  /* The ad columns: --side wide, or narrower on a short screen, so all three square ads stay in view under the pinned
-     header and banner. The results take whatever is left. */
-  .page { gap: 24px; --side-col: min(var(--side), calc((100vh - var(--top-h, 260px) - 64px) / 3));
-    grid-template-columns: var(--side-col) minmax(0, 1fr) var(--side-col); }
+}
+@media (min-width: 1200px) {
+  .site-header .container, .banner-bar .container, .container.page { max-width: var(--wide); padding-left: 24px; padding-right: 24px; }
+  .page { gap: 24px; grid-template-columns: minmax(186px, 1fr) minmax(0, 1256px) minmax(186px, 1fr); }
   .side { gap: 16px; }
-  .ad-box { max-height: none; }
+  /* Square, and all three in view under the pinned header and banner: smaller on a short screen, kept to the outer
+     edge so they line up with the banner. */
+  .ad-box { max-height: none; width: min(100%, calc((100vh - var(--top-h, 260px) - 64px) / 3)); }
+  .side-left .ad-box { justify-self: start; }
+  .side-right .ad-box { justify-self: end; }
 }
 @media (min-width: 1280px) {
-  :root { --side: 230px; }
   .brand-mark { width: 104px; height: 104px; font-size: 27px; }
   .brand-name { font-size: 40px; }
   .nav { gap: 30px; }
   .hdr-search { width: 400px; }
 }
-/* Below 1024px there is no room beside the content: the six boxes sit in a tidy block underneath it. */
-@media (max-width: 1023px) {
+/* Below 1200px there is no room beside the content: the six boxes sit in a tidy block underneath it. */
+@media (max-width: 1199px) {
   .page { grid-template-columns: minmax(0, 1fr); row-gap: 0; }
   .page > main { grid-row: 1; }
   .side { position: static; grid-template-columns: repeat(3, minmax(0, 1fr)); }
