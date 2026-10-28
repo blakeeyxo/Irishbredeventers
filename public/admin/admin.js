@@ -661,7 +661,7 @@
   // 1. Box sizes, measured from the live layout: the public home page is loaded out of sight at laptop and
   //    phone width and the real banner and right-hand-column boxes are measured, so the recommendations follow
   //    any change to the site's layout. If measuring fails, the sizes from the stylesheet are used.
-  const FALLBACK = { laptop: { banner: [1256, 110], box: [170, 170] }, phone: { banner: [358, 56], box: [112, 112] } };
+  const FALLBACK = { laptop: { banner: [1632, 110], box: [230, 230] }, phone: { banner: [358, 56], box: [112, 112] } };
   function measureAt(width) {
     return new Promise(resolve => {
       const f = document.createElement('iframe');
