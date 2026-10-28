@@ -27,7 +27,10 @@ test('IBSR has its own name, look and wording, with no eventing branding left', 
     assert.doesNotMatch(out[p], /IrishBredEventingResults \(IBER\)|IrishBred<wbr><span>Eventing|>IBER</, p);
     assert.match(out[p], /IrishBredShowjumpingResults|IBSR/, p);
   }
-  assert.doesNotMatch(out['index.html'], /eventing result|Thoresby|cross-country fence/i);
+  // The website policies name both sites on purpose ("Irish Bred Eventing Results, IBER"); the rest of the page may not.
+  const outsidePolicies = out['index.html'].replace(/<div class="panel policies" id="privacy">[\s\S]*?<\/section>\s*<\/div>/, '');
+  assert.ok(outsidePolicies.length < out['index.html'].length, 'the policies are on the page');
+  assert.doesNotMatch(outsidePolicies, /eventing result|Thoresby|cross-country fence/i);
   // Same green as IBER: identical stylesheet, favicon and browser colour.
   const iber = build(SITES.iber);
   assert.equal(out['css/site.css'], asText(iber['css/site.css']));
