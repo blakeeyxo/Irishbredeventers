@@ -292,15 +292,30 @@
   async function loadBatches() {
     const d = await api('/api/admin/batches');
     if (!d.batches.length) { $('adm-batches').innerHTML = '<div class="empty-state">Nothing uploaded yet.</div>'; return; }
+    const HEAD = '<table class="batch-table"><thead><tr><th>Event dates</th><th>Upload (week)</th><th class="num">Results</th><th>Status</th><th></th></tr></thead><tbody>';
     let html = '', season = null, month = null;
-    for (const b of d.batches) {
+    // Uploads with results waiting to be fixed come first, under their own heading; the rest by season and month.
+    const toFix = d.batches.filter(b => b.held), rest = d.batches.filter(b => !b.held);
+    if (toFix.length) {
+      const n = toFix.reduce((a, b) => a + b.held, 0);
+      html += `<h4 class="batch-season">Needs fixing: ${n} result${n === 1 ? '' : 's'} in ${toFix.length} upload${toFix.length === 1 ? '' : 's'}</h4>
+        <p class="meta">Press <b>Edit</b>: the results to fix are listed first in each upload. They stay off the site until you save them as verified.</p>${HEAD}`;
+      for (const b of toFix) html += batchRow(b);
+      html += '</tbody></table>';
+    }
+    for (const b of rest) {
       const s = b.season || 'No events', m = b.week_date ? b.week_date.slice(0, 7) : '';
-      if (s !== season) { if (season !== null) html += '</tbody></table>'; html += `<h4 class="batch-season">${esc(s)} season</h4><table class="batch-table"><thead><tr><th>Event dates</th><th>Upload (week)</th><th class="num">Results</th><th>Status</th><th></th></tr></thead><tbody>`; season = s; month = null; }
+      if (s !== season) { if (season !== null) html += '</tbody></table>'; html += `<h4 class="batch-season">${esc(s)} season</h4>${HEAD}`; season = s; month = null; }
       if (m !== month) { html += `<tr class="batch-month"><td colspan="5">${m ? `${MONTHS_LONG[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}` : 'Empty uploads'}</td></tr>`; month = m; }
-      const names = (b.event_names || '').split(',').filter(Boolean);
-      const status = !b.published ? '<span class="st st-off">Unpublished</span>'
-        : b.held ? `<span class="st st-live">Live</span> <span class="st st-held">${b.held} hidden until verified</span>` : '<span class="st st-live">Live</span>';
-      html += `<tr data-batch="${b.id}" class="${b.published ? '' : 'off'}">
+      html += batchRow(b);
+    }
+    $('adm-batches').innerHTML = html + (season !== null ? '</tbody></table>' : '');
+  }
+  function batchRow(b) {
+    const names = (b.event_names || '').split(',').filter(Boolean);
+    const status = !b.published ? '<span class="st st-off">Unpublished</span>'
+      : b.held ? `<span class="st st-live">Live</span> <span class="st st-held">${b.held} hidden until verified</span>` : '<span class="st st-live">Live</span>';
+    return `<tr data-batch="${b.id}" class="${b.published ? '' : 'off'}">
         <td>${esc(dateRange(b.first_date, b.last_date))}</td>
         <td><b>${esc(b.label || 'Upload')}</b><small>${b.events} event${b.events === 1 ? '' : 's'}${names.length ? `: ${esc(names.slice(0, 3).join(', '))}${names.length > 3 ? ` and ${names.length - 3} more` : ''}` : ''} · uploaded ${esc(niceDate(b.created_at))}</small></td>
         <td class="num">${b.results}</td>
@@ -309,8 +324,6 @@
           <button class="btn sm alt" data-pub-batch="${b.id}" data-pub="${b.published ? 0 : 1}">${b.published ? 'Unpublish' : 'Re-publish'}</button>
           <button class="btn sm alt danger" data-del-batch="${b.id}" data-name="${esc(b.label)}">Delete</button></td></tr>
         <tr class="batch-edit-row" hidden><td colspan="5"><div class="batch-edit"></div></td></tr>`;
-    }
-    $('adm-batches').innerHTML = html + '</tbody></table>';
   }
   async function openBatch(row) {
     const editRow = row.nextElementSibling, box = editRow.querySelector('.batch-edit');
