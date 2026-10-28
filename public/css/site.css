@@ -316,6 +316,7 @@ html { scroll-padding-top: calc(var(--top-h, 260px) + 12px); }
 .contact-list dd { margin: 0; }
 .privacy-copy { font-size: 14px; color: var(--ink-soft); margin: 0; }
 /* Website policies (About page): privacy, terms, Blacktype Page terms, AI statement, cookies */
+.result-note { color: var(--ink-faint); font-style: italic; }
 .policies { font-size: 15px; color: var(--ink-soft); }
 .policies section { border-top: 1px solid var(--rule); margin-top: 26px; padding-top: 6px; scroll-margin-top: 90px; }
 .policies h3 { font-family: var(--serif); font-size: 22px; color: var(--navy); margin: 16px 0 6px; }
