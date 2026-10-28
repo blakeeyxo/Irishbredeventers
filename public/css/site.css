@@ -132,11 +132,11 @@ html { scroll-padding-top: calc(var(--top-h, 260px) + 12px); }
   .site-header .container, .banner-bar .container, .container.page { max-width: var(--wide); padding-left: 24px; padding-right: 24px; }
   .page { gap: 24px; grid-template-columns: minmax(186px, 1fr) minmax(0, 1256px) minmax(186px, 1fr); }
   .side { gap: 16px; }
-  /* Square, and all three in view under the pinned header and banner: smaller on a short screen, kept to the outer
-     edge so they line up with the banner. */
-  .ad-box { max-height: none; width: min(100%, calc((100vh - var(--top-h, 260px) - 64px) / 3)); }
-  .side-left .ad-box { justify-self: start; }
-  .side-right .ad-box { justify-self: end; }
+  /* Each ad fills its column (no white gap beside the content). On a screen too short for all three under the pinned
+     header and banner, the column scrolls up until the bottom ad is in view, then stays pinned there. */
+  .page { --ad: clamp(186px, calc((100vw - 1352px) / 2), 230px); }
+  .side { top: min(calc(var(--top-h, 260px) + 16px), calc(100vh - 3 * var(--ad) - 48px)); }
+  .ad-box { max-height: none; }
 }
 @media (min-width: 1280px) {
   .brand-mark { width: 104px; height: 104px; font-size: 27px; }
