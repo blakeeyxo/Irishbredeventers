@@ -7,7 +7,7 @@
 
   /* ---------- Tabs ---------- */
   let countryList = [];
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, horses: () => { loadBreeding(); loadShared(); }, forsale: () => { loadForSale(); loadWanted(); }, analytics: () => loadAnalytics(), messages: () => { loadSubmissions(); loadComments(); loadCorrections(); loadEnquiries(); } };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, horses: () => { loadBreeding(); loadShared(); }, forsale: () => { loadForSale(); loadWanted(); }, analytics: () => loadAnalytics(), messages: () => { loadSubmissions(); loadComments(); loadCorrections(); loadEnquiries(); loadSignups(); } };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -19,12 +19,12 @@
   async function loadSummary() {
     const s = await api('/api/admin/summary');
     $('who').textContent = `Logged in as ${s.user}`;
-    for (const k of ['unverified', 'comments', 'corrections', 'enquiries']) {
+    for (const k of ['unverified', 'comments', 'corrections', 'enquiries', 'signups']) {
       const el = $('n-' + k);
       el.textContent = s[k];
       el.hidden = !s[k];
     }
-    const waiting = s.comments + s.corrections + s.enquiries + (s.submissions || 0);
+    const waiting = s.comments + s.corrections + s.enquiries + (s.submissions || 0) + (s.signups || 0);
     $('n-messages').textContent = waiting;
     $('n-messages').hidden = !waiting;
     if (!$('adm-country').options.length) {
@@ -1511,6 +1511,47 @@
     if (b.dataset.enq === 'delete' && !confirm('Delete this enquiry?')) return;
     await api('/api/admin/enquiries', { method: 'POST', body: { id: Number(b.dataset.id), action: b.dataset.enq } });
     loadEnquiries(); refreshSummary();
+  });
+
+  /* ---------- Email sign-ups (the new-results email list) ---------- */
+  let signups = [];
+  async function loadSignups() {
+    signups = (await api('/api/admin/subscribers')).subscribers;
+    const confirmed = signups.filter(s => s.confirmed);
+    const fresh = signups.filter(s => s.new).length;
+    $('sig-list').innerHTML = signups.length ? `
+      <p class="meta">${confirmed.length} confirmed · ${signups.length - confirmed.length} waiting to confirm${fresh ? ` · <b>${fresh} new</b>` : ''}</p>
+      <div class="adm-actions">
+        ${fresh ? '<button class="btn sm" data-sig="seen">Mark as seen</button>' : ''}
+        <button class="btn sm alt" data-sig="copy" ${confirmed.length ? '' : 'disabled'}>Copy confirmed emails</button>
+        <button class="btn sm alt" data-sig="csv" ${confirmed.length ? '' : 'disabled'}>Download list (CSV)</button>
+        <span class="form-done" id="sig-msg" role="status"></span>
+      </div>
+      <div class="table-scroll"><table class="adm-table"><thead><tr><th>Email</th><th>Signed up</th><th>Status</th><th></th></tr></thead><tbody>
+      ${signups.map(s => `<tr${s.new ? ' class="is-new"' : ''}><td>${s.new ? '<span class="iss">New</span> ' : ''}<a href="mailto:${esc(s.email)}">${esc(s.email)}</a></td>
+        <td>${esc(niceDate(s.created_at))}</td><td>${s.confirmed ? '<span class="ok">Confirmed</span>' : '<span class="meta">Waiting to confirm</span>'}</td>
+        <td><button class="btn sm alt" data-sig="delete" data-id="${s.id}">Remove</button></td></tr>`).join('')}
+      </tbody></table></div>`
+      : '<div class="empty-state">No sign-ups yet.</div>';
+  }
+  $('sig-list').addEventListener('click', async e => {
+    const b = e.target.closest('[data-sig]');
+    if (!b) return;
+    const confirmed = signups.filter(s => s.confirmed).map(s => s.email);
+    if (b.dataset.sig === 'copy') {
+      await navigator.clipboard.writeText(confirmed.join(', ')).then(() => btnMsg($('sig-msg'), `${confirmed.length} email${confirmed.length === 1 ? '' : 's'} copied.`), () => btnMsg($('sig-msg'), "Couldn't copy: use Download instead."));
+      return;
+    }
+    if (b.dataset.sig === 'csv') {
+      const rows = [['email', 'signed_up'], ...signups.filter(s => s.confirmed).map(s => [s.email, s.created_at])];
+      const blob = new Blob([rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n')], { type: 'text/csv' });
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${location.hostname.replace(/^www\./, '')}-email-list-${new Date().toISOString().slice(0, 10)}.csv` });
+      a.click(); URL.revokeObjectURL(a.href);
+      return;
+    }
+    if (b.dataset.sig === 'delete' && !confirm('Remove this address from the email list?')) return;
+    await api('/api/admin/subscribers', { method: 'POST', body: { action: b.dataset.sig, id: Number(b.dataset.id) } });
+    loadSignups(); refreshSummary();
   });
 
   /* ---------- Shared stallions and breeding (shared horse database, both sites) ---------- */

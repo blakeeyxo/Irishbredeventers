@@ -4,6 +4,7 @@ import { COUNTRIES } from '../../../lib/parser.js';
 import { TO_CHECK_SQL } from '../../../lib/results.js';
 import { tidyKnownSires } from '../../../lib/breeding.js';
 import { siteFor } from '../../../lib/sites.js';
+import { SEEN_SQL } from './subscribers.js';
 
 let lastTidy = 0;
 
@@ -17,7 +18,8 @@ export async function onRequestGet({ env, data }) {
       (SELECT COUNT(*) FROM corrections WHERE status = 'open') AS corrections,
       (SELECT COUNT(*) FROM enquiries WHERE status = 'open') AS enquiries,
       (SELECT COUNT(*) FROM subscribers WHERE confirmed = 1) AS subscribers,
-      (SELECT COUNT(*) FROM subscribers WHERE confirmed = 0) AS unconfirmed`).first();
+      (SELECT COUNT(*) FROM subscribers WHERE confirmed = 0) AS unconfirmed,
+      (SELECT COUNT(*) FROM subscribers WHERE id > ${SEEN_SQL}) AS signups`).first();
   // Results and breeding sent in (showjumping site, shared database) also wait under Messages.
   let submissions = 0;
   if (env.SHARED && siteFor(env).discipline === 'showjumping') {
