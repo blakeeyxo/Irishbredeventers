@@ -15,6 +15,7 @@
 .adm-table th { text-align: left; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); padding: 8px; border-bottom: 1px solid var(--rule-strong); }
 .adm-table td { padding: 8px; border-top: 1px solid var(--rule); vertical-align: top; }
 .adm-table tr.bad td { background: #FBF0EE; }
+.adm-table tr.is-new td { background: #FFF8E6; }
 .adm-table input[type=checkbox] { width: 20px; height: 20px; }
 .iss { color: var(--alert); font-weight: 600; }
 .adm-warn { color: var(--gold); font-weight: 600; }
