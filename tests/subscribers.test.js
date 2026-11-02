@@ -138,3 +138,24 @@ test('with email not set up, the owner is told nothing was sent', async () => {
     assert.deepEqual([out.emailStatus, out.emailed], ['not-set-up', 0]);
   } finally { t.restore(); }
 });
+
+test('"Send confirm email again": to everyone still waiting (or one), never to the confirmed; says when email is not set up', async () => {
+  const t = setup(mailOn);
+  try {
+    t.env.DB.raw.exec("INSERT INTO subscribers (email, confirmed, token) VALUES ('wait1@example.ie', 0, 'tokw1'), ('wait2@example.ie', 0, 'tokw2'), ('done@example.ie', 1, 'tokd')");
+    const all = await (await t.call('/api/admin/subscribers', { method: 'POST', body: { action: 'resend', id: null } })).json();
+    assert.deepEqual([all.status, all.sent], ['sent', 2]);
+    assert.deepEqual(t.sent.map(m => m.to[0]).sort(), ['wait1@example.ie', 'wait2@example.ie']);
+    assert.ok(t.sent[0].html.includes('https://iber.ie/api/subscribe/confirm?token=tokw'), 'the confirm link on the site address');
+    t.sent.length = 0;
+    const id = t.env.DB.raw.prepare("SELECT id FROM subscribers WHERE email = 'wait2@example.ie'").get().id;
+    await t.call('/api/admin/subscribers', { method: 'POST', body: { action: 'resend', id } });
+    assert.deepEqual(t.sent.map(m => m.to[0]), ['wait2@example.ie']);
+    assert.equal((await t.call('/api/admin/subscribers', { method: 'POST', host: 'iber.ie', body: { action: 'resend' } })).status, 404, 'owner only');
+  } finally { t.restore(); }
+  const off = setup();
+  try {
+    off.env.DB.raw.exec("INSERT INTO subscribers (email, confirmed, token) VALUES ('wait1@example.ie', 0, 'tokw1')");
+    assert.equal((await (await off.call('/api/admin/subscribers', { method: 'POST', body: { action: 'resend' } })).json()).status, 'not-set-up');
+  } finally { off.restore(); }
+});

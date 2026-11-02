@@ -1521,10 +1521,13 @@
     signups = (await api('/api/admin/subscribers')).subscribers;
     const confirmed = signups.filter(s => s.confirmed);
     const fresh = signups.filter(s => s.new).length;
-    $('sig-list').innerHTML = signups.length ? `
+    const waiting = signups.length - confirmed.length;
+    const noMail = summary && !summary.mailReady;
+    $('sig-list').innerHTML = (noMail ? `<p class="iss" style="margin:0 0 12px;"><b>Email is not set up yet</b>, so nobody is sent the confirm email (or results emails). Sign-ups are kept. Once the email service is set up, press <b>Send confirm email again</b>.</p>` : '') + (signups.length ? `
       <p class="meta">${confirmed.length} confirmed · ${signups.length - confirmed.length} waiting to confirm${fresh ? ` · <b>${fresh} new</b>` : ''}</p>
       <div class="adm-actions">
         ${fresh ? '<button class="btn sm" data-sig="seen">Mark as seen</button>' : ''}
+        ${waiting ? `<button class="btn sm alt" data-sig="resend">Send confirm email again (${waiting})</button>` : ''}
         <button class="btn sm alt" data-sig="copy" ${confirmed.length ? '' : 'disabled'}>Copy confirmed emails</button>
         <button class="btn sm alt" data-sig="csv" ${confirmed.length ? '' : 'disabled'}>Download list (CSV)</button>
         <span class="form-done" id="sig-msg" role="status"></span>
@@ -1532,9 +1535,9 @@
       <div class="table-scroll"><table class="adm-table"><thead><tr><th>Email</th><th>Signed up</th><th>Status</th><th></th></tr></thead><tbody>
       ${signups.map(s => `<tr${s.new ? ' class="is-new"' : ''}><td>${s.new ? '<span class="iss">New</span> ' : ''}<a href="mailto:${esc(s.email)}">${esc(s.email)}</a></td>
         <td>${esc(niceDate(s.created_at))}</td><td>${s.confirmed ? '<span class="ok">Confirmed</span>' : '<span class="meta">Waiting to confirm</span>'}</td>
-        <td><button class="btn sm alt" data-sig="delete" data-id="${s.id}">Remove</button></td></tr>`).join('')}
+        <td class="adm-actions" style="margin:0;">${s.confirmed ? '' : `<button class="btn sm alt" data-sig="resend" data-id="${s.id}">Resend</button>`}<button class="btn sm alt" data-sig="delete" data-id="${s.id}">Remove</button></td></tr>`).join('')}
       </tbody></table></div>`
-      : '<div class="empty-state">No sign-ups yet.</div>';
+      : '<div class="empty-state">No sign-ups yet.</div>');
   }
   $('sig-list').addEventListener('click', async e => {
     const b = e.target.closest('[data-sig]');
@@ -1549,6 +1552,15 @@
       const blob = new Blob([rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n')], { type: 'text/csv' });
       const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${location.hostname.replace(/^www\./, '')}-email-list-${new Date().toISOString().slice(0, 10)}.csv` });
       a.click(); URL.revokeObjectURL(a.href);
+      return;
+    }
+    if (b.dataset.sig === 'resend') {
+      const one = b.dataset.id !== undefined;
+      b.disabled = true;
+      const r = await api('/api/admin/subscribers', { method: 'POST', body: { action: 'resend', id: one ? Number(b.dataset.id) : null } }).catch(err => ({ status: 'failed', error: err.message }));
+      b.disabled = false;
+      btnMsg($('sig-msg'), r.status === 'sent' ? `Confirm email sent to ${r.sent} address${r.sent === 1 ? '' : 'es'}.`
+        : r.status === 'not-set-up' ? 'Not sent: email is not set up yet.' : `Not sent: ${r.error || 'the email service refused it'}.`);
       return;
     }
     if (b.dataset.sig === 'delete' && !confirm('Remove this address from the email list?')) return;
