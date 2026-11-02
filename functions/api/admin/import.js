@@ -4,7 +4,7 @@ import { cleanRows, importResults } from '../../../lib/import.js';
 import { sendEmails, resultsEmail } from '../../../lib/mail.js';
 import { siteFor } from '../../../lib/sites.js';
 
-export async function onRequestPost({ env, request, waitUntil }) {
+export async function onRequestPost({ env, request }) {
   const b = await readJson(request);
   if (!b || !Array.isArray(b.rows)) return bad('Bad request');
   const rows = cleanRows(b.rows, new Date().getFullYear());
@@ -22,8 +22,16 @@ export async function onRequestPost({ env, request, waitUntil }) {
     const base = siteUrl(env, request);
     const summary = `${out.results} new Irish-bred placing${out.results === 1 ? ' has' : 's have'} been added to the results.`;
     const messages = results.map(s => resultsEmail(siteFor(env), s.email, `${base}/results`, `${base}/api/unsubscribe?token=${s.token}`, summary));
-    out.emailed = messages.length;
-    waitUntil(sendEmails(env, messages).catch(e => console.error('results email failed', e)));
+    // Sent before answering, so the owner area says what really happened (sent, not set up, or failed).
+    try {
+      const r = await sendEmails(env, messages);
+      out.emailed = r.sent;
+      out.emailStatus = r.skipped ? 'not-set-up' : 'sent';
+    } catch (e) {
+      console.error('results email failed', e);
+      out.emailStatus = 'failed';
+      out.emailError = String(e && e.message || e).slice(0, 300);
+    }
   }
   return json(out);
 }

@@ -182,7 +182,9 @@
           <div><b>${s.horses}</b><span>new horses</span></div>
           <div><b>${s.sires}</b><span>new sires</span></div><div><b>${s.dams}</b><span>new dams</span></div><div><b>${s.breeders}</b><span>new breeders</span></div>
         </div>
-        ${s.emailed ? `<p class="intro">Emailing ${s.emailed} subscribers now.</p>` : ''}
+        ${s.emailStatus === 'sent' && s.emailed ? `<p class="intro ok">Emailed ${s.emailed} subscriber${s.emailed === 1 ? '' : 's'} a link to the new results.</p>` : ''}
+        ${s.emailStatus === 'not-set-up' ? '<p class="intro iss">The results are saved, but no email was sent: email is not set up yet.</p>' : ''}
+        ${s.emailStatus === 'failed' ? `<p class="intro iss">The results are saved, but the subscriber email failed (${esc(s.emailError || '')}), so some or all subscribers were not emailed. Check the email settings, then tell Emer.</p>` : ''}
         <button class="btn alt" type="button" id="imp-new">Paste another week</button></div>`;
       $('imp-new').addEventListener('click', () => { imp = null; $('parse-form').reset(); $('adm-year').value = new Date().getFullYear(); renderImport(); window.scrollTo({ top: 0 }); });
       return;
