@@ -44,6 +44,7 @@ import * as adminComments from '../functions/api/admin/comments.js';
 import * as adminCorrections from '../functions/api/admin/corrections.js';
 import * as adminEnquiries from '../functions/api/admin/enquiries.js';
 import * as adminSubscribers from '../functions/api/admin/subscribers.js';
+import * as adminEmail from '../functions/api/admin/email.js';
 import * as adminSummary from '../functions/api/admin/summary.js';
 import * as sharedStallions from '../functions/api/shared/stallions.js';
 import * as sharedHorse from '../functions/api/shared/horse/[id].js';
@@ -96,6 +97,7 @@ const ROUTES = {
   '/api/admin/corrections': adminCorrections,
   '/api/admin/enquiries': adminEnquiries,
   '/api/admin/subscribers': adminSubscribers,
+  '/api/admin/email': adminEmail,
   '/api/admin/summary': adminSummary,
   // Shared horse database (both sites): stallions, horses, pedigree, breeders.
   '/api/shared/stallions': sharedStallions,

@@ -39,6 +39,7 @@
     <button class="chip" data-a="forsale">For sale <span class="count" id="n-forsale" hidden></span></button>
     <button class="chip" data-a="analytics">Analytics</button>
     <button class="chip" data-a="messages">Messages <span class="count" id="n-messages" hidden></span></button>
+    <button class="chip" data-a="email">Email</button>
   </div>
 
   <!-- RESULTS -->
@@ -407,6 +408,55 @@
         <div class="form-done" role="status"></div>
       </form>
     </details>
+  </div>
+
+  <!-- EMAIL: write to confirmed subscribers -->
+  <div class="adm-pane" id="adm-email">
+    <h3>Email subscribers</h3>
+    <p class="intro">Write to the people who confirmed their sign-up. Each person gets their own email from the site's address, with their own unsubscribe link; nobody sees anyone else's address. Send a test to yourself first.</p>
+    <div id="em-warn"></div>
+
+    <h4 class="em-step">1. Who gets it</h4>
+    <div class="adm-bar em-pick">
+      <input type="search" id="em-search" placeholder="Search addresses" aria-label="Search subscribers">
+      <button class="btn sm alt" type="button" id="em-all">Select all</button>
+      <button class="btn sm alt" type="button" id="em-none">Select none</button>
+      <b id="em-count" role="status"></b>
+    </div>
+    <div class="table-scroll em-list"><table class="adm-table"><thead><tr><th></th><th>Email</th><th>Joined</th></tr></thead><tbody id="em-subs"></tbody></table></div>
+
+    <h4 class="em-step">2. The message</h4>
+    <form class="form" id="em-form" style="max-width:none;" autocomplete="off">
+      <div class="adm-tabs" id="em-kind">
+        <button class="chip active" type="button" data-kind="results">Results update</button>
+        <button class="chip" type="button" data-kind="other">Other message</button>
+      </div>
+      <p class="intro em-other-only" hidden>Quick fill: <button class="btn sm alt" type="button" id="em-tpl-noresults">No results this week</button></p>
+      <label>Subject<input type="text" name="subject" maxlength="200" required></label>
+      <label><span id="em-text-label">Extra note (optional)</span><textarea name="text" maxlength="20000" style="min-height:160px;" placeholder="Plain text. Leave a blank line to start a new paragraph. Links: paste the address (https://…) or write [words](https://…)."></textarea></label>
+      <details class="em-news" id="em-news">
+        <summary>News block (optional)</summary>
+        <p class="intro">Shows as a box with a headline, a short summary and a "Read more" link. <button class="btn sm alt" type="button" id="em-latest">Fill with the latest news article</button></p>
+        <label>Headline<input type="text" name="headline" maxlength="300"></label>
+        <label>Short summary<textarea name="summary" maxlength="3000" style="min-height:90px;"></textarea></label>
+        <label>Link<input type="url" name="link" maxlength="500" placeholder="Leave empty for the News page"></label>
+      </details>
+      <label>Sign-off (optional)<input type="text" name="closing" maxlength="2000" placeholder="e.g. We'll keep in touch."></label>
+    </form>
+
+    <h4 class="em-step">3. Preview</h4>
+    <p class="meta">Subject: <b id="em-prev-subject"></b></p>
+    <iframe id="em-preview" class="em-preview" title="Email preview" sandbox=""></iframe>
+
+    <h4 class="em-step">4. Send</h4>
+    <div class="adm-actions">
+      <button class="btn alt" type="button" id="em-test">Send test to me</button>
+      <button class="btn gold" type="button" id="em-send">Send to selected</button>
+    </div>
+    <div class="form-done" id="em-msg" role="status"></div>
+
+    <h4 class="em-step">Sent so far</h4>
+    <div id="em-log"></div>
   </div>
 
   <!-- MESSAGES: comments, corrections and advertising enquiries in one place -->
