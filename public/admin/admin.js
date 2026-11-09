@@ -7,7 +7,7 @@
 
   /* ---------- Tabs ---------- */
   let countryList = [];
-  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, horses: () => { loadBreeding(); loadShared(); }, forsale: () => { loadForSale(); loadWanted(); }, analytics: () => loadAnalytics(), messages: () => { loadSubmissions(); loadComments(); loadCorrections(); loadEnquiries(); loadSignups(); } };
+  const loaders = { results: loadBatches, unverified: loadUnverified, news: () => loadNews(), ads: () => { loadAds(); loadLinks(); }, stallions: loadStallions, horses: () => { loadBreeding(); loadShared(); }, forsale: () => { loadForSale(); loadWanted(); }, analytics: () => loadAnalytics(), messages: () => { loadSubmissions(); loadComments(); loadCorrections(); loadEnquiries(); loadSignups(); }, email: () => loadEmail() };
   $('adm-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-a]');
     if (!b) return;
@@ -1567,6 +1567,135 @@
     await api('/api/admin/subscribers', { method: 'POST', body: { action: b.dataset.sig, id: Number(b.dataset.id) } });
     loadSignups(); refreshSummary();
   });
+
+  /* ---------- Email: write to confirmed subscribers ---------- */
+  const SHORT = (window.SITE && window.SITE.short) || '';
+  const DISCIPLINE = (window.SITE && window.SITE.discipline) || 'eventing';
+  const em = { subs: [], picked: new Set(), kind: 'results', loaded: false, me: '' };
+  const emForm = $('em-form');
+  const emDefaultSubject = { results: `New results are up on ${SHORT}`, other: '' };
+
+  async function loadEmail() {
+    const d = await api('/api/admin/email');
+    const firstTime = !em.loaded;
+    em.subs = d.subscribers; em.me = d.me; em.loaded = true;
+    // Everyone is ticked to start with; later visits keep the ticks and add anyone new.
+    const known = new Set(em.subs.map(s => s.id));
+    if (firstTime) em.subs.forEach(s => em.picked.add(s.id));
+    [...em.picked].forEach(id => { if (!known.has(id)) em.picked.delete(id); });
+    $('em-warn').innerHTML = !d.mailReady ? '<p class="iss"><b>Email is not set up yet</b>, so nothing can be sent. Add the MAIL_API_KEY secret in Cloudflare first.</p>'
+      : !em.subs.length ? '<p class="iss">No confirmed subscribers yet. People appear here once they tap the link in their confirm email.</p>' : '';
+    $('em-test').textContent = em.me ? `Send test to me (${em.me})` : 'Send test to me';
+    if (firstTime && !emForm.elements.subject.value) emForm.elements.subject.value = emDefaultSubject.results;
+    renderEmailSubs(); renderEmailLog(d.log); emPreview();
+  }
+  function renderEmailSubs() {
+    const q = $('em-search').value.trim().toLowerCase();
+    const shown = em.subs.filter(s => !q || s.email.toLowerCase().includes(q));
+    $('em-subs').innerHTML = shown.length ? shown.map(s => `<tr><td><input type="checkbox" data-em-id="${s.id}" aria-label="${esc(s.email)}" ${em.picked.has(s.id) ? 'checked' : ''}></td>
+      <td>${esc(s.email)}</td><td>${esc(niceDate(s.created_at))}</td></tr>`).join('')
+      : `<tr><td colspan="3" class="meta">${em.subs.length ? 'No address matches the search.' : 'No confirmed subscribers yet.'}</td></tr>`;
+    $('em-count').textContent = `${em.picked.size} of ${em.subs.length} selected`;
+    $('em-send').textContent = `Send to selected (${em.picked.size})`;
+    $('em-send').disabled = !em.picked.size;
+  }
+  function renderEmailLog(log) {
+    $('em-log').innerHTML = log && log.length ? `<div class="table-scroll"><table class="adm-table"><thead><tr><th>Date</th><th>Type</th><th>Subject</th><th>Recipients</th><th>Sent</th><th>Failed</th></tr></thead><tbody>
+      ${log.map(l => `<tr${l.failed && l.failed.length ? ' class="bad"' : ''}><td>${esc(new Date(l.at).toLocaleString('en-IE', { dateStyle: 'medium', timeStyle: 'short' }))}</td>
+        <td>${l.kind === 'results' ? 'Results update' : 'Other message'}${l.test ? ' <small>(test)</small>' : ''}</td><td>${esc(l.subject)}</td><td>${l.recipients}</td><td>${l.sent}</td>
+        <td>${l.failed && l.failed.length ? `<details><summary>${l.failed.length}</summary>${l.failed.map(f => `<div class="meta">${esc(f.to)}: ${esc(f.error)}</div>`).join('')}</details>` : '0'}</td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="empty-state">Nothing sent yet.</div>';
+  }
+  const emMessage = () => {
+    const f = emForm.elements;
+    return { kind: em.kind, subject: f.subject.value, text: f.text.value, closing: f.closing.value,
+      news: { headline: f.headline.value, summary: f.summary.value, link: f.link.value } };
+  };
+  let emTimer = null, emSeq = 0;
+  function emPreview() {
+    clearTimeout(emTimer);
+    emTimer = setTimeout(async () => {
+      const seq = ++emSeq;
+      try {
+        const d = await api('/api/admin/email', { method: 'POST', body: { action: 'preview', ...emMessage() } });
+        if (seq !== emSeq) return;
+        $('em-prev-subject').textContent = d.subject || '(no subject yet)';
+        $('em-preview').srcdoc = d.html;
+      } catch (err) { btnMsg($('em-msg'), err.message); }
+    }, 350);
+  }
+  function setEmailKind(kind) {
+    const prevDefault = emDefaultSubject[em.kind];
+    em.kind = kind;
+    document.querySelectorAll('#em-kind [data-kind]').forEach(b => b.classList.toggle('active', b.dataset.kind === kind));
+    document.querySelectorAll('.em-other-only').forEach(x => { x.hidden = kind !== 'other'; });
+    $('em-text-label').textContent = kind === 'results' ? 'Extra note (optional)' : 'Message';
+    const subj = emForm.elements.subject;
+    if (!subj.value || subj.value === prevDefault) subj.value = emDefaultSubject[kind];
+    emPreview();
+  }
+  $('em-kind').addEventListener('click', e => { const b = e.target.closest('[data-kind]'); if (b) setEmailKind(b.dataset.kind); });
+  emForm.addEventListener('input', emPreview);
+  $('em-search').addEventListener('input', renderEmailSubs);
+  $('em-subs').addEventListener('change', e => {
+    const box = e.target.closest('[data-em-id]');
+    if (!box) return;
+    const id = Number(box.dataset.emId);
+    if (box.checked) em.picked.add(id); else em.picked.delete(id);
+    renderEmailSubs();
+  });
+  // Select all / none act on the addresses shown (all of them when nothing is searched).
+  const emShown = () => { const q = $('em-search').value.trim().toLowerCase(); return em.subs.filter(s => !q || s.email.toLowerCase().includes(q)); };
+  $('em-all').addEventListener('click', () => { emShown().forEach(s => em.picked.add(s.id)); renderEmailSubs(); });
+  $('em-none').addEventListener('click', () => { emShown().forEach(s => em.picked.delete(s.id)); renderEmailSubs(); });
+  $('em-tpl-noresults').addEventListener('click', () => {
+    const f = emForm.elements;
+    if ((f.text.value.trim() || f.headline.value.trim()) && !confirm('Replace what is in the message now?')) return;
+    f.subject.value = `No new ${DISCIPLINE} results this week`;
+    f.text.value = `Hi,\n\nThere are no new ${DISCIPLINE} results to post on ${SHORT} this week. Here's the latest news in the meantime.`;
+    f.headline.value = ''; f.summary.value = ''; f.link.value = `${location.origin}/news`;
+    f.closing.value = "We'll keep in touch.";
+    $('em-news').open = true;
+    emPreview();
+  });
+  $('em-latest').addEventListener('click', async () => {
+    try {
+      const d = await api('/api/news');
+      const n = d.news && d.news[0];
+      if (!n) { btnMsg($('em-msg'), 'There are no news articles yet.'); return; }
+      const f = emForm.elements;
+      const plain = String(n.snippet || n.body || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      f.headline.value = n.title;
+      f.summary.value = plain.length > 280 ? `${plain.slice(0, 277).replace(/\s+\S*$/, '')}…` : plain;
+      f.link.value = `${location.origin}/news/${n.id}`;
+      $('em-news').open = true;
+      emPreview();
+    } catch (err) { btnMsg($('em-msg'), err.message); }
+  });
+  async function emSend(action) {
+    const msg = $('em-msg');
+    const n = em.picked.size;
+    if (action === 'send' && !confirm(`Send to ${n} subscriber${n === 1 ? '' : 's'}? This can't be undone.`)) return;
+    const btns = [$('em-test'), $('em-send')];
+    btns.forEach(b => { b.disabled = true; });
+    btnMsg(msg, action === 'test' ? 'Sending the test…' : `Sending to ${n}…`);
+    try {
+      const r = await api('/api/admin/email', { method: 'POST', body: { action, ids: [...em.picked], ...emMessage() } });
+      btnMsg(msg, r.status === 'not-set-up' ? 'Nothing sent: email is not set up yet.'
+        : action === 'test' ? (r.status === 'sent' ? `Test sent to ${r.to}. Check your inbox (and spam).` : `The test could not be sent: ${r.error || 'the email service refused it'}.`)
+        : r.status === 'sent' ? `Sent to ${r.sent} subscriber${r.sent === 1 ? '' : 's'}.`
+        : `Sent to ${r.sent} of ${r.recipients}; ${r.failed.length} failed (see the log below).`);
+      const d = await api('/api/admin/email');
+      renderEmailLog(d.log);
+    } catch (err) {
+      btnMsg(msg, err.message);
+    } finally {
+      btns.forEach(b => { b.disabled = false; });
+      renderEmailSubs();
+    }
+  }
+  $('em-test').addEventListener('click', () => emSend('test'));
+  $('em-send').addEventListener('click', () => emSend('send'));
 
   /* ---------- Shared stallions and breeding (shared horse database, both sites) ---------- */
   let shUpload = null; // { text, filename } of the file last checked; Save sends exactly this

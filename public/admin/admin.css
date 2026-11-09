@@ -312,3 +312,13 @@ details.adm-notes summary { cursor: pointer; font-weight: 600; color: var(--navy
 #fs-add-box > summary { display: inline-block; list-style: none; cursor: pointer; }
 #fs-add-box > summary::-webkit-details-marker { display: none; }
 #fs-add-box[open] > summary { margin-bottom: 12px; }
+
+/* Owner area → Email */
+.em-step { margin: 28px 0 10px; }
+.em-pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.em-pick input[type=search] { flex: 1 1 220px; max-width: 360px; }
+.em-list { max-height: 320px; overflow: auto; border: 1px solid var(--rule); }
+.em-list td:first-child { width: 36px; }
+.em-preview { width: 100%; max-width: 640px; height: 560px; border: 1px solid var(--rule-strong); background: #F6F3E9; display: block; }
+.em-news { border: 1px solid var(--rule); padding: 8px 12px; margin: 12px 0; }
+.em-news summary { cursor: pointer; font-weight: 600; }
