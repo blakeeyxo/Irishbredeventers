@@ -76,3 +76,21 @@ test('a sheet with no Horse heading reads nothing and says why', () => {
   assert.equal(r.rows.length, 0);
   assert.match(r.notes[0], /No "Horse line" heading/);
 });
+
+test('IBSR sheet with CSI Spec and Class Detail columns: the level goes in front of the class; "Riser:" is the rider', async () => {
+  const t = await xlsxToTable(readFileSync(new URL('./fixtures/sj-2026-11-sheet.xlsx', import.meta.url)));
+  const r = parseSheet(t.rows, { discipline: 'showjumping', defaultYear: 2026 });
+  assert.equal(r.rows.length, 24);
+  assert.deepEqual(r.rows.filter(x => !x.verified).map(x => [x.horse_name, x.issues]), []);
+  assert.ok(r.rows.every(x => /^CSI\S* [^·]+ · /.test(x.class_name)), 'every class starts with its CSI level');
+  const cosmo = r.rows.find(x => x.horse_name === 'MHS Cosmo');
+  assert.equal(cosmo.class_name, 'CSI 3* · € 56,900 GP Table A. One round against the clock with jump-off against the clock. 1.50m');
+  assert.deepEqual([cosmo.event_name, cosmo.country, cosmo.start_date], ['Valencia International', 'Spain', '2026-11-09']);
+  assert.equal(r.rows.find(x => x.horse_name === 'HK Valhalla').rider_name, 'Seamus Hugher-Kennedy');
+  assert.equal(r.rows.find(x => x.horse_name === 'Cruising with Alice').owner, 'Laurence Masterson');
+  // A level with no class detail is the class on its own.
+  const [only] = parseSheet([['Event', 'Event dates', 'CSI Spec', 'Class Detail', 'Place', 'Horse line'],
+    ['Lier International (BEL)', '11th - 15th November 2026', 'CSI 2*', '', '4', 'Rossmount Luis (ISH) - 2017 gelding by Luidam (KWPN) out of Greenacres Clover (ISH). Breeder: M. Rider: E (IRL)']],
+  { discipline: 'showjumping', defaultYear: 2026 }).rows;
+  assert.equal(only.class_name, 'CSI 2*');
+});
