@@ -48,7 +48,7 @@ test('[was Old Name] becomes the former name, including two former names', () =>
 test('missing breeder, missing county and missing scores are warnings, not guesses', () => {
   const noBreeder = entry('3rd A Horse (ISH) - 2015 mare by B (KWPN) out of C (ISH) by D (TB). Rider: F (IRL) 30, 0, 0 = 30');
   assert.equal(noBreeder.breeder, '');
-  assert.ok(noBreeder.warnings.includes('No breeder given'));
+  assert.ok(!noBreeder.warnings.includes('No breeder given'), 'an unknown breeder is UNK, quietly');
   assert.equal(noBreeder.verified, true);
   const noCounty = entry('3rd A Horse (ISH) - 2015 mare by B (KWPN) out of C (ISH) by D (TB). Breeder: Mathew Rogers. Rider: F (IRL) 30, 0, 0 = 30');
   assert.deepEqual([noCounty.breeder, noCounty.breeder_county], ['Mathew Rogers', '']);
@@ -87,7 +87,7 @@ test('"Breeder: X, Rider:" with a comma, and a malformed "[ISH)" tag', () => {
 test('a gap is placed and noted; only a line that is really wrong is held back', () => {
   const noBreeding = entry('9th Ross Joey (unk) - 2014 gelding. Rider: Georgia Reece (GBR) 37.3, 0, 10.8 = 48.1');
   assert.equal(noBreeding.verified, true);
-  assert.ok(noBreeding.warnings.includes('Breeding not known: put as UNK'));
+  assert.deepEqual(noBreeding.warnings.filter(w => /UNK|breeding/i.test(w)), [], 'unknown breeding is UNK, quietly');
   const twice = entry('2nd MBF Vital Finesse (ISH) - 2018 gelding by Ringwood Cassero (HOLST) out of Paddys Pride (TB)[IRL] out of Indian River (TB). Breeder: A. Rider: B (GBR) 29.5, 0, 0.0 = 29.5');
   assert.ok(twice.issues.includes('"out of" appears twice'));
   assert.equal(twice.verified, false);
@@ -121,7 +121,7 @@ test('2010 archive style', () => {
   assert.deepEqual([missingBracket.dam, missingBracket.dam_sire, missingBracket.dam_sire_breed], ['Dawn Cherry', 'Oakley Dawn', 'RID']);
   const sireOnly = parseEntry(5, "The Cult ('03 g Cult Hero. Rd Tanya Kyle) 30.5, 0, 5.6 = 36.1", ctx);
   assert.equal(sireOnly.sire, 'Cult Hero');
-  assert.ok(sireOnly.warnings.includes('Dam not known: put as UNK'));
+  assert.ok(!sireOnly.warnings.some(w => /Dam not known/.test(w)));
 });
 
 test('event lines: country codes, missing bracket, missing year, month ranges', () => {
@@ -193,7 +193,7 @@ test('February 2025 variants: "32." score, OIO, dash before [was], [ISH} typo, c
   assert.ok(typo.warnings.some(w => w.startsWith('Scores add up to 47.6')));
   const oio = entry('3rd SSH Playboy (unk) – 2012 gelding OIO by Cit Cat (HOLST) out of Stomeyford Black Pearl (unk). Breeder: Ennisnag Stud. Rider: Julie Wolfert (USA) 35.5, 0, 11.2 = 46.7');
   assert.deepEqual([oio.sire, oio.dam, oio.dam_breed], ['Cit Cat', 'Stomeyford Black Pearl', 'unk']);
-  assert.ok(oio.warnings.includes('Marked OIO'));
+  assert.ok(!oio.warnings.includes('Marked OIO'));
   assert.equal(oio.verified, true);
   const dash = entry('6th Dondante (ISH) – [was Cooley All Air] – 2010 gelding by Pacino (BWP) out of Muckno Clover [ISH] by Euro Clover [ISH]. Breeder: Francis Brennan (Monaghan). Rider: Meg Pellegrini (USA) 34.1, 0.4, 16.0 = 50.5');
   assert.deepEqual([dash.horse_name, dash.breed, dash.former_name], ['Dondante', 'ISH', 'Cooley All Air']);
@@ -207,7 +207,7 @@ test('OIO (of Irish origin) with no breeding is a complete line, not a failure',
   const r = entry('9th Ross Joey (unk) – 2014 gelding OIO. Rider: Georgia Reece (GBR) 37.3, 0, 10.8 = 48.1');
   assert.deepEqual(r.issues, []);
   assert.deepEqual([r.horse_name, r.breed, r.foaled, r.sex, r.sire, r.dam], ['Ross Joey', 'unk', 2014, 'Gelding', '', '']);
-  assert.ok(r.warnings.includes('Breeding not recorded (OIO)'));
+  assert.ok(!r.warnings.includes('Breeding not recorded (OIO)'));
   const sireOnly = entry('6th Cooley For Sure (unk) – 2007 gelding OIO by Ramiro B (BWP). Rider: Greta Mason (AUS) 29.8, 0, 12.0 = 41.8');
   assert.deepEqual(sireOnly.issues, []);
   assert.equal(sireOnly.sire, 'Ramiro B');
@@ -297,4 +297,13 @@ test('an unreadable event heading is never taken for a class of the event above'
   const cyclone = r.rows.find(x => x.horse_name === 'Kilbunny Cyclone');
   assert.ok(cyclone, 'row still read');
   assert.notEqual(cyclone.event_name, 'Canadian Test Event');
+});
+
+test('typos with only one reading are fixed quietly: no note to check', () => {
+  const r = entry('4th Rossmount Luis (ISH) - 2017gelding by Luidam (KWPN) out pf Greenacres Clover (ISH)[TIH] by Clover Hill (ID). Breeder: Michael Griffin. Rider: Ellie Humphries (IRL) 30, 0, 0 = 30');
+  assert.deepEqual([r.foaled, r.sex, r.dam, r.dam_sire, r.verified], [2017, 'Gelding', 'Greenacres Clover', 'Clover Hill', true]);
+  assert.deepEqual(r.warnings, []);
+  // A real guess still gets its note.
+  const guess = entry('5th Test Horse (ISH) - 2107 gelding by A (ISH) out of B (ISH) by C (TB). Breeder: D. Rider: E (IRL) 30, 0, 0 = 30');
+  assert.ok(guess.warnings.some(w => /read as 2017/.test(w)));
 });
